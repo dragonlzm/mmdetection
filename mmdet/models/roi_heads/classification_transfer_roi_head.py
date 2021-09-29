@@ -128,6 +128,8 @@ class ClassificationTransferRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         #bbox_targets = self.bbox_head.get_targets(sampling_results, gt_bboxes,
         #                                          gt_labels, self.train_cfg)
         label_weights = [torch.ones(res.size(0)) for res in sampling_results]
+        label_weights = torch.cat(label_weights, 0).cuda()
+        gt_labels = torch.cat(gt_labels, 0)
         loss_bbox = self.bbox_head.loss(bbox_results['cls_score'], gt_labels, 
                                         label_weights)
 

@@ -150,7 +150,7 @@ class ClassificationTransferModel(BaseDetector):
         return self.roi_head.simple_test(
             x, proposal_list, img_metas, rescale=rescale)
 
-    '''should be ignored
+    #should be ignored
     def aug_test(self, imgs, img_metas, rescale=False):
         """Test with augmentations.
 
@@ -177,4 +177,3 @@ class ClassificationTransferModel(BaseDetector):
                 f'list of supported models,'
                 f'https://mmdetection.readthedocs.io/en/latest/tutorials/pytorch2onnx.html#list-of-supported-models-exportable-to-onnx'  # noqa E501
             )
-    '''

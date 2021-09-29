@@ -46,7 +46,7 @@ test_pipeline = [
 NOVEL_CLASSES = ('person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
                 'train', 'boat', 'bird', 'cat', 'dog', 'horse', 'sheep',
                 'cow', 'bottle', 'chair', 'couch', 'potted plant',
-                'dining table', 'tv'),
+                'dining table', 'tv')
 
 data = dict(
     train=dict(pipeline=train_pipeline,
