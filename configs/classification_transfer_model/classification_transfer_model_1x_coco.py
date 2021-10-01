@@ -48,10 +48,18 @@ NOVEL_CLASSES = ('person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
                 'cow', 'bottle', 'chair', 'couch', 'potted plant',
                 'dining table', 'tv')
 
+dataset_type = 'CocoFewshotTestDataset'
+
 data = dict(
-    train=dict(pipeline=train_pipeline,
+    train=dict(type=dataset_type,
+                pipeline=train_pipeline,
                 classes=NOVEL_CLASSES),
-    val=dict(pipeline=test_pipeline,
+    val=dict(type=dataset_type,
+                pipeline=test_pipeline,
                 classes=NOVEL_CLASSES),
-    test=dict(pipeline=test_pipeline,
+    test=dict(type=dataset_type,
+                pipeline=test_pipeline,
                 classes=NOVEL_CLASSES))
+
+checkpoint_config = dict(interval=6)
+evaluation = dict(interval=1, metric='bbox')
