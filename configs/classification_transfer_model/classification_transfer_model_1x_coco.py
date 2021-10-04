@@ -51,6 +51,8 @@ NOVEL_CLASSES = ('person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
 dataset_type = 'CocoFewshotTestDataset'
 
 data = dict(
+    samples_per_gpu=2,
+    workers_per_gpu=2,
     train=dict(type=dataset_type,
                 pipeline=train_pipeline,
                 classes=NOVEL_CLASSES),
@@ -63,3 +65,19 @@ data = dict(
 
 checkpoint_config = dict(interval=6)
 evaluation = dict(interval=1, metric='bbox')
+
+lr_config = dict(
+    policy='step',
+    warmup='linear',
+    warmup_iters=500,
+    warmup_ratio=0.001,
+    step=[8, 12, 16])
+runner = dict(type='EpochBasedRunner', max_epochs=18)
+
+
+log_config = dict(
+    interval=10,
+    hooks=[
+        dict(type='TextLoggerHook'),
+        dict(type='TensorboardLoggerHook')
+    ])
