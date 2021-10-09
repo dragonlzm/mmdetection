@@ -51,7 +51,7 @@ NOVEL_CLASSES = ('person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
 dataset_type = 'CocoFewshotTestDataset'
 
 data = dict(
-    samples_per_gpu=2,
+    samples_per_gpu=4,
     workers_per_gpu=2,
     train=dict(type=dataset_type,
                 pipeline=train_pipeline,
@@ -69,11 +69,11 @@ evaluation = dict(interval=1, metric='bbox')
 lr_config = dict(
     policy='step',
     warmup='linear',
-    warmup_iters=500,
+    warmup_iters=25,
     warmup_ratio=0.001,
-    step=[8, 12, 16])
-runner = dict(type='EpochBasedRunner', max_epochs=18)
-
+    step=[3, 5])
+runner = dict(type='EpochBasedRunner', max_epochs=6)
+optimizer = dict(type='SGD', lr=0.001, momentum=0.9, weight_decay=0.0001)
 
 log_config = dict(
     interval=10,
