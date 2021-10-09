@@ -2,6 +2,8 @@
 norm_cfg = dict(type='BN', requires_grad=False)
 model = dict(
     type='ClassificationTransferModel',
+    bbox_crop_mode_train='tight',
+    bbox_crop_mode_test='tight',
     backbone=dict(
         type='ResNet',
         depth=50,

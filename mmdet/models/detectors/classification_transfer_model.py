@@ -23,7 +23,9 @@ class ClassificationTransferModel(BaseDetector):
                  train_cfg=None,
                  test_cfg=None,
                  pretrained=None,
-                 init_cfg=None):
+                 init_cfg=None,
+                 bbox_crop_mode_train='tight',
+                 bbox_crop_mode_test='tight'):
         super(ClassificationTransferModel, self).__init__(init_cfg)
         if pretrained:
             warnings.warn('DeprecationWarning: pretrained is deprecated, '
@@ -45,6 +47,8 @@ class ClassificationTransferModel(BaseDetector):
 
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
+        self.bbox_crop_mode_train = bbox_crop_mode_train
+        self.bbox_crop_mode_test = bbox_crop_mode_test
 
     @property
     def with_roi_head(self):
@@ -118,35 +122,60 @@ class ClassificationTransferModel(BaseDetector):
         losses = dict()
         proposal_list = gt_bboxes
         # add the perturb on the gt boxes
-        for gt_on_img, img_info in zip(gt_bboxes, img_metas):
-            w = gt_on_img[:, 2] - gt_on_img[:, 0]
-            h = gt_on_img[:, 3] - gt_on_img[:, 1]
-            w_perturb_1 = w * 0.1 * torch.rand(1).item() * torch.Tensor(1).random_(-1,2).item()
-            w_perturb_2 = w * 0.1 * torch.rand(1).item() * torch.Tensor(1).random_(-1,2).item()
-            h_perturb_1 = h * 0.1 * torch.rand(1).item() * torch.Tensor(1).random_(-1,2).item()
-            h_perturb_2 = h * 0.1 * torch.rand(1).item() * torch.Tensor(1).random_(-1,2).item()
+        if self.bbox_crop_mode_train == 'purturb':
+            for gt_on_img, img_info in zip(gt_bboxes, img_metas):
+                w = gt_on_img[:, 2] - gt_on_img[:, 0]
+                h = gt_on_img[:, 3] - gt_on_img[:, 1]
+                w_perturb_1 = w * 0.1 * torch.rand(1).item() * torch.Tensor(1).random_(-1,2).item()
+                w_perturb_2 = w * 0.1 * torch.rand(1).item() * torch.Tensor(1).random_(-1,2).item()
+                h_perturb_1 = h * 0.1 * torch.rand(1).item() * torch.Tensor(1).random_(-1,2).item()
+                h_perturb_2 = h * 0.1 * torch.rand(1).item() * torch.Tensor(1).random_(-1,2).item()
 
-            gt_on_img[:, 0] = gt_on_img[:, 0] + w_perturb_1
-            gt_on_img[:, 2] = gt_on_img[:, 2] + w_perturb_2
-            gt_on_img[:, 1] = gt_on_img[:, 1] + h_perturb_1
-            gt_on_img[:, 3] = gt_on_img[:, 3] + h_perturb_2
-            # deal with the lt boundary
-            lt_x_mask = gt_on_img[:, 0] < 0
-            lt_y_mask = gt_on_img[:, 1] < 0
-            gt_on_img[lt_x_mask, 0] = 0
-            gt_on_img[lt_y_mask, 1] = 0
-            # deal with the rb boundary
-            image_h = img_info['img_shape'][0]
-            image_w = img_info['img_shape'][1]
-            rb_x_mask = gt_on_img[:, 2] >= image_w
-            rb_y_mask = gt_on_img[:, 3] >= image_h
-            gt_on_img[rb_x_mask, 2] = image_w - 1
-            gt_on_img[rb_y_mask, 3] = image_h - 1
-
+                gt_on_img[:, 0] = gt_on_img[:, 0] + w_perturb_1
+                gt_on_img[:, 2] = gt_on_img[:, 2] + w_perturb_2
+                gt_on_img[:, 1] = gt_on_img[:, 1] + h_perturb_1
+                gt_on_img[:, 3] = gt_on_img[:, 3] + h_perturb_2
+                # deal with the lt boundary
+                lt_x_mask = gt_on_img[:, 0] < 0
+                lt_y_mask = gt_on_img[:, 1] < 0
+                gt_on_img[lt_x_mask, 0] = 0
+                gt_on_img[lt_y_mask, 1] = 0
+                # deal with the rb boundary
+                image_h = img_info['img_shape'][0]
+                image_w = img_info['img_shape'][1]
+                rb_x_mask = gt_on_img[:, 2] >= image_w
+                rb_y_mask = gt_on_img[:, 3] >= image_h
+                gt_on_img[rb_x_mask, 2] = image_w - 1
+                gt_on_img[rb_y_mask, 3] = image_h - 1
+        elif self.bbox_crop_mode_train == 'expand':
+            # expand the gt boxes
+            for gt_on_img, img_info in zip(gt_bboxes, img_metas):
+                w = gt_on_img[:, 2] - gt_on_img[:, 0]
+                h = gt_on_img[:, 3] - gt_on_img[:, 1]
+                w_perturb = w * 0.1
+                h_perturb = h * 0.1
+                
+                gt_on_img[:, 0] = gt_on_img[:, 0] - w_perturb
+                gt_on_img[:, 2] = gt_on_img[:, 2] + w_perturb
+                gt_on_img[:, 1] = gt_on_img[:, 1] - h_perturb
+                gt_on_img[:, 3] = gt_on_img[:, 3] + h_perturb
+                # deal with the lt boundary
+                lt_x_mask = gt_on_img[:, 0] < 0
+                lt_y_mask = gt_on_img[:, 1] < 0
+                gt_on_img[lt_x_mask, 0] = 0
+                gt_on_img[lt_y_mask, 1] = 0
+                # deal with the rb boundary
+                image_h = img_info['img_shape'][0]
+                image_w = img_info['img_shape'][1]
+                rb_x_mask = gt_on_img[:, 2] >= image_w
+                rb_y_mask = gt_on_img[:, 3] >= image_h
+                gt_on_img[rb_x_mask, 2] = image_w - 1
+                gt_on_img[rb_y_mask, 3] = image_h - 1
+    
         roi_losses = self.roi_head.forward_train(x, img_metas, proposal_list,
-                                                 gt_bboxes, gt_labels,
-                                                 gt_bboxes_ignore, gt_masks,
-                                                 **kwargs)
+                                                gt_bboxes, gt_labels,
+                                                gt_bboxes_ignore, gt_masks,
+                                                **kwargs)            
         losses.update(roi_losses)
 
         return losses
@@ -245,30 +274,55 @@ class ClassificationTransferModel(BaseDetector):
 
         losses = dict()
         proposal_list = gt_bboxes
-        # expand the gt boxes
-        for gt_on_img, img_info in zip(gt_bboxes, img_metas):
-            w = gt_on_img[:, 2] - gt_on_img[:, 0]
-            h = gt_on_img[:, 3] - gt_on_img[:, 1]
-            w_perturb = w * 0.1
-            h_perturb = h * 0.1
-            
-            gt_on_img[:, 0] = gt_on_img[:, 0] - w_perturb
-            gt_on_img[:, 2] = gt_on_img[:, 2] + w_perturb
-            gt_on_img[:, 1] = gt_on_img[:, 1] - h_perturb
-            gt_on_img[:, 3] = gt_on_img[:, 3] + h_perturb
-            # deal with the lt boundary
-            lt_x_mask = gt_on_img[:, 0] < 0
-            lt_y_mask = gt_on_img[:, 1] < 0
-            gt_on_img[lt_x_mask, 0] = 0
-            gt_on_img[lt_y_mask, 1] = 0
-            # deal with the rb boundary
-            image_h = img_info['img_shape'][0]
-            image_w = img_info['img_shape'][1]
-            rb_x_mask = gt_on_img[:, 2] >= image_w
-            rb_y_mask = gt_on_img[:, 3] >= image_h
-            gt_on_img[rb_x_mask, 2] = image_w - 1
-            gt_on_img[rb_y_mask, 3] = image_h - 1
+        if self.bbox_crop_mode_test == 'purturb':
+            for gt_on_img, img_info in zip(gt_bboxes, img_metas):
+                w = gt_on_img[:, 2] - gt_on_img[:, 0]
+                h = gt_on_img[:, 3] - gt_on_img[:, 1]
+                w_perturb_1 = w * 0.1 * torch.rand(1).item() * torch.Tensor(1).random_(-1,2).item()
+                w_perturb_2 = w * 0.1 * torch.rand(1).item() * torch.Tensor(1).random_(-1,2).item()
+                h_perturb_1 = h * 0.1 * torch.rand(1).item() * torch.Tensor(1).random_(-1,2).item()
+                h_perturb_2 = h * 0.1 * torch.rand(1).item() * torch.Tensor(1).random_(-1,2).item()
 
+                gt_on_img[:, 0] = gt_on_img[:, 0] + w_perturb_1
+                gt_on_img[:, 2] = gt_on_img[:, 2] + w_perturb_2
+                gt_on_img[:, 1] = gt_on_img[:, 1] + h_perturb_1
+                gt_on_img[:, 3] = gt_on_img[:, 3] + h_perturb_2
+                # deal with the lt boundary
+                lt_x_mask = gt_on_img[:, 0] < 0
+                lt_y_mask = gt_on_img[:, 1] < 0
+                gt_on_img[lt_x_mask, 0] = 0
+                gt_on_img[lt_y_mask, 1] = 0
+                # deal with the rb boundary
+                image_h = img_info['img_shape'][0]
+                image_w = img_info['img_shape'][1]
+                rb_x_mask = gt_on_img[:, 2] >= image_w
+                rb_y_mask = gt_on_img[:, 3] >= image_h
+                gt_on_img[rb_x_mask, 2] = image_w - 1
+                gt_on_img[rb_y_mask, 3] = image_h - 1
+        elif self.bbox_crop_mode_test == 'expand':
+            # expand the gt boxes
+            for gt_on_img, img_info in zip(gt_bboxes, img_metas):
+                w = gt_on_img[:, 2] - gt_on_img[:, 0]
+                h = gt_on_img[:, 3] - gt_on_img[:, 1]
+                w_perturb = w * 0.1
+                h_perturb = h * 0.1
+                
+                gt_on_img[:, 0] = gt_on_img[:, 0] - w_perturb
+                gt_on_img[:, 2] = gt_on_img[:, 2] + w_perturb
+                gt_on_img[:, 1] = gt_on_img[:, 1] - h_perturb
+                gt_on_img[:, 3] = gt_on_img[:, 3] + h_perturb
+                # deal with the lt boundary
+                lt_x_mask = gt_on_img[:, 0] < 0
+                lt_y_mask = gt_on_img[:, 1] < 0
+                gt_on_img[lt_x_mask, 0] = 0
+                gt_on_img[lt_y_mask, 1] = 0
+                # deal with the rb boundary
+                image_h = img_info['img_shape'][0]
+                image_w = img_info['img_shape'][1]
+                rb_x_mask = gt_on_img[:, 2] >= image_w
+                rb_y_mask = gt_on_img[:, 3] >= image_h
+                gt_on_img[rb_x_mask, 2] = image_w - 1
+                gt_on_img[rb_y_mask, 3] = image_h - 1
 
         roi_losses = self.roi_head.forward_train(x, img_metas, proposal_list,
                                                  gt_bboxes, gt_labels)
