@@ -63,7 +63,7 @@ data = dict(
                 pipeline=test_pipeline,
                 classes=NOVEL_CLASSES))
 
-checkpoint_config = dict(interval=6)
+checkpoint_config = dict(interval=1)
 evaluation = dict(interval=1, metric='bbox')
 
 lr_config = dict(
