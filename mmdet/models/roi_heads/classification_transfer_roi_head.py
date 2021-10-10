@@ -6,11 +6,44 @@ from mmdet.core import bbox2result, bbox2roi, build_assigner, build_sampler
 from ..builder import HEADS, build_head, build_roi_extractor
 from .base_roi_head import BaseRoIHead
 from .test_mixins import BBoxTestMixin, MaskTestMixin
-
+from ..builder import build_shared_head
+from mmcv.cnn import ConvModule
 
 @HEADS.register_module()
 class ClassificationTransferRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
     """Simplest base roi head including one bbox head and one mask head."""
+    def __init__(self,
+                 bbox_roi_extractor=None,
+                 bbox_head=None,
+                 mask_roi_extractor=None,
+                 mask_head=None,
+                 shared_head=None,
+                 train_cfg=None,
+                 test_cfg=None,
+                 pretrained=None,
+                 init_cfg=None,
+                 dim_reduction=None):
+        super(ClassificationTransferRoIHead, self).__init__(init_cfg)
+        self.train_cfg = train_cfg
+        self.test_cfg = test_cfg
+        if shared_head is not None:
+            shared_head.pretrained = pretrained
+            self.shared_head = build_shared_head(shared_head)
+
+        if bbox_head is not None:
+            self.init_bbox_head(bbox_roi_extractor, bbox_head)
+
+        if mask_head is not None:
+            self.init_mask_head(mask_roi_extractor, mask_head)
+
+        self.init_assigner_sampler()
+        self.dim_reduction = dim_reduction
+        if self.dim_reduction != None:
+            self.dim_redu_conv = ConvModule(
+                2048,
+                dim_reduction,
+                1,
+                inplace=False)
 
     def init_assigner_sampler(self):
         """Initialize assigner and sampler."""
@@ -112,6 +145,8 @@ class ClassificationTransferRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             x[:self.bbox_roi_extractor.num_inputs], rois)
         if self.with_shared_head:
             bbox_feats = self.shared_head(bbox_feats)
+        if self.dim_reduction:
+            bbox_feats = self.dim_redu_conv(bbox_feats)
         cls_score, bbox_pred = self.bbox_head(bbox_feats)
 
         bbox_results = dict(
