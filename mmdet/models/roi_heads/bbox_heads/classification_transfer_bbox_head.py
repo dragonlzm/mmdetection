@@ -2,7 +2,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from mmcv.runner import BaseModule, auto_fp16, force_fp32
+from mmcv.runner import BaseModule, auto_fp16, force_fp32, _load_checkpoint
 from torch.nn.modules.utils import _pair
 
 from mmdet.core import build_bbox_coder, multi_apply, multiclass_nms
@@ -38,7 +38,8 @@ class ClassificationTransferBBoxHead(BaseModule):
                      loss_weight=1.0),
                  loss_bbox=dict(
                      type='SmoothL1Loss', beta=1.0, loss_weight=1.0),
-                 init_cfg=None):
+                 init_cfg=None,
+                 image_net_mlp=None):
         super(ClassificationTransferBBoxHead, self).__init__(init_cfg)
         assert with_cls or with_reg
         self.with_avg_pool = with_avg_pool
@@ -52,6 +53,7 @@ class ClassificationTransferBBoxHead(BaseModule):
         self.reg_decoded_bbox = reg_decoded_bbox
         self.reg_predictor_cfg = reg_predictor_cfg
         self.cls_predictor_cfg = cls_predictor_cfg
+        self.image_net_mlp = image_net_mlp
         self.fp16_enabled = False
 
         self.bbox_coder = build_bbox_coder(bbox_coder)
@@ -92,6 +94,14 @@ class ClassificationTransferBBoxHead(BaseModule):
                     dict(
                         type='Normal', std=0.001, override=dict(name='fc_reg'))
                 ]
+        if self.image_net_mlp != None:
+            self.image_net_mlp_layer = build_linear_layer(
+                self.cls_predictor_cfg,
+                in_features=2048,
+                out_features=1000)
+            whole_state_dict = _load_checkpoint(image_net_mlp.checkpoint)
+            new_state = {'weight':whole_state_dict['fc.weight'], 'bias':whole_state_dict['fc.bias']}
+            self.image_net_mlp_layer.load_state_dict(new_state)
 
     @property
     def custom_cls_channels(self):
@@ -108,8 +118,14 @@ class ClassificationTransferBBoxHead(BaseModule):
     @auto_fp16()
     def forward(self, x):
         if self.with_avg_pool:
-            x = self.avg_pool(x)
-        x = x.view(x.size(0), -1)
+            if self.image_net_mlp == None:
+                x = self.avg_pool(x)
+                x = x.view(x.size(0), -1)
+            else:
+                x = self.avg_pool(x)
+                x = x.view(x.size(0), -1)
+                x = self.image_net_mlp_layer(x)
+        
         cls_score = self.fc_cls(x) if self.with_cls else None
         bbox_pred = self.fc_reg(x) if self.with_reg else None
         return cls_score, bbox_pred
