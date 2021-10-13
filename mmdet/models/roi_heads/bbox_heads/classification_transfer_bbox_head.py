@@ -99,6 +99,10 @@ class ClassificationTransferBBoxHead(BaseModule):
                 self.cls_predictor_cfg,
                 in_features=2048,
                 out_features=1000)
+            if self.image_net_mlp['frozen_mlp_layer']:
+                for param in self.image_net_mlp_layer.parameters():
+                    param.requires_grad = False
+
             whole_state_dict = _load_checkpoint(image_net_mlp.checkpoint)
             new_state = {'weight':whole_state_dict['fc.weight'], 'bias':whole_state_dict['fc.bias']}
             self.image_net_mlp_layer.load_state_dict(new_state)
