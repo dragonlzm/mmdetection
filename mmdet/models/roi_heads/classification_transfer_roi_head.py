@@ -22,13 +22,19 @@ class ClassificationTransferRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                  test_cfg=None,
                  pretrained=None,
                  init_cfg=None,
-                 dim_reduction=None):
+                 dim_reduction=None,
+                 frozen_share_head=False):
         super(ClassificationTransferRoIHead, self).__init__(init_cfg)
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
+        self.frozen_share_head = frozen_share_head
         if shared_head is not None:
             shared_head.pretrained = pretrained
             self.shared_head = build_shared_head(shared_head)
+            if self.frozen_share_head:
+                for param in self.shared_head.parameters():
+                    param.requires_grad = False
+
 
         if bbox_head is not None:
             self.init_bbox_head(bbox_roi_extractor, bbox_head)

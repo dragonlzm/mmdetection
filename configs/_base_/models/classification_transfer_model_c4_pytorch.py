@@ -25,6 +25,7 @@ model = dict(
     roi_head=dict(
         type='ClassificationTransferRoIHead',
         #pretrained='open-mmlab://detectron2/resnet50_caffe',
+        frozen_share_head=True,
         shared_head=dict(
             type='ResLayer',
             depth=50,
