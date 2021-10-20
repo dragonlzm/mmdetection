@@ -325,7 +325,10 @@ class ClassificationTransferModel(BaseDetector):
                 gt_on_img[rb_y_mask, 3] = image_h - 1
 
         roi_losses = self.roi_head.forward_train(x, img_metas, proposal_list,
-                                                 gt_bboxes, gt_labels)
+                                                 gt_bboxes, gt_labels, confu_mat=True)
         losses.update(roi_losses)
 
-        return losses['acc']
+        #return losses['acc']
+        #return [(losses['acc'], losses['bbox_num'])]
+        return [(losses['acc'], losses['bbox_num'], losses['pred_label'], losses['gt_label'])]
+        #return [(losses['acc'], losses['bbox_num'], losses['pred_label'], losses['gt_label'], losses['topk_logit'])]

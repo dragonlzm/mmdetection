@@ -129,10 +129,23 @@ class ClassificationTransferBBoxHead(BaseModule):
                 x = self.avg_pool(x)
                 x = x.view(x.size(0), -1)
                 x = self.image_net_mlp_layer(x)
+                # clip the low activated value
+                mask = torch.zeros(x.shape)
+                for i in range(x.shape[0]):
+                    value, idx = torch.topk(x[i], 5)
+                    mask[i] = (x[i] > value[-1]).float()
+                x = x * mask.cuda()
+
+                # for experiments
+                if self.training == False:
+                    value, idx = torch.topk(x, 3)
         
         cls_score = self.fc_cls(x) if self.with_cls else None
         bbox_pred = self.fc_reg(x) if self.with_reg else None
-        return cls_score, bbox_pred
+        if self.training == False and (self.with_avg_pool and self.image_net_mlp != None):
+            return cls_score, bbox_pred, idx
+        else:
+            return cls_score, bbox_pred
         #return cls_score
 
     @force_fp32(apply_to=('cls_score', 'bbox_pred'))
@@ -140,7 +153,8 @@ class ClassificationTransferBBoxHead(BaseModule):
              cls_score,
              labels,
              label_weights,
-             reduction_override=None):
+             reduction_override=None,
+             confu_mat=False):
         losses = dict()
         if cls_score is not None:
             avg_factor = max(torch.sum(label_weights > 0).float().item(), 1.)
@@ -160,6 +174,26 @@ class ClassificationTransferBBoxHead(BaseModule):
                     losses.update(acc_)
                 else:
                     losses['acc'] = accuracy(cls_score, labels)
+
+        if confu_mat:
+            bbox_num = cls_score.shape[0]
+            losses['bbox_num'] = bbox_num
+            #cls_num = cls_score.shape[1]
+            #batch_size = cls_score.shape[0]
+            #confusion_mat_res = torch.zeros(cls_num,cls_num)
+            pred_list = []
+            gt_list = []
+            for i in range(bbox_num):
+                pred_label = cls_score[i].argmax().item()
+                gt_label = labels[i].item()
+
+                pred_list.append(pred_label)
+                gt_list.append(gt_label)
+            #    confusion_mat_res[gt_result][pred_label] += 1
+            #losses['confu_mat'] = confusion_mat_res
+            losses['pred_label'] = pred_list
+            losses['gt_label'] = gt_list
+
         return losses
 
     @force_fp32(apply_to=('cls_score', 'bbox_pred'))

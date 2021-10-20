@@ -94,7 +94,8 @@ class ClassificationTransferRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                       gt_bboxes,
                       gt_labels,
                       gt_bboxes_ignore=None,
-                      gt_masks=None):
+                      gt_masks=None,
+                      confu_mat=False):
         """
         Args:
             x (list[Tensor]): list of multi-level img features.
@@ -139,7 +140,9 @@ class ClassificationTransferRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         #if self.with_bbox:
         bbox_results = self._bbox_forward_train(x, proposal_list,
                                                 gt_bboxes, gt_labels,
-                                                img_metas)
+                                                img_metas, confu_mat=confu_mat)
+        if self.training == False and (self.bbox_head.with_avg_pool and self.bbox_head.image_net_mlp != None):
+            losses.update({'topk_logit':bbox_results['topk_logit']})
         losses.update(bbox_results['loss_bbox'])
 
         return losses
@@ -153,14 +156,19 @@ class ClassificationTransferRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             bbox_feats = self.shared_head(bbox_feats)
         if self.dim_reduction:
             bbox_feats = self.dim_redu_conv(bbox_feats)
-        cls_score, bbox_pred = self.bbox_head(bbox_feats)
+        
+        topk_logit = None
+        if self.training == False and (self.bbox_head.with_avg_pool and self.bbox_head.image_net_mlp != None):
+            cls_score, bbox_pred, topk_logit = self.bbox_head(bbox_feats)
+        else:
+            cls_score, bbox_pred = self.bbox_head(bbox_feats)
 
         bbox_results = dict(
-            cls_score=cls_score, bbox_pred=bbox_pred, bbox_feats=bbox_feats)
+            cls_score=cls_score, bbox_pred=bbox_pred, bbox_feats=bbox_feats, topk_logit=topk_logit)
         return bbox_results
 
     def _bbox_forward_train(self, x, sampling_results, gt_bboxes, gt_labels,
-                            img_metas):
+                            img_metas, confu_mat=False):
         """Run forward function and calculate loss for box head in training."""
         #rois = bbox2roi([res.bboxes for res in sampling_results])
         rois = bbox2roi([res for res in sampling_results])
@@ -172,7 +180,13 @@ class ClassificationTransferRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         label_weights = torch.cat(label_weights, 0).cuda()
         gt_labels = torch.cat(gt_labels, 0)
         loss_bbox = self.bbox_head.loss(bbox_results['cls_score'], gt_labels, 
-                                        label_weights)
+                                        label_weights, confu_mat=confu_mat)
+        if self.training == False:
+            pred_label_list = loss_bbox['pred_label']
+            gt_label_list = loss_bbox['gt_label']
+            for i, (pred_label, gt_label) in enumerate(zip(pred_label_list, gt_label_list)):
+                if pred_label == 0 and gt_label == 1:
+                    print(sampling_results[0][i], img_metas[0])
 
         bbox_results.update(loss_bbox=loss_bbox)
         return bbox_results
@@ -302,8 +316,8 @@ class ClassificationTransferRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             return [det_bbox] * batch_size, [det_label] * batch_size
 
         bbox_results = self._bbox_forward(x, rois)
-        img_shapes = tuple(meta['img_shape'] for meta in img_metas)
-        scale_factors = tuple(meta['scale_factor'] for meta in img_metas)
+        #img_shapes = tuple(meta['img_shape'] for meta in img_metas)
+        #scale_factors = tuple(meta['scale_factor'] for meta in img_metas)
 
         # split batch bbox prediction back to each image
         cls_score = bbox_results['cls_score']
