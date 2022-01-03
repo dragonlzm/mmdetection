@@ -1,0 +1,94 @@
+# use docker 
+https://www.tensorflow.org/install/docker
+
+##docker error
+https://github.com/NVIDIA/nvidia-docker/issues/1243
+
+
+https://www.cyberciti.biz/faq/ubuntu-linux-install-nvidia-driver-latest-proprietary-driver/
+
+sudo apt-get -o Dpkg::Options::="--force-overwrite" install -f nvidia-driver-450-server
+
+##test gpu available
+tf.test.is_gpu_available()
+
+# final command
+docker run --gpus all -it tensorflow/tensorflow:latest-gpu bash
+docker run --gpus all -itd -v /data2/lwll/zhuoming/:/nfs tensorflow/tensorflow:latest-gpu /bin/bash
+
+
+https://askubuntu.com/questions/1285472/ubuntu-18-04-broken-install-problem-with-libnvidia-common-450-package
+sudo apt-get -o Dpkg::Options::="--force-overwrite" install -f libnvidia-common-450-server
+
+c66edb878c42
+
+
+conda create -n tf-gpu tensorflow-gpu==2.3.1
+conda create -n tf-gpu tensorflow-gpu=2.1
+
+conda activate tf-gpu
+
+
+pip install pycocotools
+pip install lvis
+pip install opencv-python
+pip install PyYAML
+conda install tensorflow-estimator==2.1.0
+
+pip install numpy==1.21.1
+
+ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
+tensorflow 2.1.0 requires scipy==1.4.1; python_version >= "3", but you have scipy 1.7.1 which is incompatible.
+tensorflow 2.1.0 requires tensorboard<2.2.0,>=2.1.0, but you have tensorboard 2.4.0 which is incompatible.
+
+sudo bash /data2/lwll/zhuoming/code/tpu/tools/datasets/download_and_preprocess_coco.sh /data2/lwll/zhuoming/detection/coco
+
+
+
+
+conda create -n tf15 python=3.6 tensorflow-gpu==1.15
+conda create -n tf-gpu-newest tensorflow-gpu
+conda create -n torch-test pytorch=1.7.1 torchvision cudatoolkit=10.2 pipenv numpy pip 
+
+
+sudo apt-get install -y python-tk && \
+pip3 install --user Cython matplotlib opencv-python-headless pyyaml Pillow && \
+pip3 install --user 'git+https://github.com/cocodataset/cocoapi#egg=pycocotools&subdirectory=PythonAPI'
+
+
+pip3 install --user 'git+https://github.com/cocodataset/cocoapi#egg=pycocotools&subdirectory=PythonAPI'
+pip install --user 'git+https://github.com/cocodataset/cocoapi#egg=pycocotools&subdirectory=PythonAPI'
+????
+
+pip install mmcv-full==1.1.1 -f https://download.openmmlab.com/mmcv/dist/cu101/torch1.5.0/index.html
+pip install mmcv-full==1.3.17 -f https://download.openmmlab.com/mmcv/dist/cu114/torch1.7.1/index.html
+
+
+which -a pip
+conda create -n torch-test pytorch=1.7.1 torchvision cudatoolkit=10.2 numpy pip 
+
+conda install pytorch=1.7.1 torchvision cudatoolkit=10.2 -c pytorch
+
+/home/zhuoming/.conda/envs/pyt/bin/pip install mmcv-full==1.3.17 -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.10.0/index.html
+
+/home/zhuoming/.conda/envs/pyt/bin/pip install terminaltables
+
+bash tools/new_dist_train.sh configs/mask_rcnn/mask_rcnn_r50_fpn_1x_coco.py 4 /data2/lwll/zhuoming/detection/test /data2/lwll/zhuoming/detection
+
+bash tools/new_dist_train.sh configs/rpn/rpn_r50_caffe_c4_1x_coco.py 4 /data2/lwll/zhuoming/detection/test /data2/lwll/zhuoming/detection
+
+
+bash tools/new_dist_train.sh configs/rpn/rpn_r50_caffe_c4_1x_coco.py 2 /data2/lwll/zhuoming/detection/test /data2/lwll/zhuoming/detection
+
+bash tools/new_dist_train.sh configs/rpn/rpn_r50_fpn_1x_coco_train48_val17.py 2 /data2/lwll/zhuoming/detection/test/rpn_48_17 /data2/lwll/zhuoming/detection
+
+bash tools/new_dist_train.sh configs/rpn/rpn_r50_fpn_1x_coco_train48_val17.py 4 /data2/lwll/zhuoming/detection/test/rpn_48_17 /data2/lwll/zhuoming/detection --resume-from=/data2/lwll/zhuoming/detection/test/rpn_48_17/latest.pth
+
+/home/zhuoming/.conda/envs/pyt/bin/tensorboard --logdir . --bind_all --port=4000
+
+
+bash tools/new_dist_train.sh configs/fcos/fcos_r50_caffe_fpn_gn-head_1x_coco.py 4 /data2/lwll/zhuoming/detection/test/fcos_test /data2/lwll/zhuoming/detection 
+
+bash tools/new_dist_train.sh configs/fcos/fcos_r50_caffe_fpn_gn-head_1x_coco.py 2 /data2/lwll/zhuoming/detection/test/fcos_test /data2/lwll/zhuoming/detection
+
+bash tools/new_dist_train.sh configs/fcos/fcos_r50_caffe_fpn_gn-head_1x_coco.py 1 /data2/lwll/zhuoming/detection/test/fcos_test /data2/lwll/zhuoming/detection
