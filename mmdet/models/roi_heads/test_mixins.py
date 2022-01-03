@@ -4,7 +4,7 @@ import warnings
 
 import numpy as np
 import torch
-
+import math
 from mmdet.core import (bbox2roi, bbox_mapping, merge_aug_bboxes,
                         merge_aug_masks, multiclass_nms)
 
@@ -47,7 +47,7 @@ class BBoxTestMixin:
                 rescale=rescale,
                 cfg=rcnn_test_cfg)
             return det_bboxes, det_labels
-
+    '''
     def simple_test_bboxes(self,
                            x,
                            img_metas,
@@ -133,7 +133,85 @@ class BBoxTestMixin:
                     cfg=rcnn_test_cfg)
             det_bboxes.append(det_bbox)
             det_labels.append(det_label)
-        return det_bboxes, det_labels
+        return det_bboxes, det_labels'''
+
+    def simple_test_bboxes(self,
+                           x,
+                           img_metas,
+                           proposals,
+                           rcnn_test_cfg,
+                           rescale=False):
+        """Test only det bboxes without augmentation.
+
+        Args:
+            x (tuple[Tensor]): Feature maps of all scale level.
+            img_metas (list[dict]): Image meta info.
+            proposals (List[Tensor]): Region proposals.
+            rcnn_test_cfg (obj:`ConfigDict`): `test_cfg` of R-CNN.
+            rescale (bool): If True, return boxes in original image space.
+                Default: False.
+
+        Returns:
+            tuple[list[Tensor], list[Tensor]]: The first list contains
+                the boxes of the corresponding image in a batch, each
+                tensor has the shape (num_boxes, 5) and last dimension
+                5 represent (tl_x, tl_y, br_x, br_y, score). Each Tensor
+                in the second list is the labels with shape (num_boxes, ).
+                The length of both lists should be equal to batch_size.
+        """
+        # original
+        #rois = bbox2roi(proposals)
+        '''
+        # for gt reshaping
+        
+        scaled_bbox = []
+        for meta, proposal in zip(img_metas, proposals):
+            scale_factor = proposal.new_tensor(meta['scale_factor'])
+            bboxes = (proposal.view(proposal.size(0), -1, 4) * scale_factor).view(proposal.size()[0], -1)
+            scaled_bbox.append(bboxes)
+        rois = bbox2roi(scaled_bbox)'''
+
+        
+        # for patches feature
+        all_img_shape = [img_meta['img_shape'] for img_meta in img_metas]
+        # construct the grid proposal
+        grid_tensor_list = []
+        w_grid_num = 4
+        h_grid_num = 4
+        for this_shape in all_img_shape:
+            grid_for_one_img = []
+            h, w, c = this_shape
+            w_grid_size = w / w_grid_num
+            h_grid_size = h / h_grid_num
+            for w_idx in range(w_grid_num):
+                for h_idx in range(h_grid_num):
+                    now_grid = torch.tensor([[w_idx * w_grid_size, h_idx * h_grid_size, (w_idx + 1) * w_grid_size, (h_idx + 1) * h_grid_size]]).cuda()
+                    grid_for_one_img.append(now_grid)
+            grid_tensor = torch.cat(grid_for_one_img, dim=0)
+            grid_tensor_list.append(grid_tensor)
+        rois = bbox2roi(grid_tensor_list)
+
+        if rois.shape[0] == 0:
+            batch_size = len(proposals)
+            det_bbox = rois.new_zeros(0, 5)
+            det_label = rois.new_zeros((0, ), dtype=torch.long)
+            if rcnn_test_cfg is None:
+                det_bbox = det_bbox[:, :4]
+                det_label = rois.new_zeros(
+                    (0, self.bbox_head.fc_cls.out_features))
+            # There is no proposal in the whole batch
+            return [det_bbox] * batch_size, [det_label] * batch_size
+
+        bbox_results = self._bbox_forward(x, rois)
+        #img_shapes = tuple(meta['img_shape'] for meta in img_metas)
+        #scale_factors = tuple(meta['scale_factor'] for meta in img_metas)
+
+        # split batch bbox prediction back to each image
+        #cls_score = bbox_results['cls_score']
+        #bbox_pred = bbox_results['bbox_pred']
+        
+        return [bbox_results]
+
 
     def aug_test_bboxes(self, feats, img_metas, proposal_list, rcnn_test_cfg):
         """Test det bboxes with test time augmentation."""
