@@ -36,6 +36,9 @@ class NEWRPN(BaseDetector):
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
 
+    def crop_img_to_patches(self, img, w_num, h_num):
+
+
     def extract_feat(self, img):
         """Extract features.
 
@@ -46,9 +49,20 @@ class NEWRPN(BaseDetector):
             list[torch.Tensor]: Multi-level features that may have
                 different resolutions.
         """
+        bs = img.shape[0]
+        
+        # crop the img into the patches (a function to convert the img)
+        
+        # the normalize and reshape the patches 
+
+        # convert dimension from [bs, 64, 224, 224] to [bs*64, 224, 224]
+
+        # the input of the vision transformer should be torch.Size([64, 3, 224, 224])
         x = self.backbone(img)
         if self.with_neck:
             x = self.neck(x)
+        # convert the feature [bs*64, 512] to [bs, 64, 512]
+        x = x.view(bs, -1, x.shape[-1])
         return x
 
     def forward_dummy(self, img):
