@@ -1,9 +1,10 @@
 # model settings
 model = dict(
     type='NEWRPN',
+    patches_list=[8],
+    neck=None,
     backbone=dict(
         type='myVisionTransformer',
-        patches_list=[8],
         input_resolution=224,
         patch_size=32,
         width=768,
