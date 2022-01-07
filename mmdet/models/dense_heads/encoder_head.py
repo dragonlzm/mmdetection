@@ -59,6 +59,7 @@ class EncoderHead(AnchorFreeHead):
                  num_classes,
                  in_channels,
                  #num_query=100,
+                 patches_list=[8],
                  num_reg_fcs=2,
                  #transformer=None,
                  encoder=None,
@@ -86,7 +87,7 @@ class EncoderHead(AnchorFreeHead):
                          reg_cost=dict(type='BBoxL1Cost', weight=5.0),
                          iou_cost=dict(
                              type='IoUCost', iou_mode='giou', weight=2.0))),
-                 test_cfg=dict(max_per_img=100),
+                 test_cfg=None,
                  init_cfg=None,
                  **kwargs):
         # NOTE here use `AnchorFreeHead` instead of `TransformerHead`,
@@ -158,6 +159,7 @@ class EncoderHead(AnchorFreeHead):
         self.encoder = build_transformer_layer_sequence(encoder)
         #self.embed_dims = self.transformer.embed_dims
         self.embed_dims = self.encoder.embed_dims
+        self.patches_list = patches_list
         assert 'num_feats' in positional_encoding
         num_feats = positional_encoding['num_feats']
         assert num_feats * 2 == self.embed_dims, 'embed_dims should' \
@@ -179,15 +181,20 @@ class EncoderHead(AnchorFreeHead):
             add_residual=False)
         self.fc_reg = Linear(self.embed_dims, 4)
         #self.query_embedding = nn.Embedding(self.num_query, self.embed_dims)
-
-    def init_weights(self):
-        """Initialize weights of the transformer head."""
-        # The initialization for transformer is important
-        # self.transformer.init_weights()
         for m in self.encoder.modules():
             if hasattr(m, 'weight') and m.weight.dim() > 1:
                 xavier_init(m, distribution='uniform')
         self._is_init = True
+
+
+    #def init_weights(self):
+    #    """Initialize weights of the transformer head."""
+        # The initialization for transformer is important
+        # self.transformer.init_weights()
+    #    for m in self.encoder.modules():
+    #        if hasattr(m, 'weight') and m.weight.dim() > 1:
+    #            xavier_init(m, distribution='uniform')
+    #    self._is_init = True
 
     def _load_from_state_dict(self, state_dict, prefix, local_metadata, strict,
                               missing_keys, unexpected_keys, error_msgs):
@@ -239,8 +246,11 @@ class EncoderHead(AnchorFreeHead):
                     normalized coordinate format (cx, cy, w, h) and shape \
                     [nb_dec, bs, num_query, 4].
         """
-        num_levels = len(feats)
-        img_metas_list = [img_metas for _ in range(num_levels)]
+        #num_levels = len(feats)
+        #img_metas_list = [img_metas for _ in range(num_levels)]
+
+        feats = [feats]
+        img_metas_list = [img_metas]
         return multi_apply(self.forward_single, feats, img_metas_list)
 
     def forward_single(self, x, img_metas):
@@ -263,26 +273,35 @@ class EncoderHead(AnchorFreeHead):
         # NOTE following the official DETR repo, non-zero values representing
         # ignored positions, while zero values means valid positions.
         batch_size = x.size(0)
-        input_img_h, input_img_w = img_metas[0]['batch_input_shape']
-        masks = x.new_ones((batch_size, input_img_h, input_img_w))
-        for img_id in range(batch_size):
-            img_h, img_w, _ = img_metas[img_id]['img_shape']
-            masks[img_id, :img_h, :img_w] = 0
+        
+        #input_img_h, input_img_w = img_metas[0]['batch_input_shape']
+        #masks = x.new_ones((batch_size, input_img_h, input_img_w))
+        masks = x.new_ones((batch_size, self.patches_list[0], self.patches_list[0]))
+        #for img_id in range(batch_size):
+        #    img_h, img_w, _ = img_metas[img_id]['img_shape']
+        #    masks[img_id, :img_h, :img_w] = 0
 
-        x = self.input_proj(x)
-        # interpolate masks to have the same spatial shape with x
-        masks = F.interpolate(
-            masks.unsqueeze(1), size=x.shape[-2:]).to(torch.bool).squeeze(1)
+        #x = self.input_proj(x)
+        # interpolate masks to have the same spatial shape with x 
+        # x = [bs, c, h, w]
+        # masks = [batch_size, input_img_h, input_img_w] 
+        # the interpolate convert mask from [batch_size, input_img_h, input_img_w] to [bs, h, w]
+        # masks = F.interpolate(
+        #    masks.unsqueeze(1), size=x.shape[-2:]).to(torch.bool).squeeze(1)
         # position encoding
         pos_embed = self.positional_encoding(masks)  # [bs, embed_dim, h, w]
         # outs_dec: [nb_dec, bs, num_query, embed_dim]
         #outs_dec, _ = self.transformer(x, masks, self.query_embedding.weight,
         #                               pos_embed)
         # for encoder procedure
-        bs, c, h, w = x.shape
+        #bs, c, h, w = x.shape
+        bs, p_num, v_dim = x.shape
         # use `view` instead of `flatten` for dynamically exporting to ONNX
-        x = x.view(bs, c, -1).permute(2, 0, 1)  # [bs, c, h, w] -> [h*w, bs, c]
-        pos_embed = pos_embed.view(bs, c, -1).permute(2, 0, 1)
+        #x = x.view(bs, c, -1).permute(2, 0, 1)  # [bs, c, h, w] -> [h*w, bs, c]
+        # from [bs,64,512] to [64,bs,512]
+        x = x.permute(1, 0, 2)
+
+        pos_embed = pos_embed.view(bs, p_num, -1).permute(1, 0, 2)
         masks = masks.view(bs, -1)  # [bs, h, w] -> [bs, h*w]
         outs_dec = self.encoder(
             query=x,
@@ -290,7 +309,6 @@ class EncoderHead(AnchorFreeHead):
             value=None,
             query_pos=pos_embed,
             query_key_padding_mask=masks)
-
 
         all_cls_scores = self.fc_cls(outs_dec)
         all_bbox_preds = self.fc_reg(self.activate(
@@ -701,7 +719,7 @@ class EncoderHead(AnchorFreeHead):
         """
         assert len(cls_score) == len(bbox_pred)
         #max_per_img = self.test_cfg.get('max_per_img', self.num_query)
-        max_per_img = ?
+        max_per_img = sum([ele * ele for ele in self.patches_list])
         # exclude background
         if self.loss_cls.use_sigmoid:
             cls_score = cls_score.sigmoid()
@@ -857,7 +875,7 @@ class EncoderHead(AnchorFreeHead):
         # is used.
         img_shape = img_metas[0]['img_shape_for_onnx']
         #max_per_img = self.test_cfg.get('max_per_img', self.num_query)
-        max_per_img = ?
+        max_per_img = sum([ele * ele for ele in self.patches_list])
         batch_size = cls_scores.size(0)
         # `batch_index_offset` is used for the gather of concatenated tensor
         batch_index_offset = torch.arange(batch_size).to(

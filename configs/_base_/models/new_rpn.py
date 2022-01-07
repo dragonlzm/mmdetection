@@ -3,6 +3,7 @@ model = dict(
     type='NEWRPN',
     backbone=dict(
         type='myVisionTransformer',
+        patches_list=[8],
         input_resolution=224,
         patch_size=32,
         width=768,
@@ -14,6 +15,7 @@ model = dict(
         type='EncoderHead',
         num_classes=1,
         in_channels=512,
+        patches_list=[8],
         encoder=dict(
             type='DetrTransformerEncoder',
             num_layers=6,
@@ -50,4 +52,4 @@ model = dict(
             cls_cost=dict(type='ClassificationCost', weight=1.),
             reg_cost=dict(type='BBoxL1Cost', weight=5.0, box_format='xywh'),
             iou_cost=dict(type='IoUCost', iou_mode='giou', weight=2.0))),
-    test_cfg=dict(max_per_img=100))
+            )
