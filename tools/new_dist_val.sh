@@ -7,8 +7,8 @@ DATA_DIR=$4
 
 PORT=${PORT:-29500}
 
-rm -rf /mmdetection/data
-ln -sf ${DATA_DIR} /mmdetection/data
+rm -rf ./data
+ln -sf ${DATA_DIR} ./data
 
 PYTHONPATH="$(dirname $0)/..":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=$GPUS --master_port=$PORT \
