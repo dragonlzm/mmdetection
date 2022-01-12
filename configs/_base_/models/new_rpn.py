@@ -1,7 +1,8 @@
 # model settings
 model = dict(
     type='NEWRPN',
-    patches_list=[8],
+    #patches_list=[8],
+    patches_list=[2, 4, 6],
     neck=None,
     backbone=dict(
         type='myVisionTransformer',
@@ -11,12 +12,16 @@ model = dict(
         layers=12,
         heads=12,
         output_dim=512,
-        init_cfg=dict(type='Pretrained', checkpoint="https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt")),
+        #init_cfg=dict(type='Pretrained', checkpoint="https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt")),
+        init_cfg=dict(type='Pretrained', checkpoint="/data2/lwll/zhuoming/code/new_rpn/mmdetection/modified_state_dict.pth"),
+        fixed_param=True),
+
     rpn_head=dict(
         type='EncoderHead',
         num_classes=1,
         in_channels=512,
-        patches_list=[8],
+        #patches_list=[8],
+        patches_list=[2, 4, 6],
         encoder=dict(
             type='DetrTransformerEncoder',
             num_layers=6,
@@ -29,7 +34,7 @@ model = dict(
                         num_heads=8,
                         dropout=0.1)
                 ],
-                feedforward_channels=2048,
+                feedforward_channels=512,
                 ffn_dropout=0.1,
                 operation_order=('self_attn', 'norm', 'ffn', 'norm'))),
         positional_encoding=dict(
@@ -46,11 +51,13 @@ model = dict(
             loss_weight=1.0),
         loss_bbox=dict(type='L1Loss', loss_weight=5.0),
         loss_iou=dict(type='GIoULoss', loss_weight=2.0)),
-    # training and testing settings
     train_cfg=dict(
-        assigner=dict(
-            type='HungarianAssigner',
-            cls_cost=dict(type='ClassificationCost', weight=1.),
-            reg_cost=dict(type='BBoxL1Cost', weight=5.0, box_format='xywh'),
-            iou_cost=dict(type='IoUCost', iou_mode='giou', weight=2.0))),
+        rpn_head=dict(
+            assigner=dict(
+                type='HungarianAssigner',
+                cls_cost=dict(type='ClassificationCost', weight=1.),
+                reg_cost=dict(type='BBoxL1Cost', weight=5.0, box_format='xywh'),
+                iou_cost=dict(type='IoUCost', iou_mode='giou', weight=2.0))
+                )
             )
+        )

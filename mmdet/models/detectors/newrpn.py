@@ -50,44 +50,51 @@ class NEWRPN(BaseDetector):
             backbone.pretrained = pretrained
         self.backbone = build_backbone(backbone)
         self.neck = build_neck(neck) if neck is not None else None
-        rpn_train_cfg = train_cfg.rpn if train_cfg is not None else None
+        #rpn_train_cfg = train_cfg.rpn if train_cfg is not None else None
+        rpn_train_cfg = train_cfg.get('rpn_head', None) if train_cfg is not None else None
+        rpn_test_cfg = test_cfg.get('rpn_head', None) if test_cfg is not None else None
         rpn_head.update(train_cfg=rpn_train_cfg)
-        rpn_head.update(test_cfg=test_cfg.rpn)
+        rpn_head.update(test_cfg=rpn_test_cfg)
         self.rpn_head = build_head(rpn_head)
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
         self.preprocess = _transform(self.backbone.input_resolution)
         self.patches_list = patches_list
 
-    def crop_img_to_patches(self, img, img_metas, w_patch_num, h_patch_num):
+    def crop_img_to_patches(self, img, img_metas, w_patch_num_list, h_patch_num_list):
         bs, c, _, _ = img.shape
-        #'img_shape': (800, 1067, 3)
+        #'img_shape':  torch.Size([2, 3, 800, 1184])
+        # what we need is [800, 1184, 3]
+        img = img.permute(0, 2, 3, 1)
+
         result = []
         for img_id in range(bs):
-            
-            H, W, channel = img_metas[img_id]['img_shape']
-            patch_H, patch_W = H / h_patch_num, W / w_patch_num
-            h_pos = [int(patch_H) * i for i in range(h_patch_num + 1)]
-            w_pos = [int(patch_W) * i for i in range(w_patch_num + 1)]
+            for h_patch_num, w_patch_num in zip(h_patch_num_list, w_patch_num_list):
+                H, W, channel = img_metas[img_id]['img_shape']
+                patch_H, patch_W = H / h_patch_num, W / w_patch_num
+                h_pos = [int(patch_H) * i for i in range(h_patch_num + 1)]
+                w_pos = [int(patch_W) * i for i in range(w_patch_num + 1)]
 
-            for i in range(h_patch_num):
-                h_start_pos = h_pos[i]
-                h_end_pos = h_pos[i+1]
-                for j in range(w_patch_num):
-                    w_start_pos = w_pos[j]
-                    w_end_pos = w_pos[j+1]
-                    # cropping the img into the patches which size is (H/8) * (W/8)
-                    # use the numpy to crop the image
-                    now_patch = img[h_start_pos: h_end_pos, w_start_pos: w_end_pos, :]
-                    PIL_image = Image.fromarray(np.uint8(now_patch))
-                    # do the preprocessing
-                    new_patch = self.preprocess(PIL_image)
+                for i in range(h_patch_num):
+                    h_start_pos = h_pos[i]
+                    h_end_pos = h_pos[i+1]
+                    for j in range(w_patch_num):
+                        w_start_pos = w_pos[j]
+                        w_end_pos = w_pos[j+1]
+                        # cropping the img into the patches which size is (H/8) * (W/8)
+                        # use the numpy to crop the image
+                        # img shape: torch.Size([2, 3, 800, 1088])
+                        now_patch = img[img_id, h_start_pos: h_end_pos, w_start_pos: w_end_pos, :]
+                        PIL_image = Image.fromarray(np.uint8(now_patch))
+                        # do the preprocessing
+                        new_patch = self.preprocess(PIL_image)
 
-                    #new_patch, w_scale, h_scale = mmcv.imresize(now_patch, (224, 224), return_scale=True)
-                    #result.append(np.expand_dims(new_patch, axis=0))
-                    result.append(new_patch.unsqueeze(dim=0))
+                        #new_patch, w_scale, h_scale = mmcv.imresize(now_patch, (224, 224), return_scale=True)
+                        #result.append(np.expand_dims(new_patch, axis=0))
+                        result.append(new_patch.unsqueeze(dim=0))
 
         #cropped_patches = np.concatenate(result, axis=0)
+        # the shape of the cropped_patches: torch.Size([bs*sum([ele**2 for ele in w_patch_num_list]), 3, 224, 224])
         cropped_patches = torch.cat(result, dim=0).cuda()
         return cropped_patches
 
@@ -110,13 +117,13 @@ class NEWRPN(BaseDetector):
         
         # crop the img into the patches with normalization and reshape
         # (a function to convert the img)
-        converted_img_patches = self.crop_img_to_patches(img, img_metas, self.patches_list[0], self.patches_list[0])
+        converted_img_patches = self.crop_img_to_patches(img.cpu(), img_metas, self.patches_list, self.patches_list)
 
         # convert dimension from [bs, 64, 224, 224] to [bs*64, 224, 224]
-        converted_img_patches = converted_img_patches.view(bs, -1, self.backbone.input_resolution, self.backbone.input_resolution)
+        #converted_img_patches = converted_img_patches.view(bs, -1, self.backbone.input_resolution, self.backbone.input_resolution)
 
         # the input of the vision transformer should be torch.Size([64, 3, 224, 224])
-        x = self.backbone(img)
+        x = self.backbone(converted_img_patches)
         if self.with_neck:
             x = self.neck(x)
         # convert the feature [bs*64, 512] to [bs, 64, 512]
@@ -133,7 +140,8 @@ class NEWRPN(BaseDetector):
                       img,
                       img_metas,
                       gt_bboxes=None,
-                      gt_bboxes_ignore=None):
+                      gt_bboxes_ignore=None,
+                      gt_labels=None):
         """
         Args:
             img (Tensor): Input images of shape (N, C, H, W).
@@ -151,12 +159,12 @@ class NEWRPN(BaseDetector):
         Returns:
             dict[str, Tensor]: A dictionary of loss components.
         """
-        if (isinstance(self.train_cfg.rpn, dict)
-                and self.train_cfg.rpn.get('debug', False)):
-            self.rpn_head.debug_imgs = tensor2imgs(img)
+        #if (isinstance(self.train_cfg.rpn, dict)
+        #        and self.train_cfg.rpn.get('debug', False)):
+        #    self.rpn_head.debug_imgs = tensor2imgs(img)
 
         x = self.extract_feat(img, img_metas)
-        losses = self.rpn_head.forward_train(x, img_metas, gt_bboxes, None,
+        losses = self.rpn_head.forward_train(x, img_metas, gt_bboxes, gt_labels,
                                              gt_bboxes_ignore)
         return losses
 
@@ -177,14 +185,14 @@ class NEWRPN(BaseDetector):
         if torch.onnx.is_in_onnx_export():
             img_shape = torch._shape_as_tensor(img)[2:]
             img_metas[0]['img_shape_for_onnx'] = img_shape
-        proposal_list = self.rpn_head.simple_test_bboxes(x, img_metas)
-        if rescale:
-            for proposals, meta in zip(proposal_list, img_metas):
-                proposals[:, :4] /= proposals.new_tensor(meta['scale_factor'])
+        proposal_list = self.rpn_head.simple_test_bboxes(x, img_metas, rescale)
+        #if rescale:
+        #    for proposals, meta in zip(proposal_list, img_metas):
+        #        proposals[:, :4] /= proposals.new_tensor(meta['scale_factor'])
         if torch.onnx.is_in_onnx_export():
             return proposal_list
 
-        return [proposal[0].cpu().numpy() for proposal in proposal_list]
+        return [proposal.cpu().numpy() for proposal in proposal_list]
 
     def aug_test(self, imgs, img_metas, rescale=False):
         """Test function with test time augmentation.

@@ -26,7 +26,10 @@ test_pipeline = [
             #dict(type='Normalize', **img_norm_cfg),
             dict(type='Pad', size_divisor=32),
             dict(type='ImageToTensor', keys=['img']),
-            dict(type='Collect', keys=['img']),
+            dict(type='Collect', keys=['img'], 
+                    meta_keys=('filename', 'ori_filename', 'ori_shape',
+                            'img_shape', 'pad_shape', 'scale_factor', 'flip',
+                            'flip_direction')),
         ])
 ]
 
@@ -34,3 +37,14 @@ data = dict(train=dict(pipeline=train_pipeline),
             val=dict(pipeline=test_pipeline),
             test=dict(pipeline=test_pipeline))
 evaluation = dict(interval=1, metric='proposal_fast')
+
+optimizer = dict(
+    _delete_=True,
+    type='AdamW',
+    lr=0.0001,
+    weight_decay=0.0001,
+    paramwise_cfg=dict(
+        custom_keys={'backbone': dict(lr_mult=0.1, decay_mult=1.0)}))
+optimizer_config = dict(_delete_=True, grad_clip=dict(max_norm=0.1, norm_type=2))
+lr_config = dict(_delete_=True, policy='step', step=[8, 11])
+

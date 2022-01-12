@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+from pickle import FALSE
 import warnings
 from collections import OrderedDict
 from typing import Tuple, Union
@@ -9,9 +10,10 @@ import torch.nn as nn
 from ..builder import BACKBONES
 import numpy as np
 import torch
+from mmcv.runner import BaseModule
 
 
-class Bottleneck(nn.Module):
+class Bottleneck(BaseModule):
     expansion = 4
 
     def __init__(self, inplanes, planes, stride=1):
@@ -57,7 +59,7 @@ class Bottleneck(nn.Module):
         return out
 
 
-class AttentionPool2d(nn.Module):
+class AttentionPool2d(BaseModule):
     def __init__(self, spacial_dim: int, embed_dim: int, num_heads: int, output_dim: int = None):
         super().__init__()
         self.positional_embedding = nn.Parameter(torch.randn(spacial_dim ** 2 + 1, embed_dim) / embed_dim ** 0.5)
@@ -94,7 +96,7 @@ class AttentionPool2d(nn.Module):
         return x[0]
 
 
-class ModifiedResNet(nn.Module):
+class ModifiedResNet(BaseModule):
     """
     A ResNet class that is similar to torchvision's but contains the following changes:
     - There are now 3 "stem" convolutions as opposed to 1, with an average pool instead of a max pool.
@@ -163,12 +165,12 @@ class LayerNorm(nn.LayerNorm):
         return ret.type(orig_type)
 
 
-class QuickGELU(nn.Module):
+class QuickGELU(BaseModule):
     def forward(self, x: torch.Tensor):
         return x * torch.sigmoid(1.702 * x)
 
 
-class ResidualAttentionBlock(nn.Module):
+class ResidualAttentionBlock(BaseModule):
     def __init__(self, d_model: int, n_head: int, attn_mask: torch.Tensor = None):
         super().__init__()
 
@@ -192,7 +194,7 @@ class ResidualAttentionBlock(nn.Module):
         return x
 
 
-class Transformer(nn.Module):
+class Transformer(BaseModule):
     def __init__(self, width: int, layers: int, heads: int, attn_mask: torch.Tensor = None):
         super().__init__()
         self.width = width
@@ -204,9 +206,9 @@ class Transformer(nn.Module):
 
 
 @BACKBONES.register_module()
-class myVisionTransformer(nn.Module):
-    def __init__(self, input_resolution: int, patch_size: int, width: int, layers: int, heads: int, output_dim: int):
-        super().__init__()
+class myVisionTransformer(BaseModule):
+    def __init__(self, input_resolution: int, patch_size: int, width: int, layers: int, heads: int, output_dim: int, init_cfg: dict, fixed_param=FALSE):
+        super(myVisionTransformer, self).__init__(init_cfg)
         self.input_resolution = input_resolution
         self.output_dim = output_dim
         self.conv1 = nn.Conv2d(in_channels=3, out_channels=width, kernel_size=patch_size, stride=patch_size, bias=False)
@@ -220,6 +222,16 @@ class myVisionTransformer(nn.Module):
 
         self.ln_post = LayerNorm(width)
         self.proj = nn.Parameter(scale * torch.randn(width, output_dim))
+        self.init_cfg = init_cfg
+        #self.init_weights()
+        self.fixed_param = fixed_param
+        if self.fixed_param == True:
+            self.fix_model_parameter()
+    
+    def fix_model_parameter(self):
+        for param in self.parameters():
+            param.requires_grad = False
+        print('backbone parameters are fixed')
 
     def forward(self, x: torch.Tensor):
         x = self.conv1(x)  # shape = [*, width, grid, grid]

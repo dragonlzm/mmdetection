@@ -13,7 +13,7 @@ from mmcv.cnn.bricks.transformer import (BaseTransformerLayer,
                                          build_transformer_layer_sequence)
 
 from mmdet.core import (bbox_cxcywh_to_xyxy, bbox_xyxy_to_cxcywh,
-                        build_assigner, build_sampler, multi_apply,
+                        build_assigner, build_sampler, mask, multi_apply,
                         reduce_mean)
 from mmdet.models.utils import build_transformer
 from ..builder import HEADS, build_loss
@@ -133,7 +133,7 @@ class EncoderHead(AnchorFreeHead):
             sampler_cfg = dict(type='PseudoSampler')
             self.sampler = build_sampler(sampler_cfg, context=self)
         #self.num_query = num_query
-        self.num_classes = num_classes
+        self.num_class = num_classes
         self.in_channels = in_channels
         self.num_reg_fcs = num_reg_fcs
         self.train_cfg = train_cfg
@@ -171,6 +171,7 @@ class EncoderHead(AnchorFreeHead):
         """Initialize layers of the transformer head."""
         #self.input_proj = Conv2d(
         #    self.in_channels, self.embed_dims, kernel_size=1)
+        self.input_proj = Linear(self.in_channels, self.embed_dims)
         self.fc_cls = Linear(self.embed_dims, self.cls_out_channels)
         self.reg_ffn = FFN(
             self.embed_dims,
@@ -181,20 +182,15 @@ class EncoderHead(AnchorFreeHead):
             add_residual=False)
         self.fc_reg = Linear(self.embed_dims, 4)
         #self.query_embedding = nn.Embedding(self.num_query, self.embed_dims)
+
+    def init_weights(self):
+        """Initialize weights of the transformer head."""
+        # The initialization for transformer is important
+        # self.transformer.init_weights()
         for m in self.encoder.modules():
             if hasattr(m, 'weight') and m.weight.dim() > 1:
                 xavier_init(m, distribution='uniform')
         self._is_init = True
-
-
-    #def init_weights(self):
-    #    """Initialize weights of the transformer head."""
-        # The initialization for transformer is important
-        # self.transformer.init_weights()
-    #    for m in self.encoder.modules():
-    #        if hasattr(m, 'weight') and m.weight.dim() > 1:
-    #            xavier_init(m, distribution='uniform')
-    #    self._is_init = True
 
     def _load_from_state_dict(self, state_dict, prefix, local_metadata, strict,
                               missing_keys, unexpected_keys, error_msgs):
@@ -276,7 +272,10 @@ class EncoderHead(AnchorFreeHead):
         
         #input_img_h, input_img_w = img_metas[0]['batch_input_shape']
         #masks = x.new_ones((batch_size, input_img_h, input_img_w))
-        masks = x.new_ones((batch_size, self.patches_list[0], self.patches_list[0]))
+        #masks = x.new_ones((batch_size, self.patches_list[0], self.patches_list[0]))
+        #masks = torch.zeros(batch_size, self.patches_list[0], self.patches_list[0]).cuda()
+        masks_list = [torch.zeros(batch_size, ele, ele).cuda() for ele in self.patches_list]
+
         #for img_id in range(batch_size):
         #    img_h, img_w, _ = img_metas[img_id]['img_shape']
         #    masks[img_id, :img_h, :img_w] = 0
@@ -289,20 +288,43 @@ class EncoderHead(AnchorFreeHead):
         # masks = F.interpolate(
         #    masks.unsqueeze(1), size=x.shape[-2:]).to(torch.bool).squeeze(1)
         # position encoding
-        pos_embed = self.positional_encoding(masks)  # [bs, embed_dim, h, w]
+        #pos_embed = self.positional_encoding(masks)  # [bs, embed_dim, h, w]
+        pos_embed_list = [self.positional_encoding(mask) for mask in masks_list]  # [bs, embed_dim, h, w]
+
         # outs_dec: [nb_dec, bs, num_query, embed_dim]
         #outs_dec, _ = self.transformer(x, masks, self.query_embedding.weight,
         #                               pos_embed)
         # for encoder procedure
         #bs, c, h, w = x.shape
-        bs, p_num, v_dim = x.shape
         # use `view` instead of `flatten` for dynamically exporting to ONNX
         #x = x.view(bs, c, -1).permute(2, 0, 1)  # [bs, c, h, w] -> [h*w, bs, c]
         # from [bs,64,512] to [64,bs,512]
         x = x.permute(1, 0, 2)
+        x = self.input_proj(x)
+        hw, bs, v_dim = x.shape
+        #print('x.shape', x.shape, 'pos_embed.shape', pos_embed.shape)
 
-        pos_embed = pos_embed.view(bs, p_num, -1).permute(1, 0, 2)
-        masks = masks.view(bs, -1)  # [bs, h, w] -> [bs, h*w]
+        # concat the all the masks and all the pos_embed
+        if len(masks_list) == 0:
+            pos_embed = pos_embed_list[0]
+            masks = masks_list[0]
+            pos_embed = pos_embed.view(bs, v_dim, -1).permute(2, 0, 1)
+            masks = masks.view(bs, -1)  # [bs, h, w] -> [bs, h*w]
+        else:
+            # [(bs, embed_dim, 2, 2), (bs, embed_dim, 4, 4), (bs, embed_dim, 6, 6)]
+            # => [(bs, embed_dim, 4), (bs, embed_dim, 16), (bs, embed_dim, 36)]
+            pos_embed_list = [ele.view(bs, v_dim, -1) for ele in pos_embed_list]
+            # => (bs, embed_dim, 56)
+            pos_embed = torch.cat(pos_embed_list, dim=-1)
+            # => (56, bs, embed_dim)
+            pos_embed = pos_embed.permute(2, 0, 1)
+            # [(bs, 2, 2), (bs, 4, 4), (bs, 6, 6)]
+            # => [(bs, 4), (bs, 16), (bs, 36)]
+            masks_list = [ele.view(bs, -1) for ele in masks_list]
+            # => [(bs, 56)]
+            masks = torch.cat(masks_list, dim=-1)
+            
+        # outs_dec torch.Size([64, 2, 256])
         outs_dec = self.encoder(
             query=x,
             key=None,
@@ -348,8 +370,9 @@ class EncoderHead(AnchorFreeHead):
             dict[str, Tensor]: A dictionary of loss components.
         """
         # NOTE defaultly only the outputs from the last feature scale is used.
-        all_cls_scores = all_cls_scores_list[-1]
-        all_bbox_preds = all_bbox_preds_list[-1]
+        # convert from [hw, bs, 1] to [bs, hw, 1], the len of the list is 1 with only ele with the size [bs, hw, 1]
+        all_cls_scores = [all_cls_scores_list[-1].permute([1, 0, 2])]
+        all_bbox_preds = [all_bbox_preds_list[-1].permute([1, 0, 2])]
         assert gt_bboxes_ignore is None, \
             'Only supports for gt_bboxes_ignore setting to None.'
 
@@ -569,7 +592,7 @@ class EncoderHead(AnchorFreeHead):
         num_bboxes = bbox_pred.size(0)
         # prepare the GT label for the assigner
         if gt_labels is None:
-            gt_labels = torch.zeros(gt_bboxes.shape[0])
+            gt_labels = torch.zeros(gt_bboxes.shape[0]).long().cuda()
 
         # assigner and sampler
         assign_result = self.assigner.assign(bbox_pred, cls_score, gt_bboxes,
@@ -582,7 +605,7 @@ class EncoderHead(AnchorFreeHead):
 
         # label targets
         labels = gt_bboxes.new_full((num_bboxes, ),
-                                    self.num_classes,
+                                    self.num_class,
                                     dtype=torch.long)
         labels[pos_inds] = gt_labels[sampling_result.pos_assigned_gt_inds]
         label_weights = gt_bboxes.new_ones(num_bboxes)
@@ -631,6 +654,13 @@ class EncoderHead(AnchorFreeHead):
         Returns:
             dict[str, Tensor]: A dictionary of loss components.
         """
+        #out: <class 'tuple'>
+        #out = (all_cls_scores_list, all_bbox_preds_list)
+        #all_cls_scores_list: 1
+        #all_bbox_preds_list: 1
+        #ele in all_cls_scores_list: torch.Size([64, 2, 1])
+        #ele in all_bbox_preds_list: torch.Size([64, 2, 4])
+
         assert proposal_cfg is None, '"proposal_cfg" must be None'
         outs = self(x, img_metas)
         if gt_labels is None:
@@ -670,8 +700,12 @@ class EncoderHead(AnchorFreeHead):
         """
         # NOTE defaultly only using outputs from the last feature level,
         # and only the outputs from the last decoder layer is used.
-        cls_scores = all_cls_scores_list[-1][-1]
-        bbox_preds = all_bbox_preds_list[-1][-1]
+        #cls_scores = all_cls_scores_list[-1][-1]
+        #bbox_preds = all_bbox_preds_list[-1][-1]
+        # convert from [hw, bs, 1] to [bs, hw, 1], the len of the list is 1 with only ele with the size [bs, hw, 1]
+        cls_scores = all_cls_scores_list[-1].permute([1, 0, 2])
+        bbox_preds = all_bbox_preds_list[-1].permute([1, 0, 2])
+
 
         result_list = []
         for img_id in range(len(img_metas)):
@@ -724,14 +758,14 @@ class EncoderHead(AnchorFreeHead):
         if self.loss_cls.use_sigmoid:
             cls_score = cls_score.sigmoid()
             scores, indexes = cls_score.view(-1).topk(max_per_img)
-            det_labels = indexes % self.num_classes
-            bbox_index = indexes // self.num_classes
+            #det_labels = indexes % self.num_class
+            bbox_index = indexes // self.num_class
             bbox_pred = bbox_pred[bbox_index]
         else:
             scores, det_labels = F.softmax(cls_score, dim=-1)[..., :-1].max(-1)
             scores, bbox_index = scores.topk(max_per_img)
             bbox_pred = bbox_pred[bbox_index]
-            det_labels = det_labels[bbox_index]
+            #det_labels = det_labels[bbox_index]
 
         det_bboxes = bbox_cxcywh_to_xyxy(bbox_pred)
         det_bboxes[:, 0::2] = det_bboxes[:, 0::2] * img_shape[1]
@@ -742,7 +776,8 @@ class EncoderHead(AnchorFreeHead):
             det_bboxes /= det_bboxes.new_tensor(scale_factor)
         det_bboxes = torch.cat((det_bboxes, scores.unsqueeze(1)), -1)
 
-        return det_bboxes, det_labels
+        #return det_bboxes, det_labels
+        return det_bboxes
 
     def simple_test_bboxes(self, feats, img_metas, rescale=False):
         """Test det bboxes without test-time augmentation.
@@ -888,8 +923,8 @@ class EncoderHead(AnchorFreeHead):
             cls_scores = cls_scores.sigmoid()
             scores, indexes = cls_scores.view(batch_size, -1).topk(
                 max_per_img, dim=1)
-            det_labels = indexes % self.num_classes
-            bbox_index = indexes // self.num_classes
+            det_labels = indexes % self.num_class
+            bbox_index = indexes // self.num_class
             bbox_index = (bbox_index + batch_index_offset).view(-1)
             bbox_preds = bbox_preds.view(-1, 4)[bbox_index]
             bbox_preds = bbox_preds.view(batch_size, -1, 4)
