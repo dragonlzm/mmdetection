@@ -171,7 +171,8 @@ class EncoderHead(AnchorFreeHead):
         """Initialize layers of the transformer head."""
         #self.input_proj = Conv2d(
         #    self.in_channels, self.embed_dims, kernel_size=1)
-        self.input_proj = Linear(self.in_channels, self.embed_dims)
+        if self.in_channels != self.embed_dims:
+            self.input_proj = Linear(self.in_channels, self.embed_dims)
         self.fc_cls = Linear(self.embed_dims, self.cls_out_channels)
         self.reg_ffn = FFN(
             self.embed_dims,
@@ -300,7 +301,8 @@ class EncoderHead(AnchorFreeHead):
         #x = x.view(bs, c, -1).permute(2, 0, 1)  # [bs, c, h, w] -> [h*w, bs, c]
         # from [bs,64,512] to [64,bs,512]
         x = x.permute(1, 0, 2)
-        x = self.input_proj(x)
+        if self.in_channels != self.embed_dims:
+            x = self.input_proj(x)
         hw, bs, v_dim = x.shape
         #print('x.shape', x.shape, 'pos_embed.shape', pos_embed.shape)
 

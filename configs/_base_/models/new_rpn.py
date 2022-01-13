@@ -1,8 +1,8 @@
 # model settings
 model = dict(
     type='NEWRPN',
-    #patches_list=[8],
-    patches_list=[2, 4, 6],
+    patches_list=[4],
+    #patches_list=[2, 4, 6],
     neck=None,
     backbone=dict(
         type='myVisionTransformer',
@@ -20,8 +20,8 @@ model = dict(
         type='EncoderHead',
         num_classes=1,
         in_channels=512,
-        #patches_list=[8],
-        patches_list=[2, 4, 6],
+        patches_list=[4],
+        #patches_list=[2, 4, 6],
         encoder=dict(
             type='DetrTransformerEncoder',
             num_layers=6,
