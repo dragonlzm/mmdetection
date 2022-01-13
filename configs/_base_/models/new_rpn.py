@@ -34,8 +34,14 @@ model = dict(
                         num_heads=8,
                         dropout=0.1)
                 ],
-                feedforward_channels=512,
-                ffn_dropout=0.1,
+                ffn_cfgs=dict(
+                     type='FFN',
+                     embed_dims=256,
+                     feedforward_channels=512,
+                     num_fcs=2,
+                     ffn_drop=0.1,
+                     act_cfg=dict(type='ReLU', inplace=True),
+                 ),
                 operation_order=('self_attn', 'norm', 'ffn', 'norm'))),
         positional_encoding=dict(
             type='SinePositionalEncoding', num_feats=128, normalize=True),

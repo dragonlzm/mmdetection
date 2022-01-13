@@ -11,6 +11,9 @@ model = dict(
                         embed_dims=512,
                         num_heads=8,
                         dropout=0.1)
-                ])),
+                ],
+                ffn_cfgs=dict(
+                     embed_dims=512,
+                 ))),
         positional_encoding=dict(
             type='SinePositionalEncoding', num_feats=256, normalize=True)))
