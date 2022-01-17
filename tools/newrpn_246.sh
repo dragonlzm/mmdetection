@@ -5,7 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=30GB
-#SBATCH --time=10:00:00
+#SBATCH --time=24:00:00
 #SBATCH --account=nevatia_174
 
 
@@ -22,4 +22,5 @@ PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH 
 python -m torch.distributed.launch --nproc_per_node=2 \
     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
     configs/new_rpn/new_rpn_patches246_coco.py --launcher pytorch \
-    --work-dir=/project/nevatia_174/zhuoming/detection/test/new_rpn_patches246_coco
+    --work-dir=/project/nevatia_174/zhuoming/detection/test/new_rpn_patches246_coco \
+    --resume-from=/project/nevatia_174/zhuoming/detection/test/new_rpn_patches246_coco/latest.pth

@@ -14,7 +14,8 @@ from PIL import Image
 #file_path = "C:\\step_1_learningloss_newadd.json"
 #file_path = "C:\\step_1_influence_newadd.json"
 #proposal_file_path = "C:\\Users\\XPS\\Desktop\\results.proposal.json"
-proposal_file_path = "C:\\Users\\XPS\\Desktop\\results_4_by_4.proposal.json"
+#proposal_file_path = "C:\\Users\\XPS\\Desktop\\results_4_by_4.proposal.json"
+proposal_file_path = "C:\\Users\\XPS\\Desktop\\new_rpn_4_by_4_2x.proposal.json"
 
 proposal_result = json.load(open(proposal_file_path))
 
@@ -57,7 +58,9 @@ all_img_info = {info['id']:info for info in first_100_imgs}
 #save_root = 'C:\\liuzhuoming\\桌面\\images\\random\\'
 #save_root = 'C:\\liuzhuoming\\桌面\\images\\influence\\'
 #save_root = 'C:\\Users\\XPS\\Desktop\\visualization\\'
-save_root = 'C:\\Users\\XPS\\Desktop\\visualization_4_by_4\\'
+#save_root = 'C:\\Users\\XPS\\Desktop\\visualization_4_by_4\\'
+save_root = 'C:\\Users\\XPS\\Desktop\\visualization_4_by_4_2x\\'
+
 
 #print(all_img_annotation)
 for img_id in all_img_info:
