@@ -145,10 +145,12 @@ class EncoderHead(AnchorFreeHead):
                 self.cls_out_channels = num_classes + 1
         else:
             self.loss_cls = None
+        
         if loss_bbox != None:
             self.loss_bbox = build_loss(loss_bbox)
         else:
             self.loss_bbox = None
+        
         if loss_iou != None:
             self.loss_iou = build_loss(loss_iou)
         else:
@@ -184,7 +186,7 @@ class EncoderHead(AnchorFreeHead):
             self.fc_cls = Linear(self.embed_dims, self.cls_out_channels)
         else:
             self.fc_cls = None
-        if self.loss_reg != None:
+        if self.loss_bbox != None:
             self.reg_ffn = FFN(
                 self.embed_dims,
                 self.embed_dims,
@@ -885,7 +887,7 @@ class EncoderHead(AnchorFreeHead):
             # is 1 with only ele with the size [bs, hw, 1]
             cls_score = cls_list[-1].permute([1, 0, 2])
             bs, hw, _ = cls_score.shape
-            all_cls_scores = [cls_score[i] for i in range(bs)]
+            all_cls_scores = [cls_score[i].sigmoid().view(-1) for i in range(bs)]
             return all_cls_scores
         
         results_list = self.get_bboxes(*outs, img_metas, rescale=rescale)

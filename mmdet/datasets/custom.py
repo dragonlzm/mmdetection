@@ -75,6 +75,7 @@ class CustomDataset(Dataset):
         self.test_mode = test_mode
         self.filter_empty_gt = filter_empty_gt
         self.CLASSES = self.get_classes(classes)
+        self.patches_file = patches_file
 
         # join paths if data_root is specified
         if self.data_root is not None:
@@ -96,7 +97,7 @@ class CustomDataset(Dataset):
         else:
             self.proposals = None
 
-        if patches_file is not None:
+        if self.patches_file is not None:
             self.patches_gt = self.load_patches_gt(self.patches_file)
         else:
             self.patches_gt = None
@@ -133,7 +134,7 @@ class CustomDataset(Dataset):
         patches_gt = torch.load(patches_file)
         sorted_result = []
         for img_id in self.img_ids:
-            sorted_result.append(patches_gt[img_id])
+            sorted_result.append(patches_gt[img_id].numpy())
         return sorted_result
 
     def get_ann_info(self, idx):

@@ -20,3 +20,13 @@ data = dict(
 
 # change the evalution
 evaluation = dict(interval=1, metric='acc')
+
+# model settings
+model = dict(
+    rpn_head=dict(
+        loss_cls=dict(
+            type='CrossEntropyLoss', 
+            use_sigmoid=True, 
+            loss_weight=1.0),
+        loss_bbox=None,
+        loss_iou=None))

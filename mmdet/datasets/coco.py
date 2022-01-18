@@ -213,6 +213,18 @@ class CocoDataset(CustomDataset):
                 json_results.append(data)
         return json_results
 
+    def _acc2json(self, results):
+        """Convert detection results to COCO json style."""
+        json_results = []
+        for idx in range(len(self)):
+            img_id = self.img_ids[idx]
+            result = results[idx]
+            data = dict()
+            data['image_id'] = img_id
+            data['score'] = result
+            json_results.append(data)
+        return json_results
+
     def _det2json(self, results):
         """Convert detection results to COCO json style."""
         json_results = []
@@ -288,7 +300,11 @@ class CocoDataset(CustomDataset):
                 values are corresponding filenames.
         """
         result_files = dict()
-        if isinstance(results[0], list):
+        if isinstance(results[0], np.ndarray) and len(results[0]) > 5:
+            json_results = self._acc2json(results)
+            result_files['acc'] = f'{outfile_prefix}.acc.json'
+            mmcv.dump(json_results, result_files['acc'])
+        elif isinstance(results[0], list):
             json_results = self._det2json(results)
             result_files['bbox'] = f'{outfile_prefix}.bbox.json'
             result_files['proposal'] = f'{outfile_prefix}.bbox.json'
@@ -309,17 +325,16 @@ class CocoDataset(CustomDataset):
         return result_files
 
     def calc_acc(self, results):
-        gt_bboxes = []
         aver_acc = 0
         for i in range(len(self.img_ids)):
-            patches_gt = self.patches_gt[i].view(-1)
+            patches_gt = torch.from_numpy(self.patches_gt[i]).view(-1)
             # if the patches is not the bg, the position will become True
             patches_gt_sign = (patches_gt != 1.0000e+04)
             predict_result = torch.from_numpy(results[i])
             # if the predicted score higher than 0.5 regarded as fg, the position is True
             predict_result_sign = (predict_result >= 0.5) 
-            img_acc = torch.sum(patches_gt_sign == predict_result_sign)
-            img_acc /= len(predict_result)
+            img_acc = torch.sum(patches_gt_sign == predict_result_sign).float()
+            img_acc /= predict_result.shape[0]
             aver_acc += img_acc
         aver_acc /= len(self.img_ids)
         return aver_acc
@@ -418,7 +433,7 @@ class CocoDataset(CustomDataset):
         """
 
         metrics = metric if isinstance(metric, list) else [metric]
-        allowed_metrics = ['bbox', 'segm', 'proposal', 'proposal_fast']
+        allowed_metrics = ['bbox', 'segm', 'proposal', 'proposal_fast', 'acc']
         for metric in metrics:
             if metric not in allowed_metrics:
                 raise KeyError(f'metric {metric} is not supported')
