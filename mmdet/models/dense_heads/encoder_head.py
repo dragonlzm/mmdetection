@@ -74,12 +74,9 @@ class EncoderHead(AnchorFreeHead):
                  #    use_sigmoid=False,
                  #    loss_weight=1.0,
                  #    class_weight=1.0),
-                loss_cls=dict(
-                    type='CrossEntropyLoss', 
-                    use_sigmoid=True, 
-                    loss_weight=1.0),
-                 loss_bbox=dict(type='L1Loss', loss_weight=5.0),
-                 loss_iou=dict(type='GIoULoss', loss_weight=2.0),
+                 loss_cls=None,
+                 loss_bbox=None,
+                 loss_iou=None,
                  train_cfg=dict(
                      assigner=dict(
                          type='HungarianAssigner',
@@ -96,36 +93,37 @@ class EncoderHead(AnchorFreeHead):
         super(AnchorFreeHead, self).__init__(init_cfg)
         self.bg_cls_weight = 0
         self.sync_cls_avg_factor = sync_cls_avg_factor
-        class_weight = loss_cls.get('class_weight', None)
-        if class_weight is not None and (self.__class__ is EncoderHead):
-            assert isinstance(class_weight, float), 'Expected ' \
-                'class_weight to have type float. Found ' \
-                f'{type(class_weight)}.'
-            # NOTE following the official DETR rep0, bg_cls_weight means
-            # relative classification weight of the no-object class.
-            bg_cls_weight = loss_cls.get('bg_cls_weight', class_weight)
-            assert isinstance(bg_cls_weight, float), 'Expected ' \
-                'bg_cls_weight to have type float. Found ' \
-                f'{type(bg_cls_weight)}.'
-            class_weight = torch.ones(num_classes + 1) * class_weight
-            # set background class as the last indice
-            class_weight[num_classes] = bg_cls_weight
-            loss_cls.update({'class_weight': class_weight})
-            if 'bg_cls_weight' in loss_cls:
-                loss_cls.pop('bg_cls_weight')
-            self.bg_cls_weight = bg_cls_weight
+        if loss_cls != None:
+            class_weight = loss_cls.get('class_weight', None)
+            if class_weight is not None and (self.__class__ is EncoderHead):
+                assert isinstance(class_weight, float), 'Expected ' \
+                    'class_weight to have type float. Found ' \
+                    f'{type(class_weight)}.'
+                # NOTE following the official DETR rep0, bg_cls_weight means
+                # relative classification weight of the no-object class.
+                bg_cls_weight = loss_cls.get('bg_cls_weight', class_weight)
+                assert isinstance(bg_cls_weight, float), 'Expected ' \
+                    'bg_cls_weight to have type float. Found ' \
+                    f'{type(bg_cls_weight)}.'
+                class_weight = torch.ones(num_classes + 1) * class_weight
+                # set background class as the last indice
+                class_weight[num_classes] = bg_cls_weight
+                loss_cls.update({'class_weight': class_weight})
+                if 'bg_cls_weight' in loss_cls:
+                    loss_cls.pop('bg_cls_weight')
+                self.bg_cls_weight = bg_cls_weight
 
         if train_cfg:
             assert 'assigner' in train_cfg, 'assigner should be provided '\
                 'when train_cfg is set.'
             assigner = train_cfg['assigner']
-            assert loss_cls['loss_weight'] == assigner['cls_cost']['weight'], \
+            assert loss_cls == None or (loss_cls != None and loss_cls['loss_weight'] == assigner['cls_cost']['weight']), \
                 'The classification weight for loss and matcher should be' \
                 'exactly the same.'
-            assert loss_bbox['loss_weight'] == assigner['reg_cost'][
-                'weight'], 'The regression L1 weight for loss and matcher ' \
+            assert loss_bbox == None or (loss_bbox != None and loss_bbox['loss_weight'] == assigner['reg_cost'][
+                'weight']), 'The regression L1 weight for loss and matcher ' \
                 'should be exactly the same.'
-            assert loss_iou['loss_weight'] == assigner['iou_cost']['weight'], \
+            assert loss_iou == None or (loss_iou != None and loss_iou['loss_weight'] == assigner['iou_cost']['weight']), \
                 'The regression iou weight for loss and matcher should be' \
                 'exactly the same.'
             self.assigner = build_assigner(assigner)
@@ -139,14 +137,23 @@ class EncoderHead(AnchorFreeHead):
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
         self.fp16_enabled = False
-        self.loss_cls = build_loss(loss_cls)
-        self.loss_bbox = build_loss(loss_bbox)
-        self.loss_iou = build_loss(loss_iou)
-
-        if self.loss_cls.use_sigmoid:
-            self.cls_out_channels = num_classes
+        if loss_cls != None:
+            self.loss_cls = build_loss(loss_cls)
+            if self.loss_cls.use_sigmoid:
+                self.cls_out_channels = num_classes
+            else:
+                self.cls_out_channels = num_classes + 1
         else:
-            self.cls_out_channels = num_classes + 1
+            self.loss_cls = None
+        if loss_bbox != None:
+            self.loss_bbox = build_loss(loss_bbox)
+        else:
+            self.loss_bbox = None
+        if loss_iou != None:
+            self.loss_iou = build_loss(loss_iou)
+        else:
+            self.loss_iou = None
+
         #self.act_cfg = transformer.get('act_cfg',
         #                               dict(type='ReLU', inplace=True))
         self.act_cfg = encoder.get('act_cfg',
@@ -173,15 +180,22 @@ class EncoderHead(AnchorFreeHead):
         #    self.in_channels, self.embed_dims, kernel_size=1)
         if self.in_channels != self.embed_dims:
             self.input_proj = Linear(self.in_channels, self.embed_dims)
-        self.fc_cls = Linear(self.embed_dims, self.cls_out_channels)
-        self.reg_ffn = FFN(
-            self.embed_dims,
-            self.embed_dims,
-            self.num_reg_fcs,
-            self.act_cfg,
-            dropout=0.0,
-            add_residual=False)
-        self.fc_reg = Linear(self.embed_dims, 4)
+        if self.loss_cls != None:
+            self.fc_cls = Linear(self.embed_dims, self.cls_out_channels)
+        else:
+            self.fc_cls = None
+        if self.loss_reg != None:
+            self.reg_ffn = FFN(
+                self.embed_dims,
+                self.embed_dims,
+                self.num_reg_fcs,
+                self.act_cfg,
+                dropout=0.0,
+                add_residual=False)
+            self.fc_reg = Linear(self.embed_dims, 4)
+        else:
+            self.fc_reg = None
+            self.reg_ffn = None
         #self.query_embedding = nn.Embedding(self.num_query, self.embed_dims)
 
     def init_weights(self):
@@ -334,10 +348,67 @@ class EncoderHead(AnchorFreeHead):
             query_pos=pos_embed,
             query_key_padding_mask=masks)
 
-        all_cls_scores = self.fc_cls(outs_dec)
-        all_bbox_preds = self.fc_reg(self.activate(
-            self.reg_ffn(outs_dec))).sigmoid()
+        if self.fc_cls != None:
+            all_cls_scores = self.fc_cls(outs_dec)
+        else:
+            all_cls_scores = None
+        if self.fc_reg != None:
+            all_bbox_preds = self.fc_reg(self.activate(
+                self.reg_ffn(outs_dec))).sigmoid()
+        else:
+            all_bbox_preds = None
         return all_cls_scores, all_bbox_preds
+
+    @force_fp32(apply_to=('all_cls_scores_list', 'all_bbox_preds_list'))
+    def patches_loss(self,
+             all_cls_scores_list,
+             all_bbox_preds_list, 
+             patches_gt, 
+             img_metas):
+        """"Loss function.
+
+        Only outputs from the last feature level are used for computing
+        losses by default.
+
+        Args:
+            all_cls_scores_list (list[Tensor]): Classification outputs
+                for each feature level. Each is a 4D-tensor with shape
+                [nb_dec, bs, num_query, cls_out_channels].
+            all_bbox_preds_list (list[Tensor]): Sigmoid regression
+                outputs for each feature level. Each is a 4D-tensor with
+                normalized coordinate format (cx, cy, w, h) and shape
+                [nb_dec, bs, num_query, 4].
+            gt_bboxes_list (list[Tensor]): Ground truth bboxes for each image
+                with shape (num_gts, 4) in [tl_x, tl_y, br_x, br_y] format.
+            gt_labels_list (list[Tensor]): Ground truth class indices for each
+                image with shape (num_gts, ).
+            img_metas (list[dict]): List of image meta information.
+            gt_bboxes_ignore (list[Tensor], optional): Bounding boxes
+                which can be ignored for each image. Default None.
+
+        Returns:
+            dict[str, Tensor]: A dictionary of loss components.
+        """
+        # convert from [hw, bs, 1] to [bs, hw, 1], the len of the list is 1 
+        # with only ele with the size [bs, hw, 1]
+        all_cls_scores = all_cls_scores_list[-1].permute([1, 0, 2])
+        #all_bbox_preds = [all_bbox_preds_list[-1].permute([1, 0, 2])]    
+        
+        bs = len(patches_gt)
+        loss = 0
+        for i in range(bs):
+            # reshape the patches gt
+            # if the patches is not the bg, the position will become True
+            labels = patches_gt[i].view(-1)
+            labels = (labels != 1.0000e+04).long()
+
+            cls_scores = all_cls_scores[i].view(-1)
+            loss += self.loss_cls(cls_scores, labels)
+        
+        loss_dict = dict()
+        loss_dict['loss_cls'] = loss
+
+        return loss_dict
 
     @force_fp32(apply_to=('all_cls_scores_list', 'all_bbox_preds_list'))
     def loss(self,
@@ -346,7 +417,8 @@ class EncoderHead(AnchorFreeHead):
              gt_bboxes_list,
              gt_labels_list,
              img_metas,
-             gt_bboxes_ignore=None):
+             gt_bboxes_ignore=None,
+             patches_gt=None):
         """"Loss function.
 
         Only outputs from the last feature level are used for computing
@@ -637,6 +709,7 @@ class EncoderHead(AnchorFreeHead):
                       gt_labels=None,
                       gt_bboxes_ignore=None,
                       proposal_cfg=None,
+                      patches_gt=None,
                       **kwargs):
         """Forward function for training mode.
 
@@ -664,12 +737,18 @@ class EncoderHead(AnchorFreeHead):
         #ele in all_bbox_preds_list: torch.Size([64, 2, 4])
 
         assert proposal_cfg is None, '"proposal_cfg" must be None'
+        # the out here should be two lists, all_cls_scores_list and all_bbox_preds_list
         outs = self(x, img_metas)
-        if gt_labels is None:
-            loss_inputs = outs + (gt_bboxes, img_metas)
+        #if patches_gt is None:
+        if self.fc_cls != None and self.fc_reg == None:
+            loss_inputs = outs + (patches_gt, img_metas)
+            losses = self.patches_loss(*loss_inputs)
         else:
-            loss_inputs = outs + (gt_bboxes, gt_labels, img_metas)
-        losses = self.loss(*loss_inputs, gt_bboxes_ignore=gt_bboxes_ignore)
+            if gt_labels is None:
+                loss_inputs = outs + (gt_bboxes, img_metas)
+            else:
+                loss_inputs = outs + (gt_bboxes, gt_labels, img_metas)
+            losses = self.loss(*loss_inputs, gt_bboxes_ignore=gt_bboxes_ignore)
         return losses
 
     @force_fp32(apply_to=('all_cls_scores_list', 'all_bbox_preds_list'))
@@ -800,6 +879,15 @@ class EncoderHead(AnchorFreeHead):
         """
         # forward of this head requires img_metas
         outs = self.forward(feats, img_metas)
+        if self.fc_cls != None and self.fc_reg == None:
+            cls_list, reg_list = outs
+            # convert from [hw, bs, 1] to [bs, hw, 1], the len of the list 
+            # is 1 with only ele with the size [bs, hw, 1]
+            cls_score = cls_list[-1].permute([1, 0, 2])
+            bs, hw, _ = cls_score.shape
+            all_cls_scores = [cls_score[i] for i in range(bs)]
+            return all_cls_scores
+        
         results_list = self.get_bboxes(*outs, img_metas, rescale=rescale)
         return results_list
 

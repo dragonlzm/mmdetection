@@ -141,7 +141,8 @@ class NEWRPN(BaseDetector):
                       img_metas,
                       gt_bboxes=None,
                       gt_bboxes_ignore=None,
-                      gt_labels=None):
+                      gt_labels=None,
+                      patches_gt=None):
         """
         Args:
             img (Tensor): Input images of shape (N, C, H, W).
@@ -165,7 +166,7 @@ class NEWRPN(BaseDetector):
 
         x = self.extract_feat(img, img_metas)
         losses = self.rpn_head.forward_train(x, img_metas, gt_bboxes, gt_labels,
-                                             gt_bboxes_ignore)
+                                             gt_bboxes_ignore, patches_gt)
         return losses
 
     def simple_test(self, img, img_metas, rescale=False):

@@ -3,6 +3,8 @@ import os.path as osp
 import warnings
 from collections import OrderedDict
 
+import torch
+
 import mmcv
 import numpy as np
 from mmcv.utils import print_log
@@ -63,7 +65,8 @@ class CustomDataset(Dataset):
                  seg_prefix=None,
                  proposal_file=None,
                  test_mode=False,
-                 filter_empty_gt=True):
+                 filter_empty_gt=True,
+                 patches_file=None):
         self.ann_file = ann_file
         self.data_root = data_root
         self.img_prefix = img_prefix
@@ -93,12 +96,19 @@ class CustomDataset(Dataset):
         else:
             self.proposals = None
 
+        if patches_file is not None:
+            self.patches_gt = self.load_patches_gt(self.patches_file)
+        else:
+            self.patches_gt = None
+
         # filter images too small and containing no annotations
         if not test_mode:
             valid_inds = self._filter_imgs()
             self.data_infos = [self.data_infos[i] for i in valid_inds]
             if self.proposals is not None:
                 self.proposals = [self.proposals[i] for i in valid_inds]
+            if self.patches_gt is not None:
+                self.patches_gt = [self.patches_gt[i] for i in valid_inds]
             # set group flag for the sampler
             self._set_group_flag()
 
@@ -116,6 +126,15 @@ class CustomDataset(Dataset):
     def load_proposals(self, proposal_file):
         """Load proposal from proposal file."""
         return mmcv.load(proposal_file)
+
+    def load_patches_gt(self, patches_file):
+        """Load proposal from proposal file."""
+
+        patches_gt = torch.load(patches_file)
+        sorted_result = []
+        for img_id in self.img_ids:
+            sorted_result.append(patches_gt[img_id])
+        return sorted_result
 
     def get_ann_info(self, idx):
         """Get annotation by index.
@@ -214,6 +233,8 @@ class CustomDataset(Dataset):
         results = dict(img_info=img_info, ann_info=ann_info)
         if self.proposals is not None:
             results['proposals'] = self.proposals[idx]
+        if self.patches_gt is not None:
+            results['patches_gt'] = self.patches_gt[idx]
         self.pre_pipeline(results)
         return self.pipeline(results)
 
@@ -232,6 +253,8 @@ class CustomDataset(Dataset):
         results = dict(img_info=img_info)
         if self.proposals is not None:
             results['proposals'] = self.proposals[idx]
+        if self.patches_gt is not None:
+            results['patches_gt'] = self.patches_gt[idx]
         self.pre_pipeline(results)
         return self.pipeline(results)
 

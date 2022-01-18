@@ -15,6 +15,7 @@ from mmdet.core import eval_recalls
 from .api_wrappers import COCO, COCOeval
 from .builder import DATASETS
 from .custom import CustomDataset
+import torch
 
 
 @DATASETS.register_module()
@@ -307,6 +308,23 @@ class CocoDataset(CustomDataset):
             raise TypeError('invalid type of results')
         return result_files
 
+    def calc_acc(self, results):
+        gt_bboxes = []
+        aver_acc = 0
+        for i in range(len(self.img_ids)):
+            patches_gt = self.patches_gt[i].view(-1)
+            # if the patches is not the bg, the position will become True
+            patches_gt_sign = (patches_gt != 1.0000e+04)
+            predict_result = torch.from_numpy(results[i])
+            # if the predicted score higher than 0.5 regarded as fg, the position is True
+            predict_result_sign = (predict_result >= 0.5) 
+            img_acc = torch.sum(patches_gt_sign == predict_result_sign)
+            img_acc /= len(predict_result)
+            aver_acc += img_acc
+        aver_acc /= len(self.img_ids)
+        return aver_acc
+
+
     def fast_eval_recall(self, results, proposal_nums, iou_thrs, logger=None):
         gt_bboxes = []
         for i in range(len(self.img_ids)):
@@ -420,7 +438,12 @@ class CocoDataset(CustomDataset):
             if logger is None:
                 msg = '\n' + msg
             print_log(msg, logger=logger)
-
+            if metric == 'acc':
+                acc = self.calc_acc(results)
+                eval_results['acc'] = acc
+                log_msg = f'\nacc\t{acc:.4f}'
+                print_log(log_msg, logger=logger)
+                continue
             if metric == 'proposal_fast':
                 ar = self.fast_eval_recall(
                     results, proposal_nums, iou_thrs, logger='silent')
