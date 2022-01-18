@@ -30,3 +30,6 @@ model = dict(
             loss_weight=1.0),
         loss_bbox=None,
         loss_iou=None))
+
+# for 2 gpus training
+optimizer = dict(lr=0.00005)

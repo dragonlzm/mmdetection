@@ -10,3 +10,6 @@ data = dict(
     train=dict(patches_file=data_root + 'new_assigned_gt_8_by_8_train.pt'),
     val=dict(patches_file=data_root + 'new_assigned_gt_8_by_8_val.pt'),
     test=dict(patches_file=data_root + 'new_assigned_gt_8_by_8_val.pt'))
+
+# for 2 gpus training
+optimizer = dict(lr=0.00005)
