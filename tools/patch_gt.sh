@@ -21,6 +21,6 @@ ln -sf /project/nevatia_174/zhuoming/detection ./data
 PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
-    configs/new_rpn/new_rpn_patches345_coco.py --launcher pytorch \
-    --work-dir=/project/nevatia_174/zhuoming/detection/test/new_rpn_patches345_coco \
-    --resume-from=/project/nevatia_174/zhuoming/detection/test/new_rpn_patches345_coco/latest.pth
+    configs/new_rpn/new_rpn_coco_patch_gt.py --launcher pytorch \
+    --work-dir=/project/nevatia_174/zhuoming/detection/test/new_rpn_coco_patch_gt 
+    #--resume-from=/project/nevatia_174/zhuoming/detection/test/new_rpn_coco_patch_gt/latest.pth

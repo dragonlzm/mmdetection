@@ -137,15 +137,15 @@ def bbox_overlaps(bboxes1, bboxes2, mode='iou', is_aligned=False, eps=1e-6):
 #device = "cuda" if torch.cuda.is_available() else "cpu"
 #model, preprocess = clip.load('ViT-B/32', device)
 
-#json_file_path = '/data2/lwll/zhuoming/detection/coco/annotations/instances_val2017.json'
-json_file_path = '/data2/lwll/zhuoming/detection/coco/annotations/instances_train2017.json'
+json_file_path = '/data2/lwll/zhuoming/detection/coco/annotations/instances_val2017.json'
+#json_file_path = '/data2/lwll/zhuoming/detection/coco/annotations/instances_train2017.json'
 
 # load the json file
 json_val = json.load(open(json_file_path))
 
 # aggregate the annotation for each image
-#file_root = '/data2/lwll/zhuoming/detection/coco/val2017/'
-file_root = '/data2/lwll/zhuoming/detection/coco/train2017/'
+file_root = '/data2/lwll/zhuoming/detection/coco/val2017/'
+#file_root = '/data2/lwll/zhuoming/detection/coco/train2017/'
 from_img_id_to_bbox = {}
 
 # go through 'images' first
@@ -177,8 +177,10 @@ for count_i, image_id in enumerate(from_img_id_to_bbox.keys()):
     #img_bytes = file_client.get(filenname)
     #img = mmcv.imfrombytes(img_bytes, flag='color', channel_order='rgb')
     
-    h_patch_num = 8
-    w_patch_num = 8
+    h_patch_num = 16
+    w_patch_num = 16
+    #h_patch_num = 8
+    #w_patch_num = 8
     #h_patch_num = 4
     #w_patch_num = 4
     
@@ -295,7 +297,9 @@ for count_i, image_id in enumerate(from_img_id_to_bbox.keys()):
 
 #np.save('assigned_res_4_by_4.npy', all_assigned_res.reshape(-1).numpy())
 #torch.save(all_assigned_res, 'new_assigned_gt_4_by_4_train.pt')
-torch.save(all_assigned_res, 'new_assigned_gt_8_by_8_train.pt')
+#torch.save(all_assigned_res, 'new_assigned_gt_8_by_8_train.pt')
+#torch.save(all_assigned_res, 'new_assigned_gt_16_by_16_train.pt')
+torch.save(all_assigned_res, 'new_assigned_gt_16_by_16_val.pt')
 #torch.save(all_feature_res, 'feature_4_by_4.pt')
 
 

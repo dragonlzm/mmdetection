@@ -5,5 +5,5 @@ optimizer = dict(lr=0.01)
 model = dict(
     backbone=dict(
         init_cfg=dict(type='Pretrained', 
-            checkpoint='/project/nevatia_174/zhuoming/code/new_rpn/mmdetection/pretrain/resnet50-0676ba61.pth')))
+            checkpoint='data/pretrain/resnet50-0676ba61.pth')))
 

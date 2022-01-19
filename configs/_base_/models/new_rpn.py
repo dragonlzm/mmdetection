@@ -13,7 +13,8 @@ model = dict(
         heads=12,
         output_dim=512,
         #init_cfg=dict(type='Pretrained', checkpoint="https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt")),
-        init_cfg=dict(type='Pretrained', checkpoint="/data2/lwll/zhuoming/code/new_rpn/mmdetection/modified_state_dict.pth"),
+        #init_cfg=dict(type='Pretrained', checkpoint="/data2/lwll/zhuoming/code/new_rpn/mmdetection/modified_state_dict.pth"),
+        init_cfg=dict(type='Pretrained', checkpoint="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection/modified_state_dict.pth"),
         fixed_param=True),
 
     rpn_head=dict(
