@@ -336,9 +336,9 @@ class CocoDataset(CustomDataset):
             img_acc = torch.sum(patches_gt_sign == predict_result_sign).float()
             img_acc /= predict_result.shape[0]
             aver_acc += img_acc
+        aver_acc = aver_acc.item()
         aver_acc /= len(self.img_ids)
         return aver_acc
-
 
     def fast_eval_recall(self, results, proposal_nums, iou_thrs, logger=None):
         gt_bboxes = []
