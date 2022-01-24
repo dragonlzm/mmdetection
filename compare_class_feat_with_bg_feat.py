@@ -26,8 +26,10 @@ from_ori_id_to_cate_name = {1: 'person', 2: 'bicycle', 3: 'car', 4: 'motorcycle'
 
 #assign_res = np.load('assigned_res.npy')
 #assign_res = np.load('assigned_res_4_by_4.npy')
+assign_res = np.load('newest_patches_gt_4_by_4_val.npy')
+
 #assign_res = np.load('assigned_gt_res.npy')
-assign_res = np.load('assigned_gt_res_new.npy')
+#assign_res = np.load('assigned_gt_res_new.npy')
 print(assign_res.shape)
 
 count = 0
@@ -52,9 +54,9 @@ print(from_ori_id_to_new_id)
 print(new_assign_id)
 
 #tsne_res = np.load('tsne_all.npy')
-#tsne_res = np.load('tsne_all_4_by_4.npy')
+tsne_res = np.load('tsne_all_4_by_4.npy')
 #tsne_res = np.load('tsne_gt.npy')
-tsne_res = np.load('tsne_gt_new.npy')
+#tsne_res = np.load('tsne_gt_new.npy')
 
 #tsne_res = np.load('tsne_fasterrcnn_4_by_4_final_feat.npy')
 #tsne_res = np.load('tsne_fasterrcnn_final_feat_gt.npy')
@@ -105,8 +107,8 @@ for x, y, assign_id in zip(x_list, y_list, new_assign_id):
 
 print(from_ori_id_to_new_id)
 for i in range(1, count):
-    if i == 2:
-        continue
+    #if i == 2:
+    #    continue
     the_origin_id = from_new_id_to_ori_id[i]
     the_origin_name = from_ori_id_to_cate_name[the_origin_id]
     print(the_origin_id, the_origin_id, the_origin_name)
@@ -130,7 +132,8 @@ for i in range(1, count):
     #scat = ax.scatter(x_list,y_list,c=new_assign_id, s=1, cmap=cmap, norm=norm)
 
     #scat = ax.scatter(filter_x_list, filter_y_list, c=filtered_new_assign_id, s=1,  cmap=cmap, norm=norm)
-    scat = ax.scatter(filter_x_list, filter_y_list, c='black', s=1, alpha=0.5)
+    #scat = ax.scatter(filter_x_list, filter_y_list, c='black', s=1, alpha=0.5)
+    scat = ax.scatter(x_list, y_list, c='black', s=1, alpha=0.5)
     scat = ax.scatter(filter_fg_x_list, filter_fg_y_list, c='red', s=3, alpha=0.5)
 
     #ax.scatter([x_list[81], x_list[82], x_list[102]], [y_list[81], y_list[82], y_list[102]], c='red', s=5, alpha=0.5)
@@ -157,10 +160,11 @@ for i in range(1, count):
     #ax.set_title('fasterrcnn patch feature tsne visualization(fg only)')
     #plt.show()
     #ax.set_title('patch feature(4 by 4) tsne visualization bg vs ' + the_origin_name)
-    ax.set_title('gt feature tsne visualization person vs ' + the_origin_name)
+    #ax.set_title('gt feature tsne visualization person vs ' + the_origin_name)
+    ax.set_title('patches feature tsne visualization all points vs ' + the_origin_name)
 
     #plt.savefig('C:\\Users\\XPS\\Desktop\\experiment_result\\clip\\bg_contrast_with_each_class(4_by_4_and_patch)\\bg vs ' + the_origin_name + '.png',bbox_inches='tight',pad_inches=0.0)
-    plt.savefig('C:\\Users\\XPS\\Desktop\\experiment_result\\clip\\gt_person_vs_others\\person vs ' + the_origin_name + '.png',bbox_inches='tight',pad_inches=0.0)
+    plt.savefig('C:\\Users\\XPS\\Desktop\\experiment_result\\pre_feat_visualization\\clip\\patch_all_vs_others\\all vs ' + the_origin_name + '.png',bbox_inches='tight',pad_inches=0.0)
 
     
     plt.close()
