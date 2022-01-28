@@ -33,3 +33,4 @@ model = dict(
 
 # for 2 gpus training
 optimizer = dict(lr=0.00005)
+lr_config = dict(_delete_=True, policy='step', step=[4, 8])

@@ -162,8 +162,8 @@ for anno in json_val['annotations']:
     from_img_id_to_bbox[image_id]['bbox'].append(box)
 
 
-#all_assigned_res = []
-all_assigned_res = {}
+all_assigned_res = []
+#all_assigned_res = {}
 all_feature_res = []
 file_client_args=dict(backend='disk')
 file_client = mmcv.FileClient(**file_client_args)
@@ -177,12 +177,12 @@ for count_i, image_id in enumerate(from_img_id_to_bbox.keys()):
     #img_bytes = file_client.get(filenname)
     #img = mmcv.imfrombytes(img_bytes, flag='color', channel_order='rgb')
     
-    h_patch_num = 16
-    w_patch_num = 16
+    #h_patch_num = 16
+    #w_patch_num = 16
     #h_patch_num = 8
     #w_patch_num = 8
-    #h_patch_num = 4
-    #w_patch_num = 4
+    h_patch_num = 4
+    w_patch_num = 4
     
     #H1, W1, channel1 = img.shape
     H, W, channel = from_img_id_to_bbox[image_id]['shape']
@@ -267,8 +267,8 @@ for count_i, image_id in enumerate(from_img_id_to_bbox.keys()):
 
                 final_assign_tensor[i][j] = match_list[i][j][torch.argmax(iou_value)][-1]
     
-    #all_assigned_res.append(torch.unsqueeze(final_assign_tensor, dim=0))
-    all_assigned_res[image_id] = final_assign_tensor
+    all_assigned_res.append(torch.unsqueeze(final_assign_tensor, dim=0))
+    #all_assigned_res[image_id] = final_assign_tensor
 
     # crop the image and combine them together
     #result = []
@@ -292,14 +292,16 @@ for count_i, image_id in enumerate(from_img_id_to_bbox.keys()):
     #all_feature_res.append(torch.unsqueeze(image_features, dim=0).cpu())
 
 # Save to file
-#all_assigned_res = torch.cat(all_assigned_res, dim=0)
+all_assigned_res = torch.cat(all_assigned_res, dim=0)
 #all_feature_res = torch.cat(all_feature_res, dim=0)
 
-#np.save('assigned_res_4_by_4.npy', all_assigned_res.reshape(-1).numpy())
+np.save('newest_patches_gt_4_by_4_val.npy', all_assigned_res.reshape(-1).numpy())
+#torch.save(all_assigned_res, 'newest_patches_gt_4_by_4_val.pt')
+
 #torch.save(all_assigned_res, 'new_assigned_gt_4_by_4_train.pt')
 #torch.save(all_assigned_res, 'new_assigned_gt_8_by_8_train.pt')
 #torch.save(all_assigned_res, 'new_assigned_gt_16_by_16_train.pt')
-torch.save(all_assigned_res, 'new_assigned_gt_16_by_16_val.pt')
+#torch.save(all_assigned_res, 'new_assigned_gt_16_by_16_val.pt')
 #torch.save(all_feature_res, 'feature_4_by_4.pt')
 
 
