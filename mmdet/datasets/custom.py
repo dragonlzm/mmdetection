@@ -66,7 +66,8 @@ class CustomDataset(Dataset):
                  proposal_file=None,
                  test_mode=False,
                  filter_empty_gt=True,
-                 patches_file=None):
+                 patches_file=None,
+                 eval_filter_empty_gt=False):
         self.ann_file = ann_file
         self.data_root = data_root
         self.img_prefix = img_prefix
@@ -103,7 +104,7 @@ class CustomDataset(Dataset):
             self.patches_gt = None
 
         # filter images too small and containing no annotations
-        if not test_mode:
+        if not test_mode or eval_filter_empty_gt:
             valid_inds = self._filter_imgs()
             self.data_infos = [self.data_infos[i] for i in valid_inds]
             if self.proposals is not None:

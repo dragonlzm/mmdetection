@@ -213,7 +213,19 @@ class CocoDataset(CustomDataset):
                 json_results.append(data)
         return json_results
 
-    def _acc2json(self, results):
+    def _patchacc2json(self, results):
+        """Convert detection results to COCO json style."""
+        json_results = []
+        for idx in range(len(self)):
+            img_id = self.img_ids[idx]
+            result = results[idx]
+            data = dict()
+            data['image_id'] = img_id
+            data['score'] = result
+            json_results.append(data)
+        return json_results
+
+    def _gtacc2json(self, results):
         """Convert detection results to COCO json style."""
         json_results = []
         for idx in range(len(self)):
@@ -300,10 +312,14 @@ class CocoDataset(CustomDataset):
                 values are corresponding filenames.
         """
         result_files = dict()
-        if isinstance(results[0], np.ndarray) and len(results[0]) > 5:
-            json_results = self._acc2json(results)
-            result_files['acc'] = f'{outfile_prefix}.acc.json'
-            mmcv.dump(json_results, result_files['acc'])
+        if isinstance(results[0], np.ndarray) and results[0][0].item() == bool:
+            json_results = self._gtacc2json(results)
+            result_files['gt_acc'] = f'{outfile_prefix}.gt_acc.json'
+            mmcv.dump(json_results, result_files['gt_acc'])
+        elif isinstance(results[0], np.ndarray) and len(results[0]) > 5:
+            json_results = self._patchacc2json(results)
+            result_files['patch_acc'] = f'{outfile_prefix}.patch_acc.json'
+            mmcv.dump(json_results, result_files['patch_acc'])
         elif isinstance(results[0], list):
             json_results = self._det2json(results)
             result_files['bbox'] = f'{outfile_prefix}.bbox.json'
@@ -324,7 +340,7 @@ class CocoDataset(CustomDataset):
             raise TypeError('invalid type of results')
         return result_files
 
-    def calc_acc(self, results):
+    def calc_patch_acc(self, results):
         aver_acc = 0
         for i in range(len(self.img_ids)):
             patches_gt = torch.from_numpy(self.patches_gt[i]).view(-1)
@@ -339,6 +355,15 @@ class CocoDataset(CustomDataset):
         aver_acc = aver_acc.item()
         aver_acc /= len(self.img_ids)
         return aver_acc
+
+    def calc_gt_acc(self, results):
+        all_gts = 0
+        correct_num = 0
+        for ele in results:
+            gt_num = ele.shape
+            all_gts += gt_num
+            correct_num += ele.sum().item()
+        return correct_num / all_gts
 
     def fast_eval_recall(self, results, proposal_nums, iou_thrs, logger=None):
         gt_bboxes = []
@@ -433,7 +458,7 @@ class CocoDataset(CustomDataset):
         """
 
         metrics = metric if isinstance(metric, list) else [metric]
-        allowed_metrics = ['bbox', 'segm', 'proposal', 'proposal_fast', 'acc']
+        allowed_metrics = ['bbox', 'segm', 'proposal', 'proposal_fast', 'patch_acc', 'gt_acc']
         for metric in metrics:
             if metric not in allowed_metrics:
                 raise KeyError(f'metric {metric} is not supported')
@@ -453,9 +478,15 @@ class CocoDataset(CustomDataset):
             if logger is None:
                 msg = '\n' + msg
             print_log(msg, logger=logger)
-            if metric == 'acc':
-                acc = self.calc_acc(results)
-                eval_results['acc'] = acc
+            if metric == 'patch_acc':
+                acc = self.calc_patch_acc(results)
+                eval_results['patch_acc'] = acc
+                log_msg = f'\nacc\t{acc:.4f}'
+                print_log(log_msg, logger=logger)
+                continue
+            if metric == 'gt_acc':
+                acc = self.calc_gt_acc(results)
+                eval_results['gt_acc'] = acc
                 log_msg = f'\nacc\t{acc:.4f}'
                 print_log(log_msg, logger=logger)
                 continue

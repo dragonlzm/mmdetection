@@ -19,7 +19,7 @@ data = dict(
     test=dict(patches_file=data_root + 'new_assigned_gt_4_by_4_val.pt'))
 
 # change the evalution
-evaluation = dict(interval=1, metric='acc')
+evaluation = dict(interval=1, metric='patch_acc')
 
 # model settings
 model = dict(

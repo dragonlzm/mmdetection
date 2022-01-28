@@ -10,6 +10,7 @@ from ..builder import DETECTORS, build_backbone, build_head, build_neck
 from .base import BaseDetector
 from PIL import Image
 import numpy as np
+import math
 from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normalize
 try:
     from torchvision.transforms import InterpolationMode
@@ -63,40 +64,53 @@ class ClsFinetuner(BaseDetector):
         bs, c, _, _ = img.shape
         #'img_shape':  torch.Size([2, 3, 800, 1184])
         # what we need is [800, 1184, 3]
-        img = img.permute(0, 2, 3, 1)
+        img = img.permute(0, 2, 3, 1).numpy()
 
         result = []
         for img_idx in range(bs):
             H, W, channel = img_metas[img_idx]['img_shape']
             all_gt_bboxes = gt_bboxes[img_idx]
-            for h_patch_num, w_patch_num in zip(h_patch_num_list, w_patch_num_list):
-                
-                patch_H, patch_W = H / h_patch_num, W / w_patch_num
-                h_pos = [int(patch_H) * i for i in range(h_patch_num + 1)]
-                w_pos = [int(patch_W) * i for i in range(w_patch_num + 1)]
+            
+            for bbox in all_gt_bboxes:
+                # for each bbox we need to calculate whether the bbox is inside the grid
+                tl_x, tl_y, br_x, br_y = bbox[0], bbox[1], bbox[2], bbox[3]
+                x = tl_x
+                y = tl_y
+                w = br_x - tl_x
+                h = br_y - tl_y
+                x_start_pos = math.floor(max(x-0.1*w, 0))
+                y_start_pos = math.floor(max(y-0.1*h, 0))
+                x_end_pos = math.ceil(min(x+1.1*w, W-1))
+                y_end_pos = math.ceil(min(y+1.1*h, H-1))
 
-                for i in range(h_patch_num):
-                    h_start_pos = h_pos[i]
-                    h_end_pos = h_pos[i+1]
-                    for j in range(w_patch_num):
-                        w_start_pos = w_pos[j]
-                        w_end_pos = w_pos[j+1]
-                        # cropping the img into the patches which size is (H/8) * (W/8)
-                        # use the numpy to crop the image
-                        # img shape: torch.Size([2, 3, 800, 1088])
-                        now_patch = img[img_idx, h_start_pos: h_end_pos, w_start_pos: w_end_pos, :]
-                        PIL_image = Image.fromarray(np.uint8(now_patch))
-                        # do the preprocessing
-                        new_patch = self.preprocess(PIL_image)
-
-                        #new_patch, w_scale, h_scale = mmcv.imresize(now_patch, (224, 224), return_scale=True)
-                        #result.append(np.expand_dims(new_patch, axis=0))
-                        result.append(new_patch.unsqueeze(dim=0))
+                now_patch = img[y_start_pos: y_end_pos, x_start_pos: x_end_pos, :]           
+                # crop the GT bbox and place it in the center of the zero square
+                gt_h, gt_w, c = now_patch.shape
+                if gt_h != gt_w:
+                    long_edge = max((gt_h, gt_w))
+                    empty_patch = np.zeros((long_edge, long_edge, 3))
+                    if gt_h > gt_w:
+                        x_start = (long_edge - gt_w) // 2
+                        x_end = x_start + gt_w
+                        empty_patch[:, x_start: x_end] = now_patch
+                    else:
+                        y_start = (long_edge - gt_h) // 2
+                        y_end = y_start + gt_h
+                        empty_patch[y_start: y_end] = now_patch
+                    now_patch = empty_patch
+                #new_patch, w_scale, h_scale = mmcv.imresize(now_patch, (224, 224), return_scale=True)
+                # convert the numpy to PIL image
+                PIL_image = Image.fromarray(np.uint8(now_patch))
+                # do the preprocessing
+                new_patch = self.preprocess(PIL_image)
+                #image_result.append(np.expand_dims(new_patch, axis=0))
+                result.append(new_patch)
 
         #cropped_patches = np.concatenate(result, axis=0)
-        # the shape of the cropped_patches: torch.Size([bs*sum([ele**2 for ele in w_patch_num_list]), 3, 224, 224])
-        cropped_patches = torch.cat(result, dim=0).cuda()
-        return cropped_patches
+        # the shape of the cropped_patches: torch.Size([gt_num_in_batch, 3, 224, 224])
+        #cropped_patches = torch.cat(result, dim=0).cuda()
+        cropped_patches_list = result
+        return cropped_patches_list
 
     def extract_feat(self, img, gt_bboxes, img_metas=None):
         """Extract features.
@@ -113,22 +127,26 @@ class ClsFinetuner(BaseDetector):
         #torch.Size([2, 3, 800, 1088])
         #torch.Size([2, 3, 800, 1216])
         #torch.Size([2, 3, 800, 1216])
-        bs = img.shape[0]
+        #bs = img.shape[0]
         
         # crop the img into the patches with normalization and reshape
         # (a function to convert the img)
-        converted_img_patches = self.crop_img_to_patches(img.cpu(), gt_bboxes.cpu(), img_metas)
+        #cropped_patches_list:len = batch_size, list[tensor] each tensor shape [gt_num_of_image, 3, 224, 224]
+        cropped_patches_list = self.crop_img_to_patches(img.cpu(), gt_bboxes.cpu(), img_metas)
 
-        # convert dimension from [bs, 64, 224, 224] to [bs*64, 224, 224]
+        # convert dimension from [bs, 64, 3, 224, 224] to [bs*64, 3, 224, 224]
         #converted_img_patches = converted_img_patches.view(bs, -1, self.backbone.input_resolution, self.backbone.input_resolution)
 
         # the input of the vision transformer should be torch.Size([64, 3, 224, 224])
-        x = self.backbone(converted_img_patches)
-        if self.with_neck:
-            x = self.neck(x)
+        result_list = []
+        for patches in cropped_patches_list:
+            x = self.backbone(patches)
+            if self.with_neck:
+                x = self.neck(x)
+            result_list.append(x)
         # convert the feature [bs*64, 512] to [bs, 64, 512]
-        x = x.view(bs, -1, x.shape[-1])
-        return x
+        #x = x.view(bs, -1, x.shape[-1])
+        return result_list
 
     def forward_dummy(self, img):
         """Dummy forward function."""
@@ -141,8 +159,7 @@ class ClsFinetuner(BaseDetector):
                       img_metas,
                       gt_bboxes=None,
                       gt_bboxes_ignore=None,
-                      gt_labels=None,
-                      patches_gt=None):
+                      gt_labels=None):
         """
         Args:
             img (Tensor): Input images of shape (N, C, H, W).
@@ -165,11 +182,12 @@ class ClsFinetuner(BaseDetector):
         #    self.rpn_head.debug_imgs = tensor2imgs(img)
 
         x = self.extract_feat(img, gt_bboxes, img_metas)
+        # x: list[tensor] each tensor shape [gt_num_of_image, 512]
         losses = self.rpn_head.forward_train(x, img_metas, gt_bboxes, gt_labels,
-                                             gt_bboxes_ignore, patches_gt=patches_gt)
+                                             gt_bboxes_ignore)
         return losses
 
-    def simple_test(self, img, img_metas, rescale=False):
+    def simple_test(self, img, img_metas, gt_bboxes, gt_labels, rescale=False):
         """Test function without test time augmentation.
 
         Args:
@@ -181,12 +199,12 @@ class ClsFinetuner(BaseDetector):
         Returns:
             list[np.ndarray]: proposals
         """
-        x = self.extract_feat(img, img_metas)
+        x = self.extract_feat(img, gt_bboxes, img_metas)
         # get origin input shape to onnx dynamic input shape
         if torch.onnx.is_in_onnx_export():
             img_shape = torch._shape_as_tensor(img)[2:]
             img_metas[0]['img_shape_for_onnx'] = img_shape
-        proposal_list = self.rpn_head.simple_test_bboxes(x, img_metas, rescale)
+        proposal_list = self.rpn_head.simple_test_bboxes(x, gt_labels, img_metas, rescale)
         #if rescale:
         #    for proposals, meta in zip(proposal_list, img_metas):
         #        proposals[:, :4] /= proposals.new_tensor(meta['scale_factor'])
