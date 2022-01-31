@@ -1,8 +1,6 @@
 # model settings
 model = dict(
     type='ClsFinetuner',
-    patches_list=[4],
-    #patches_list=[2, 4, 6],
     neck=None,
     backbone=dict(
         type='myVisionTransformer',
@@ -16,7 +14,6 @@ model = dict(
         init_cfg=dict(type='Pretrained', checkpoint="/data2/lwll/zhuoming/code/new_rpn/mmdetection/modified_state_dict.pth"),
         #init_cfg=dict(type='Pretrained', checkpoint="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection/modified_state_dict.pth"),
         fixed_param=True),
-
     rpn_head=dict(
         type='ClipClsHead',
         num_classes=80,

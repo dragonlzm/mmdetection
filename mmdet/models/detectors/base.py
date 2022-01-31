@@ -119,9 +119,9 @@ class BaseDetector(BaseModule, metaclass=ABCMeta):
                 augs (multiscale, flip, etc.) and the inner list indicates
                 images in a batch.
         """
-        for var, name in [(imgs, 'imgs'), (img_metas, 'img_metas')]:
-            if not isinstance(var, list):
-                raise TypeError(f'{name} must be a list, but got {type(var)}')
+        #for var, name in [(imgs, 'imgs'), (img_metas, 'img_metas')]:
+        #    if not isinstance(var, list):
+        #        raise TypeError(f'{name} must be a list, but got {type(var)}')
 
         num_augs = len(imgs)
         if num_augs != len(img_metas):
@@ -131,10 +131,10 @@ class BaseDetector(BaseModule, metaclass=ABCMeta):
         # NOTE the batched image size information may be useful, e.g.
         # in DETR, this is needed for the construction of masks, which is
         # then used for the transformer_head.
-        for img, img_meta in zip(imgs, img_metas):
-            batch_size = len(img_meta)
-            for img_id in range(batch_size):
-                img_meta[img_id]['batch_input_shape'] = tuple(img.size()[-2:])
+        #for img, img_meta in zip(imgs, img_metas):
+        #    batch_size = len(img_meta)
+        #    for img_id in range(batch_size):
+        #        img_meta[img_id]['batch_input_shape'] = tuple(img.size()[-2:])
 
         if num_augs == 1:
             # proposals (List[List[Tensor]]): the outer list indicates

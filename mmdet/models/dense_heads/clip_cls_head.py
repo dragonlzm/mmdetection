@@ -108,6 +108,11 @@ class ClipClsHead(AnchorFreeHead):
         #self.activate = build_activation_layer(self.act_cfg)
         self._init_layers(word_embeddings_path)
 
+    def get_bboxes(self):
+        pass
+    def get_targets(self): 
+        pass
+
     def _init_layers(self, word_embeddings_path):
         """Initialize layers of the transformer head."""
         if word_embeddings_path == None:
@@ -217,11 +222,11 @@ class ClipClsHead(AnchorFreeHead):
         # the out here should be two lists, all_cls_scores_list and all_bbox_preds_list
         outs = self(x, img_metas)
         #if patches_gt is None:
-        loss_inputs = outs + (gt_labels, img_metas)
+        loss_inputs = (outs,) + (gt_labels, img_metas)
         losses = self.loss(*loss_inputs)
         return losses
 
-    def simple_test_bboxes(self, gt_labels, feats, img_metas, rescale=False):
+    def simple_test_bboxes(self, feats, gt_labels, img_metas, rescale=False):
         """Test det bboxes without test-time augmentation.
 
         Args:
@@ -245,7 +250,7 @@ class ClipClsHead(AnchorFreeHead):
         # calculate the acc
         # predict_results list(tensor) each tensor is a true false tensor shape [gt_per_img]
         predict_results = []
-        for pred, gt in (outs, gt_labels):
+        for pred, gt in zip(outs, gt_labels):
             pred_idx = torch.argmax(pred, dim=1)
             result = (pred_idx == gt)
             predict_results.append(result)

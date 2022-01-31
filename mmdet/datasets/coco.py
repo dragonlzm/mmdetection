@@ -360,7 +360,7 @@ class CocoDataset(CustomDataset):
         all_gts = 0
         correct_num = 0
         for ele in results:
-            gt_num = ele.shape
+            gt_num = ele.shape[0]
             all_gts += gt_num
             correct_num += ele.sum().item()
         return correct_num / all_gts

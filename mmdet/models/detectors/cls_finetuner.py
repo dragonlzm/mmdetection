@@ -60,17 +60,18 @@ class ClsFinetuner(BaseDetector):
         self.test_cfg = test_cfg
         self.preprocess = _transform(self.backbone.input_resolution)
 
-    def crop_img_to_patches(self, img, gt_bboxes, img_metas):
-        bs, c, _, _ = img.shape
+    def crop_img_to_patches(self, imgs, gt_bboxes, img_metas):
+        bs, c, _, _ = imgs.shape
         #'img_shape':  torch.Size([2, 3, 800, 1184])
         # what we need is [800, 1184, 3]
-        img = img.permute(0, 2, 3, 1).numpy()
+        imgs = imgs.permute(0, 2, 3, 1).numpy()
 
-        result = []
+        all_results = []
         for img_idx in range(bs):
             H, W, channel = img_metas[img_idx]['img_shape']
             all_gt_bboxes = gt_bboxes[img_idx]
-            
+            img = imgs[img_idx]
+            result = []
             for bbox in all_gt_bboxes:
                 # for each bbox we need to calculate whether the bbox is inside the grid
                 tl_x, tl_y, br_x, br_y = bbox[0], bbox[1], bbox[2], bbox[3]
@@ -104,13 +105,14 @@ class ClsFinetuner(BaseDetector):
                 # do the preprocessing
                 new_patch = self.preprocess(PIL_image)
                 #image_result.append(np.expand_dims(new_patch, axis=0))
-                result.append(new_patch)
+                result.append(new_patch.unsqueeze(dim=0))
+            result = torch.cat(result, dim=0)
+            all_results.append(result)
 
         #cropped_patches = np.concatenate(result, axis=0)
         # the shape of the cropped_patches: torch.Size([gt_num_in_batch, 3, 224, 224])
         #cropped_patches = torch.cat(result, dim=0).cuda()
-        cropped_patches_list = result
-        return cropped_patches_list
+        return all_results
 
     def extract_feat(self, img, gt_bboxes, img_metas=None):
         """Extract features.
@@ -132,7 +134,7 @@ class ClsFinetuner(BaseDetector):
         # crop the img into the patches with normalization and reshape
         # (a function to convert the img)
         #cropped_patches_list:len = batch_size, list[tensor] each tensor shape [gt_num_of_image, 3, 224, 224]
-        cropped_patches_list = self.crop_img_to_patches(img.cpu(), gt_bboxes.cpu(), img_metas)
+        cropped_patches_list = self.crop_img_to_patches(img.cpu(), gt_bboxes, img_metas)
 
         # convert dimension from [bs, 64, 3, 224, 224] to [bs*64, 3, 224, 224]
         #converted_img_patches = converted_img_patches.view(bs, -1, self.backbone.input_resolution, self.backbone.input_resolution)
@@ -140,7 +142,7 @@ class ClsFinetuner(BaseDetector):
         # the input of the vision transformer should be torch.Size([64, 3, 224, 224])
         result_list = []
         for patches in cropped_patches_list:
-            x = self.backbone(patches)
+            x = self.backbone(patches.cuda())
             if self.with_neck:
                 x = self.neck(x)
             result_list.append(x)
@@ -199,6 +201,9 @@ class ClsFinetuner(BaseDetector):
         Returns:
             list[np.ndarray]: proposals
         """
+        img = img.unsqueeze(dim=0)
+        img_metas = [img_metas]
+
         x = self.extract_feat(img, gt_bboxes, img_metas)
         # get origin input shape to onnx dynamic input shape
         if torch.onnx.is_in_onnx_export():
