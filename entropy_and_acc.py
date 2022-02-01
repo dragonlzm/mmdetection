@@ -1,5 +1,8 @@
+from cgitb import small
 from operator import gt
 import os
+from statistics import median
+import this
 from scipy import rand
 import clip
 import torch
@@ -446,8 +449,8 @@ print(all_acc)    '''
 #gt_predict_result = torch.load('coco80_gt_predict_result_enlarged_cifar10_template.pt')
 #gt_predict_result = torch.load('coco80_gt_predict_result_center_padded.pt')
 #gt_predict_result = torch.load('coco80_gt_predict_result_zero_padded.pt')
-#gt_predict_result = torch.load('coco80_gt_predict_result_1_2times_zero_padded.pt')
-gt_predict_result = torch.load('coco80_gt_predict_result_1_5times_zero_padded.pt')
+gt_predict_result = torch.load('coco80_gt_predict_result_1_2times_zero_padded.pt')
+#gt_predict_result = torch.load('coco80_gt_predict_result_1_5times_zero_padded.pt')
 
 #gt_assignment_res = torch.load('val_img_enlarged_gt_rand_all_assigned_result.pt')
 gt_assignment_res = torch.load('val_img_center_pad_gt_rand_all_assigned_result.pt')
@@ -507,7 +510,9 @@ import numpy as np
 
 temp = normalized_mat.numpy()
 temp = pd.DataFrame(temp)
-temp.to_csv('normalized_mat.csv')
+#temp.to_csv('normalized_mat.csv')
+temp.to_csv('normalized_mat_1_2time_zero_padding.csv')
+
 
 
 # for the prediction top 5 prob
@@ -550,3 +555,154 @@ for similarity in testing:
         print(coco_cate[index.item()], 100 * value.item())
         #print(f"{imagenet_cate_name[str(index.item())]:>16s}: {100 * value.item():.2f}%")
 
+
+# small medium and large 
+import mmcv
+import math
+import numpy as np
+
+json_file_path = '/data2/lwll/zhuoming/detection/coco/annotations/instances_val2017.json'
+# load the json file
+json_val = json.load(open(json_file_path))
+
+areaRng = [[0 ** 2, 1e5 ** 2], [0 ** 2, 32 ** 2], [32 ** 2, 96 ** 2], [96 ** 2, 1e5 ** 2]]
+
+# aggregate the annotation for each image
+file_root = '/data2/lwll/zhuoming/detection/coco/val2017/'
+from_img_id_to_bbox = {}
+#{image_id:{image_name:"", bbox_list:[]},}
+# go through 'images' first
+for anno in json_val['images']:
+    image_id = anno['id']
+    if image_id not in from_img_id_to_bbox:
+        from_img_id_to_bbox[image_id] = {'img_shape': (anno['width'], anno['height']), 'path': file_root + anno['file_name'], 'bbox':[]}
+
+# go through the 'annotations'
+for anno in json_val['annotations']:
+    image_id = anno['image_id']
+    box = anno['bbox']
+    box.append(anno['category_id'])
+    from_img_id_to_bbox[image_id]['bbox'].append(box)
+
+all_size_result = {}
+
+# go through all the image in the dict:
+for count_i, image_id in enumerate(from_img_id_to_bbox.keys()):
+    # the shape of the img shoud be (x, y, 3)
+    size_result = []
+    # obtain the gt bbox feat
+    if len(from_img_id_to_bbox[image_id]['bbox']) != 0:
+        for bbox in from_img_id_to_bbox[image_id]['bbox']:
+            # for each bbox we need to calculate whether the bbox is inside the grid
+            x, y, w, h, cat_id = bbox[0], bbox[1], bbox[2], bbox[3], bbox[4]
+            area = w * h
+            if area < 32 ** 2:
+                tag = 0 
+            elif area > 96 ** 2:
+                tag = 2
+            else:
+                tag = 1
+            size_result.append(tag)
+    all_size_result[image_id] = torch.tensor(size_result)
+    #if count_i > 100:
+    #    break
+    if count_i % 1000 == 0:
+        print(count_i)
+
+torch.save(all_size_result, 'val_img_size_tags.pt')
+
+
+
+# acc with scale
+gt_predict_result = torch.load('coco80_gt_predict_result_1_2times_zero_padded.pt')
+#gt_predict_result = torch.load('coco80_gt_predict_result_1_5times_zero_padded.pt')
+
+#gt_assignment_res = torch.load('val_img_enlarged_gt_rand_all_assigned_result.pt')
+gt_assignment_res = torch.load('val_img_center_pad_gt_rand_all_assigned_result.pt')
+#gt_assignment_res = torch.load('val_img_zero_pad_gt_rand_all_assigned_result.pt')
+all_size_tags = torch.load('val_img_size_tags.pt')
+
+json_file_path = '/data2/lwll/zhuoming/detection/coco/annotations/instances_val2017.json'
+json_val = json.load(open(json_file_path))
+
+from_cate_id_to_embedding_id = {}
+from_embedding_id_to_cate_name = {}
+for i, cate_anno in enumerate(json_val['categories']):
+    cate_id = cate_anno['id']
+    from_cate_id_to_embedding_id[cate_id] = i
+    from_embedding_id_to_cate_name[i] = cate_anno['name']
+
+all_acc = [0, 0, 0]
+all_gt_num = [0, 0, 0]
+for key in gt_predict_result.keys():
+    #print(key)
+    gt_pred = gt_predict_result[key]
+    assigned_cate_ids = gt_assignment_res[key]
+    this_size_tags = all_size_tags[key]
+    small_idx = (this_size_tags == 0)
+    median_idx = (this_size_tags == 1)
+    large_idx = (this_size_tags == 2)
+    pred_idx = torch.argmax(gt_pred, dim=1)
+    # convert gt label to the embedding_idx
+    gt_gt_label = [from_cate_id_to_embedding_id[cate_id.item()] for cate_id in assigned_cate_ids]
+    gt_gt_label = torch.tensor(gt_gt_label)
+    # all predict result
+    match_res = (gt_gt_label.cuda() == pred_idx)
+    small_match_res = match_res[small_idx]
+    median_match_res = match_res[median_idx]
+    large_match_res = match_res[large_idx]
+    small_acc = small_match_res.sum()
+    median_acc = median_match_res.sum()
+    large_acc = large_match_res.sum()
+    small_gt_num = len(small_match_res)
+    median_gt_num = len(median_match_res)
+    large_gt_num = len(large_match_res)
+    all_acc[0] += small_acc.item()
+    all_acc[1] += median_acc.item()
+    all_acc[2] += large_acc.item()
+    all_gt_num[0] += small_gt_num
+    all_gt_num[1] += median_gt_num
+    all_gt_num[2] += large_gt_num
+    #print(small_acc, median_acc, large_acc, small_gt_num, median_gt_num, large_gt_num)
+    #print((gt_gt_label.cuda() == pred_idx).sum().item(), len(gt_gt_label))
+    #acc = (gt_gt_label.cuda() == pred_idx).sum()
+    #all_acc += acc.item()
+    #gt_num = len(gt_gt_label)
+    #all_gt_num += gt_num
+
+all_acc = np.array(all_acc).astype(float)
+all_gt_num = np.array(all_gt_num).astype(float)
+all_acc /= all_gt_num
+print(all_acc)
+
+
+confusion_matrix = torch.zeros(3, 80, 80)
+
+for key in gt_predict_result.keys():
+    #print(key)
+    gt_pred = gt_predict_result[key]
+    assigned_cate_ids = gt_assignment_res[key]
+    this_size_tags = all_size_tags[key]
+    #print(assigned_cate_ids)
+    pred_idxes = torch.argmax(gt_pred, dim=1)
+    # convert gt label to the embedding_idx
+    for gt_cate_id, pred_idx, tag in zip(assigned_cate_ids, pred_idxes, this_size_tags):
+        gt_idx = from_cate_id_to_embedding_id[gt_cate_id.item()]
+        confusion_matrix[tag][gt_idx][pred_idx.item()] += 1
+
+print(confusion_matrix)
+
+normalized_mat = confusion_matrix / confusion_matrix.sum(dim=-1, keepdim=True)
+print(normalized_mat)
+
+import pandas as pd
+import numpy as np
+
+temp = normalized_mat.numpy()
+temp0 = pd.DataFrame(temp[0])
+temp1 = pd.DataFrame(temp[1])
+temp2 = pd.DataFrame(temp[2])
+#temp.to_csv('normalized_mat.csv')
+temp0.to_csv('normalized_mat_1_2time_zero_padding_small.csv')
+temp1.to_csv('normalized_mat_1_2time_zero_padding_median.csv')
+temp2.to_csv('normalized_mat_1_2time_zero_padding_large.csv')
