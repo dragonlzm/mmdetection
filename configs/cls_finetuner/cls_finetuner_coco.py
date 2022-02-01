@@ -52,5 +52,5 @@ data = dict(train=dict(pipeline=train_pipeline),
             test=dict(eval_filter_empty_gt=True, pipeline=test_pipeline))
 evaluation = dict(interval=1, metric='gt_acc')
 
-lr_config = dict(step=[2, 4])
+lr_config = dict(step=[4])
 runner = dict(type='EpochBasedRunner', max_epochs=6)

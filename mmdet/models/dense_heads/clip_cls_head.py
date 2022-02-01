@@ -124,6 +124,14 @@ class ClipClsHead(AnchorFreeHead):
         else:
             self.word_embeddings = None
 
+    def init_weights(self):
+        # follow the official DETR to init parameters
+        if self.fc_cls != None:
+            for m in self.fc_cls.modules():
+                if hasattr(m, 'weight') and m.weight.dim() > 1:
+                    xavier_init(m, distribution='uniform')
+        self._is_init = True
+
     def forward(self, feats, img_metas):
         """Forward function.
 
