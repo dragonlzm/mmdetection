@@ -39,7 +39,7 @@ for cate_id in imagenet_cate_name:
 all_cate_feat = torch.cat(all_cate_feat, dim=0)
 torch.save(all_cate_feat, 'imagenet_name_feat_combined.pt')'''
 
-'''
+
 # prepare the coco cate text embeddings
 #sentence_template = ['There is {category} in the scene.',
 #'There is the {category} in the scene.',
@@ -109,6 +109,8 @@ for cate_info in coco_json['categories']:
         tokenized_result = clip.tokenize(now_sentence).to(device)
         all_sentences_result.append(tokenized_result)
     all_sentences_result = torch.cat(all_sentences_result, dim=0)
+
+    #tokenized_result = clip.tokenize(f"a photo of a {name}").to(device)    
     #print(all_sentences_result.shape)
     with torch.no_grad():
         #cate_features = model.encode_text(tokenized_result)
@@ -126,7 +128,7 @@ print(all_cate_feat.shape)
 #torch.save(all_cate_feat, 'coco_name_feat_space_replaced.pt')
 
 #torch.save(all_cate_feat, 'coco_name_feat_multi_template.pt')
-torch.save(all_cate_feat, 'coco_name_feat_8_template.pt')'''
+torch.save(all_cate_feat, 'coco_name_feat_8_template.pt')
 
 
 # prepare the image embedding
@@ -289,9 +291,9 @@ text_embedding = torch.load('coco_name_feat_combined.pt')
 #image_embedding = torch.load('val_img_gt_rand_feat_res.pt')
 #image_embedding = torch.load('val_img_enlarged_gt_rand_feat_res.pt')
 #image_embedding = torch.load('val_img_center_pad_gt_rand_feat_res.pt')
-#image_embedding = torch.load('val_img_zero_pad_gt_rand_feat_res.pt')
+image_embedding = torch.load('val_img_zero_pad_gt_rand_feat_res.pt')
 #image_embedding = torch.load('val_img_1_2times_zero_pad_gt_rand_feat_res.pt')
-image_embedding = torch.load('val_img_1_5times_zero_pad_gt_rand_feat_res.pt')
+#image_embedding = torch.load('val_img_1_5times_zero_pad_gt_rand_feat_res.pt')
 
 text_embedding /= text_embedding.norm(dim=-1, keepdim=True)
 
@@ -369,14 +371,14 @@ print('rand_std', torch.std(all_rand_entropy))
 #torch.save(gt_predict_result, 'coco80_gt_predict_result_center_padded.pt')
 #torch.save(rand_predict_result, 'coco80_rand_predict_result_center_padded.pt')
 
-#torch.save(gt_predict_result, 'coco80_gt_predict_result_zero_padded.pt')
-#torch.save(rand_predict_result, 'coco80_rand_predict_result_zero_padded.pt')
+torch.save(gt_predict_result, 'coco80_gt_predict_result_zero_padded.pt')
+torch.save(rand_predict_result, 'coco80_rand_predict_result_zero_padded.pt')
 
 #torch.save(gt_predict_result, 'coco80_gt_predict_result_1_2times_zero_padded.pt')
 #torch.save(rand_predict_result, 'coco80_rand_predict_result_1_2times_zero_padded.pt')
 
-torch.save(gt_predict_result, 'coco80_gt_predict_result_1_5times_zero_padded.pt')
-torch.save(rand_predict_result, 'coco80_rand_predict_result_1_5times_zero_padded.pt')
+#torch.save(gt_predict_result, 'coco80_gt_predict_result_1_5times_zero_padded.pt')
+#torch.save(rand_predict_result, 'coco80_rand_predict_result_1_5times_zero_padded.pt')
 
 #torch.save(gt_predict_result, 'imagenet_gt_predict_result_enlarged.pt')
 #torch.save(rand_predict_result, 'imagenet_rand_predict_result_enlarged.pt')
@@ -537,14 +539,17 @@ coco_cate = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
 
 #torch.save(rand_predict_result, 'coco80_rand_predict_result_enlarged.pt')
 #gt_predict_result = torch.load('coco80_gt_predict_result_enlarged.pt')
-random_predict_result = torch.load('coco80_rand_predict_result_enlarged.pt')
+gt_predict_result = torch.load('coco80_gt_predict_result_zero_padded.pt')
+#random_predict_result = torch.load('coco80_rand_predict_result_enlarged.pt')
 #testing = gt_predict_result[507037]
 #testing = gt_predict_result[580410]
 #testing = gt_predict_result[275198]
+testing = gt_predict_result[554002]
+
 
 #testing = random_predict_result[507037]
 #testing = random_predict_result[580410]
-testing = random_predict_result[275198]
+#testing = random_predict_result[275198]
 
 for similarity in testing:
     values, indices = similarity.topk(5)
@@ -706,3 +711,9 @@ temp2 = pd.DataFrame(temp[2])
 temp0.to_csv('normalized_mat_1_2time_zero_padding_small.csv')
 temp1.to_csv('normalized_mat_1_2time_zero_padding_median.csv')
 temp2.to_csv('normalized_mat_1_2time_zero_padding_large.csv')
+
+
+# create legs feat
+test  = clip.tokenize(f"a photo of legs").to(device)
+cate_features = model.encode_text(test)
+torch.save(cate_features.cpu(), 'legs_feat.pt')

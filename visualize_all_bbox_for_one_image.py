@@ -9,7 +9,8 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from PIL import Image
 
-save_path = 'C:\\Users\\XPS\\Desktop\\random_bbox\\000000507037.jpg'
+save_path = 'C:\\Users\\XPS\\Desktop\\gt_bbox\\large_person\\000000554002.jpg'
+#save_path = 'C:\\Users\\XPS\\Desktop\\random_bbox\\000000507037.jpg'
 #save_path = 'C:\\Users\\XPS\\Desktop\\random_bbox\\000000580410.jpg'
 #save_path = 'C:\\Users\\XPS\\Desktop\\random_bbox\\000000275198.jpg'
 im = np.array(Image.open(save_path), dtype=np.uint8)
@@ -54,12 +55,14 @@ for ele in gt_anno_result['annotations']:
 
 #save_root = 'C:\\Users\\XPS\\Desktop\\gt_bbox\\000000275198\\'
 #save_root = 'C:\\Users\\XPS\\Desktop\\gt_bbox\\000000580410\\'
-save_root = 'C:\\Users\\XPS\\Desktop\\gt_bbox\\000000507037\\'
+#save_root = 'C:\\Users\\XPS\\Desktop\\gt_bbox\\000000507037\\'
+save_root = 'C:\\Users\\XPS\\Desktop\\gt_bbox\\000000554002\\'
 
 #for i, box in enumerate(all_bbox):
 #for i, box in enumerate(from_img_id_to_gt[275198]):
 #for i, box in enumerate(from_img_id_to_gt[580410]):  
-for i, box in enumerate(from_img_id_to_gt[507037]):  
+#for i, box in enumerate(from_img_id_to_gt[507037]):
+for i, box in enumerate(from_img_id_to_gt[554002]): 
     #box = annotation['bbox']
     fig,ax = plt.subplots(1)
 
@@ -75,6 +78,8 @@ for i, box in enumerate(from_img_id_to_gt[507037]):
         os.makedirs(print_path)
     #file_name = '000000507037_' + str(i) + '.jpg'
     #file_name = '000000580410_' + str(i) + '.jpg'
-    file_name = '000000275198_' + str(i) + '.jpg'    
+    #file_name = '000000275198_' + str(i) + '.jpg' 
+    file_name = '000000554002_' + str(i) + '.jpg' 
+       
     plt.savefig(print_path+file_name)
     plt.close()
