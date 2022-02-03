@@ -116,6 +116,17 @@ class ClipClsHead(AnchorFreeHead):
     def _init_layers(self, word_embeddings_path):
         """Initialize layers of the transformer head."""
         if word_embeddings_path == None:
+            #self.fc_cls = Linear(self.in_channels, self.cls_out_channels)
+            self.act_cfg = dict(type='ReLU', inplace=True)
+            self.activate = build_activation_layer(self.act_cfg)
+            self.num_reg_fcs = 2
+            self.cls_ffn = FFN(
+                self.in_channels,
+                self.in_channels*2,
+                self.num_reg_fcs,
+                self.act_cfg,
+                dropout=0.0,
+                add_residual=False)
             self.fc_cls = Linear(self.in_channels, self.cls_out_channels)
         else:
             self.fc_cls = None
@@ -150,7 +161,9 @@ class ClipClsHead(AnchorFreeHead):
         all_cls_scores_list = []
         for feat in feats:
             if self.fc_cls != None:
-                cls_scores = self.fc_cls(feat)
+                #cls_scores = self.fc_cls(feat)
+                cls_scores = self.fc_cls(self.activate(
+                            self.cls_ffn(feat)))
             else:
                 cls_scores = (feat @ self.word_embeddings.T).softmax(dim=-1)
             all_cls_scores_list.append(cls_scores)

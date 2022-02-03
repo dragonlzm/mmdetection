@@ -207,7 +207,7 @@ class Transformer(BaseModule):
 
 @BACKBONES.register_module()
 class myVisionTransformer(BaseModule):
-    def __init__(self, input_resolution: int, patch_size: int, width: int, layers: int, heads: int, output_dim: int, init_cfg: dict, fixed_param=FALSE):
+    def __init__(self, input_resolution: int, patch_size: int, width: int, layers: int, heads: int, output_dim: int, init_cfg: dict, fixed_param=False, open_ln=False):
         super(myVisionTransformer, self).__init__(init_cfg)
         self.input_resolution = input_resolution
         self.output_dim = output_dim
@@ -225,13 +225,24 @@ class myVisionTransformer(BaseModule):
         self.init_cfg = init_cfg
         #self.init_weights()
         self.fixed_param = fixed_param
+        self.open_ln = open_ln
         if self.fixed_param == True:
             self.fix_model_parameter()
     
     def fix_model_parameter(self):
-        for param in self.parameters():
-            param.requires_grad = False
-        print('backbone parameters are fixed')
+        if self.open_ln == False:
+            for param in self.parameters():
+                param.requires_grad = False
+            print('backbone parameters are fixed')
+        else:
+            #print(self.state_dict())
+            for para_name, param in zip(self.state_dict(), self.parameters()):
+                #print(para_name, self.state_dict()[para_name].shape, param.shape)
+                if 'ln_' not in para_name:
+                    param.requires_grad = False
+            for para_name, param in zip(self.state_dict(), self.parameters()):
+                print(para_name, param.requires_grad, param.shape)            
+            #print('backbone parameters are fixed, with ln open')
 
     def forward(self, x: torch.Tensor):
         x = self.conv1(x)  # shape = [*, width, grid, grid]
