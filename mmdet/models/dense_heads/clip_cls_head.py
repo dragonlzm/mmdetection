@@ -60,6 +60,8 @@ class ClipClsHead(AnchorFreeHead):
                  in_channels,
                  num_reg_fcs=2,
                  word_embeddings_path=None,
+                 linear_probe=True,
+                 mlp_probe=False,
                  loss_cls=None,
                  train_cfg=None,
                  test_cfg=None,
@@ -97,6 +99,10 @@ class ClipClsHead(AnchorFreeHead):
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
         self.fp16_enabled = False
+        self.word_embeddings_path=word_embeddings_path
+        self.linear_probe=linear_probe
+        self.mlp_probe=mlp_probe
+
         if loss_cls != None:
             self.loss_cls = build_loss(loss_cls)
             if self.loss_cls.use_sigmoid:
@@ -106,17 +112,18 @@ class ClipClsHead(AnchorFreeHead):
         else:
             self.loss_cls = None
         #self.activate = build_activation_layer(self.act_cfg)
-        self._init_layers(word_embeddings_path)
+        self._init_layers()
 
     def get_bboxes(self):
         pass
     def get_targets(self): 
         pass
 
-    def _init_layers(self, word_embeddings_path):
+    def _init_layers(self):
         """Initialize layers of the transformer head."""
-        if word_embeddings_path == None:
-            #self.fc_cls = Linear(self.in_channels, self.cls_out_channels)
+        if self.linear_probe:
+            self.fc_cls = Linear(self.in_channels, self.cls_out_channels)
+        elif self.mlp_probe:
             self.act_cfg = dict(type='ReLU', inplace=True)
             self.activate = build_activation_layer(self.act_cfg)
             self.num_reg_fcs = 2
@@ -130,17 +137,21 @@ class ClipClsHead(AnchorFreeHead):
             self.fc_cls = Linear(self.in_channels, self.cls_out_channels)
         else:
             self.fc_cls = None
-        if word_embeddings_path != None:
-            self.word_embeddings = torch.load(word_embeddings_path)
+        if self.word_embeddings_path != None:
+            self.word_embeddings = torch.load(self.word_embeddings_path)
         else:
             self.word_embeddings = None
 
     def init_weights(self):
         # follow the official DETR to init parameters
-        if self.fc_cls != None:
+        if self.linear_probe or self.mlp_probe:
             for m in self.fc_cls.modules():
                 if hasattr(m, 'weight') and m.weight.dim() > 1:
                     xavier_init(m, distribution='uniform')
+        if self.mlp_probe:
+            for m in self.cls_ffn.modules():
+                if hasattr(m, 'weight') and m.weight.dim() > 1:
+                    xavier_init(m, distribution='uniform')            
         self._is_init = True
 
     def forward(self, feats, img_metas):
@@ -160,8 +171,9 @@ class ClipClsHead(AnchorFreeHead):
         #feats = torch.cat(feats)
         all_cls_scores_list = []
         for feat in feats:
-            if self.fc_cls != None:
-                #cls_scores = self.fc_cls(feat)
+            if self.linear_probe:
+                cls_scores = self.fc_cls(feat)
+            elif self.mlp_probe:
                 cls_scores = self.fc_cls(self.activate(
                             self.cls_ffn(feat)))
             else:

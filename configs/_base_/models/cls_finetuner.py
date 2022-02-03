@@ -20,17 +20,19 @@ model = dict(
         in_channels=512,
         positional_encoding=dict(
             type='SinePositionalEncoding', num_feats=128, normalize=True),
-        word_embeddings_path = None,
-        #loss_cls=dict(
-        #    type='CrossEntropyLoss', 
-        #    use_sigmoid=True, 
-        #    loss_weight=1.0)
+        word_embeddings_path=None,
+        linear_probe=True,
+        mlp_probe=False,
         loss_cls=dict(
-            type='FocalLoss',
-            use_sigmoid=True,
-            gamma=2.0,
-            alpha=0.25,
-            loss_weight=1.0),
+            type='CrossEntropyLoss', 
+            use_sigmoid=True, 
+            loss_weight=1.0)
+        #loss_cls=dict(
+        #    type='FocalLoss',
+        #    use_sigmoid=True,
+        #    gamma=2.0,
+        #    alpha=0.25,
+        #    loss_weight=1.0),
         ),
         )
 
