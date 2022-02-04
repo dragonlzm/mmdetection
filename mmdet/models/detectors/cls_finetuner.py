@@ -209,7 +209,7 @@ class ClsFinetuner(BaseDetector):
         if torch.onnx.is_in_onnx_export():
             img_shape = torch._shape_as_tensor(img)[2:]
             img_metas[0]['img_shape_for_onnx'] = img_shape
-        proposal_list = self.rpn_head.simple_test_bboxes(x, gt_labels, img_metas, rescale)
+        proposal_list = self.rpn_head.simple_test_bboxes(x, gt_labels, img_metas, gt_bboxes)
         #if rescale:
         #    for proposals, meta in zip(proposal_list, img_metas):
         #        proposals[:, :4] /= proposals.new_tensor(meta['scale_factor'])

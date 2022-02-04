@@ -259,7 +259,7 @@ class ClipClsHead(AnchorFreeHead):
         losses = self.loss(*loss_inputs)
         return losses
 
-    def simple_test_bboxes(self, feats, gt_labels, img_metas, rescale=False):
+    def simple_test_bboxes(self, feats, gt_labels, img_metas, gt_bboxes):
         """Test det bboxes without test-time augmentation.
 
         Args:
@@ -283,10 +283,29 @@ class ClipClsHead(AnchorFreeHead):
         # calculate the acc
         # predict_results list(tensor) each tensor is a true false tensor shape [gt_per_img]
         predict_results = []
-        for pred, gt in zip(outs, gt_labels):
+        for pred, gt_label, gt_bbox, img_meta in zip(outs, gt_labels, gt_bboxes, img_metas):
             pred_idx = torch.argmax(pred, dim=1)
-            result = (pred_idx == gt)
-            predict_results.append(result)
+            #result = (pred_idx == gt)
+            #predict_results.append(result)
+            # scale the gt bboxes back to the original size 
+            scale_factor = img_meta['scale_factor']
+            #print('before scale:', gt_bbox)
+            #print('scale_factor:', scale_factor)
+            gt_bbox /= gt_bbox.new_tensor(scale_factor)
+            #print('after scale:', gt_bbox)
+            # calculate the area
+            area = (gt_bbox[:, 2] - gt_bbox[:, 0]) * (gt_bbox[:, 3] - gt_bbox[:, 1])
+            #print('area:', area.shape)
+            size_result = torch.full(area.shape, -1)
+            size_result[area > 96 ** 2] = 2
+            size_result[(area < 96 ** 2) & (area > 32 **2)] = 1
+            size_result[area < 32 **2] = 0
+            #size_result.cuda()
+            #print('size_result:', size_result.shape, size_result)
+            
+            # concat the gt and the pred result
+            pred_and_gt = torch.cat([pred_idx.unsqueeze(dim=0).cuda(), gt_label.unsqueeze(dim=0).cuda(), size_result.unsqueeze(dim=0).cuda()], dim=0)
+            predict_results.append(pred_and_gt)
 
         return predict_results
 

@@ -312,7 +312,7 @@ class CocoDataset(CustomDataset):
                 values are corresponding filenames.
         """
         result_files = dict()
-        if isinstance(results[0], np.ndarray) and results[0][0].item() == bool:
+        if isinstance(results[0], np.ndarray) and results[0].shape[0] == 3:
             json_results = self._gtacc2json(results)
             result_files['gt_acc'] = f'{outfile_prefix}.gt_acc.json'
             mmcv.dump(json_results, result_files['gt_acc'])
@@ -359,11 +359,58 @@ class CocoDataset(CustomDataset):
     def calc_gt_acc(self, results):
         all_gts = 0
         correct_num = 0
+
+        gt_num_over_scales = np.array([0,0,0])
+        corr_num_over_scales = np.array([0,0,0])
+
+        person_gt_num = 0
+        person_correct_num = 0
+        
+
         for ele in results:
-            gt_num = ele.shape[0]
+            pred_res = torch.from_numpy(ele[0])
+            gt_res = torch.from_numpy(ele[1])
+            scale_info = torch.from_numpy(ele[2])
+
+            # calculate the acc over all scale
+            gt_num = pred_res.shape[0]
             all_gts += gt_num
-            correct_num += ele.sum().item()
-        return correct_num / all_gts
+            matched_res = (pred_res == gt_res)
+            correct_num += matched_res.sum().item()
+
+            # calculate the acc over different scale 
+            s_pred = pred_res[scale_info==0]
+            s_gt = gt_res[scale_info==0]
+
+            m_pred = pred_res[scale_info==1]
+            m_gt = gt_res[scale_info==1]
+
+            l_pred = pred_res[scale_info==2]
+            l_gt = gt_res[scale_info==2]
+
+            # deal with small, median and large
+            gt_num_over_scales[0] += s_pred.shape[0]
+            gt_num_over_scales[1] += m_pred.shape[0]
+            gt_num_over_scales[2] += l_pred.shape[0]
+
+            corr_num_over_scales[0] += (s_pred == s_gt).sum().item()
+            corr_num_over_scales[1] += (m_pred == m_gt).sum().item()
+            corr_num_over_scales[2] += (l_pred == l_gt).sum().item()
+
+            # deal with the person categories
+            person_pred = pred_res[gt_res==0]
+            person_gt = gt_res[gt_res==0]
+
+            person_gt_num += person_pred.shape[0]
+            person_correct_num += (person_pred == person_gt).sum().item()
+
+        over_all_acc = correct_num / all_gts
+        acc_over_scales = corr_num_over_scales / gt_num_over_scales
+        s_acc = acc_over_scales[0]
+        m_acc = acc_over_scales[1]
+        l_acc = acc_over_scales[2]
+        person_acc = person_correct_num / person_gt_num
+        return over_all_acc, s_acc, m_acc, l_acc, person_acc
 
     def fast_eval_recall(self, results, proposal_nums, iou_thrs, logger=None):
         gt_bboxes = []
@@ -485,9 +532,18 @@ class CocoDataset(CustomDataset):
                 print_log(log_msg, logger=logger)
                 continue
             if metric == 'gt_acc':
-                acc = self.calc_gt_acc(results)
-                eval_results['gt_acc'] = acc
-                log_msg = f'\nacc\t{acc:.4f}'
+                over_all_acc, s_acc, m_acc, l_acc, person_acc = self.calc_gt_acc(results)
+                eval_results['over_all_acc'] = over_all_acc
+                eval_results['s_acc'] = s_acc
+                eval_results['m_acc'] = m_acc
+                eval_results['l_acc'] = l_acc
+                eval_results['person_acc'] = person_acc
+
+                log_msg = f'\n over_all_acc\t{over_all_acc:.4f}' + \
+                    f'\n s_acc\t{s_acc:.4f}'+ \
+                    f'\n m_acc\t{m_acc:.4f}' + \
+                    f'\n l_acc\t{l_acc:.4f}' + \
+                    f'\n person_acc\t{person_acc:.4f}'
                 print_log(log_msg, logger=logger)
                 continue
             if metric == 'proposal_fast':
