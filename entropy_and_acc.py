@@ -39,7 +39,7 @@ for cate_id in imagenet_cate_name:
 all_cate_feat = torch.cat(all_cate_feat, dim=0)
 torch.save(all_cate_feat, 'imagenet_name_feat_combined.pt')'''
 
-
+'''
 # prepare the coco cate text embeddings
 #sentence_template = ['There is {category} in the scene.',
 #'There is the {category} in the scene.',
@@ -128,7 +128,7 @@ print(all_cate_feat.shape)
 #torch.save(all_cate_feat, 'coco_name_feat_space_replaced.pt')
 
 #torch.save(all_cate_feat, 'coco_name_feat_multi_template.pt')
-torch.save(all_cate_feat, 'coco_name_feat_8_template.pt')
+torch.save(all_cate_feat, 'coco_name_feat_8_template.pt')'''
 
 
 # prepare the image embedding
@@ -137,22 +137,31 @@ import math
 import numpy as np
 
 json_file_path = '/data2/lwll/zhuoming/detection/coco/annotations/instances_val2017.json'
+#json_file_path = '/data2/lwll/zhuoming/detection/coco/annotations/instances_train2017.json'
+
 # load the json file
 json_val = json.load(open(json_file_path))
 
 # aggregate the annotation for each image
 file_root = '/data2/lwll/zhuoming/detection/coco/val2017/'
+#file_root = '/data2/lwll/zhuoming/detection/coco/train2017/'
+
+
 from_img_id_to_bbox = {}
 #{image_id:{image_name:"", bbox_list:[]},}
 # go through 'images' first
 for anno in json_val['images']:
     image_id = anno['id']
+    #if image_id != 472054 and image_id != 174228:
+    #    continue
     if image_id not in from_img_id_to_bbox:
         from_img_id_to_bbox[image_id] = {'img_shape': (anno['width'], anno['height']), 'path': file_root + anno['file_name'], 'bbox':[]}
 
 # go through the 'annotations'
 for anno in json_val['annotations']:
     image_id = anno['image_id']
+    #if image_id != 472054 and image_id != 174228:
+    #    continue
     box = anno['bbox']
     box.append(anno['category_id'])
     from_img_id_to_bbox[image_id]['bbox'].append(box)
@@ -276,8 +285,11 @@ for count_i, image_id in enumerate(from_img_id_to_bbox.keys()):
 #torch.save(all_assigned_result, 'val_img_zero_pad_gt_rand_all_assigned_result.pt')
 #torch.save(all_feature_res, 'val_img_1_2times_zero_pad_gt_rand_feat_res.pt')
 #torch.save(all_assigned_result, 'val_img_1_2times_zero_pad_gt_rand_all_assigned_result.pt')
-torch.save(all_feature_res, 'val_img_1_5times_zero_pad_gt_rand_feat_res.pt')
-torch.save(all_assigned_result, 'val_img_1_5times_zero_pad_gt_rand_all_assigned_result.pt')
+#torch.save(all_feature_res, 'val_img_1_5times_zero_pad_gt_rand_feat_res.pt')
+#torch.save(all_assigned_result, 'val_img_1_5times_zero_pad_gt_rand_all_assigned_result.pt')
+
+torch.save(all_feature_res, '174228_and_472054_feat.pt')
+torch.save(all_assigned_result, '174228_and_472054_assigned_result.pt')
 
 # predict the categories (calculate the entropy)
 #text_embedding = torch.load('imagenet_name_feat_combined.pt')
@@ -285,15 +297,21 @@ torch.save(all_assigned_result, 'val_img_1_5times_zero_pad_gt_rand_all_assigned_
 
 #text_embedding = torch.load('coco_name_feat_space_replaced.pt')
 text_embedding = torch.load('coco_name_feat_combined.pt')
+person_with_dog = torch.load('person_with_dog_feat.pt').cuda()
+person_with_dog_sentence = torch.load('person_with_dog_sentence_feat.pt').cuda()
+person_with_kite = torch.load('person_with_kite_feat.pt').cuda()
+person_with_kite_sentence = torch.load('person_with_kite_sentence_feat.pt').cuda()
+text_embedding = torch.cat([text_embedding, person_with_dog, person_with_dog_sentence, person_with_kite, person_with_kite_sentence])
 #text_embedding = torch.load('coco_name_feat_multi_template.pt')
 #text_embedding = torch.load('coco_name_feat_8_template.pt')
 #text_embedding = torch.load('coco_name_feat_cifar10_template.pt')
 #image_embedding = torch.load('val_img_gt_rand_feat_res.pt')
 #image_embedding = torch.load('val_img_enlarged_gt_rand_feat_res.pt')
 #image_embedding = torch.load('val_img_center_pad_gt_rand_feat_res.pt')
-image_embedding = torch.load('val_img_zero_pad_gt_rand_feat_res.pt')
+#image_embedding = torch.load('val_img_zero_pad_gt_rand_feat_res.pt')
 #image_embedding = torch.load('val_img_1_2times_zero_pad_gt_rand_feat_res.pt')
 #image_embedding = torch.load('val_img_1_5times_zero_pad_gt_rand_feat_res.pt')
+image_embedding = torch.load('174228_and_472054_feat.pt')
 
 text_embedding /= text_embedding.norm(dim=-1, keepdim=True)
 
@@ -307,7 +325,7 @@ total_gt_entry = 0
 total_rand_entry = 0
 
 for key in image_embedding.keys():
-    #if key != 275198:
+    #if key != 174228:
     #    continue
     image_features = image_embedding[key].cuda()
     image_features /= image_features.norm(dim=-1, keepdim=True)
@@ -371,8 +389,11 @@ print('rand_std', torch.std(all_rand_entropy))
 #torch.save(gt_predict_result, 'coco80_gt_predict_result_center_padded.pt')
 #torch.save(rand_predict_result, 'coco80_rand_predict_result_center_padded.pt')
 
-torch.save(gt_predict_result, 'coco80_gt_predict_result_zero_padded.pt')
-torch.save(rand_predict_result, 'coco80_rand_predict_result_zero_padded.pt')
+#torch.save(gt_predict_result, 'coco80_gt_predict_result_zero_padded.pt')
+#torch.save(rand_predict_result, 'coco80_rand_predict_result_zero_padded.pt')
+
+torch.save(gt_predict_result, '174228_and_472054_predict.pt')
+torch.save(rand_predict_result, '174228_and_472054_random_predict.pt')
 
 #torch.save(gt_predict_result, 'coco80_gt_predict_result_1_2times_zero_padded.pt')
 #torch.save(rand_predict_result, 'coco80_rand_predict_result_1_2times_zero_padded.pt')
@@ -443,7 +464,6 @@ print(all_acc)    '''
     
 
 # predict acc with assignment result
-
 #gt_predict_result = torch.load('coco80_gt_predict_result.pt')
 #gt_predict_result = torch.load('coco80_gt_predict_result_enlarged.pt')
 #gt_predict_result = torch.load('coco80_gt_predict_result_enlarged_multi_template.pt')
@@ -530,7 +550,7 @@ coco_cate = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
 'donut', 'cake', 'chair', 'couch', 'potted plant', 'bed', 'dining table', 
 'toilet', 'tv', 'laptop', 'mouse', 'remote', 'keyboard', 'cell phone', 
 'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 
-'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush']
+'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush', 'person_with_dog']
 
 #rand_predict_result = torch.load('imagenet_rand_predict_result_enlarged.pt')
 #testing = rand_predict_result[507037]
@@ -544,17 +564,17 @@ gt_predict_result = torch.load('coco80_gt_predict_result_zero_padded.pt')
 #testing = gt_predict_result[507037]
 #testing = gt_predict_result[580410]
 #testing = gt_predict_result[275198]
-testing = gt_predict_result[554002]
-
-
+#testing = gt_predict_result[554002]
+testing = gt_predict_result[174228]
+#testing = gt_predict_result[554002]
 #testing = random_predict_result[507037]
 #testing = random_predict_result[580410]
 #testing = random_predict_result[275198]
 
-for similarity in testing:
+for i, similarity in enumerate(testing):
     values, indices = similarity.topk(5)
     # Print the result
-    print("\nTop predictions:\n")
+    print("Image " + str(i) +" Top predictions:\n")
     for value, index in zip(values, indices):
         #print(imagenet_cate_name[str(index.item())], 100 * value.item())
         print(coco_cate[index.item()], 100 * value.item())
@@ -714,6 +734,24 @@ temp2.to_csv('normalized_mat_1_2time_zero_padding_large.csv')
 
 
 # create legs feat
-test  = clip.tokenize(f"a photo of legs").to(device)
+test = clip.tokenize(f"a photo of legs").to(device)
 cate_features = model.encode_text(test)
 torch.save(cate_features.cpu(), 'legs_feat.pt')
+
+# create person and dog feat
+test = clip.tokenize(f"a photo of person with dog").to(device)
+cate_features = model.encode_text(test)
+torch.save(cate_features.cpu(), 'person_with_dog_feat.pt')
+
+test = clip.tokenize(f"a woman standing at a table next to a large black dog.").to(device)
+cate_features = model.encode_text(test)
+torch.save(cate_features.cpu(), 'person_with_dog_sentence_feat.pt')
+
+# create person and kite feat
+test = clip.tokenize(f"a photo of person with kite").to(device)
+cate_features = model.encode_text(test)
+torch.save(cate_features.cpu(), 'person_with_kite_feat.pt')
+
+test = clip.tokenize(f"a woman is holding onto an x-wing model kite as she prepares it for flight.").to(device)
+cate_features = model.encode_text(test)
+torch.save(cate_features.cpu(), 'person_with_kite_sentence_feat.pt')
