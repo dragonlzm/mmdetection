@@ -11,7 +11,8 @@ model = dict(
         heads=12,
         output_dim=512,
         #init_cfg=dict(type='Pretrained', checkpoint="https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt")),
-        init_cfg=dict(type='Pretrained', checkpoint="/data2/lwll/zhuoming/code/new_rpn/mmdetection/modified_state_dict.pth"),
+        #init_cfg=dict(type='Pretrained', checkpoint="/data2/lwll/zhuoming/code/new_rpn/mmdetection/data/pretrained/modified_state_dict.pth"),
+        init_cfg=dict(type='Pretrained', checkpoint="/data2/lwll/zhuoming/code/new_rpn/mmdetection/data/pretrained/clip_vitb32_full.pth", prefix='visual.'),
         #init_cfg=dict(type='Pretrained', checkpoint="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection/modified_state_dict.pth"),
         fixed_param=True),
     rpn_head=dict(
@@ -26,14 +27,5 @@ model = dict(
         loss_cls=dict(
             type='CrossEntropyLoss', 
             use_sigmoid=True, 
-            loss_weight=1.0)
-        #loss_cls=dict(
-        #    type='FocalLoss',
-        #    use_sigmoid=True,
-        #    gamma=2.0,
-        #    alpha=0.25,
-        #    loss_weight=1.0),
-        ),
+            loss_weight=1.0)),
         )
-
-
