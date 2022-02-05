@@ -8,7 +8,8 @@ from collections import OrderedDict
 
 
 # Load the model
-device = "cuda" if torch.cuda.is_available() else "cpu"
+#device = "cuda" if torch.cuda.is_available() else "cpu"
+device = 'cpu'
 model, preprocess = clip.load('ViT-B/32', device)
 
 
@@ -30,3 +31,9 @@ for param_tensor in new_state_dict:
     print(param_tensor, "\t", new_state_dict[param_tensor].size())
 
 # Print optimizer's state_dict
+
+
+
+
+
+torch.save(model.cpu().state_dict(), 'ViT_B32_full.pt')
