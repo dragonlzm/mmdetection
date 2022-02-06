@@ -37,6 +37,7 @@ from .yolof_head import YOLOFHead
 from .yolox_head import YOLOXHead
 from .encoder_head import EncoderHead
 from .clip_cls_head import ClipClsHead
+from .clip_encoder_head import ClipEncoderHead
 
 __all__ = [
     'AnchorFreeHead', 'AnchorHead', 'GuidedAnchorHead', 'FeatureAdaption',
@@ -49,5 +50,5 @@ __all__ = [
     'CascadeRPNHead', 'EmbeddingRPNHead', 'LDHead', 'CascadeRPNHead',
     'AutoAssignHead', 'DETRHead', 'YOLOFHead', 'DeformableDETRHead',
     'SOLOHead', 'DecoupledSOLOHead', 'CenterNetHead', 'YOLOXHead',
-    'DecoupledSOLOLightHead', 'EncoderHead', 'ClipClsHead'
+    'DecoupledSOLOLightHead', 'EncoderHead', 'ClipClsHead', 'ClipEncoderHead'
 ]

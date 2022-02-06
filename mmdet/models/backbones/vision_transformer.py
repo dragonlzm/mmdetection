@@ -194,7 +194,8 @@ class ResidualAttentionBlock(BaseModule):
         return x
 
 
-class Transformer(BaseModule):
+@BACKBONES.register_module()
+class myTransformer(BaseModule):
     def __init__(self, width: int, layers: int, heads: int, attn_mask: torch.Tensor = None):
         super().__init__()
         self.width = width
@@ -218,7 +219,7 @@ class myVisionTransformer(BaseModule):
         self.positional_embedding = nn.Parameter(scale * torch.randn((input_resolution // patch_size) ** 2 + 1, width))
         self.ln_pre = LayerNorm(width)
 
-        self.transformer = Transformer(width, layers, heads)
+        self.transformer = myTransformer(width, layers, heads)
 
         self.ln_post = LayerNorm(width)
         self.proj = nn.Parameter(scale * torch.randn(width, output_dim))
@@ -240,9 +241,9 @@ class myVisionTransformer(BaseModule):
                 #print(para_name, self.state_dict()[para_name].shape, param.shape)
                 if 'ln_' not in para_name:
                     param.requires_grad = False
-            for para_name, param in zip(self.state_dict(), self.parameters()):
-                print(para_name, param.requires_grad, param.shape)            
-            #print('backbone parameters are fixed, with ln open')
+            #for para_name, param in zip(self.state_dict(), self.parameters()):
+            #    print(para_name, param.requires_grad, param.shape)            
+            print('backbone parameters are fixed, with ln open')
 
     def forward(self, x: torch.Tensor):
         x = self.conv1(x)  # shape = [*, width, grid, grid]
