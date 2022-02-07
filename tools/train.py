@@ -47,6 +47,10 @@ def parse_args():
         action='store_true',
         help='whether to set deterministic options for CUDNN backend.')
     parser.add_argument(
+        '--save-model-before-train',
+        action='store_true',
+        help='whether to save the model before training.')
+    parser.add_argument(
         '--options',
         nargs='+',
         action=DictAction,
@@ -161,6 +165,11 @@ def main():
         train_cfg=cfg.get('train_cfg'),
         test_cfg=cfg.get('test_cfg'))
     model.init_weights()
+
+    # save the epoch_0 model
+    if args.save_model_before_train:
+        model_save_path = os.path.join(args.work_dir, 'epoch_0.pth')
+        torch.save(model.state_dict(), model_save_path)
 
     datasets = [build_dataset(cfg.data.train)]
     if len(cfg.workflow) == 2:
