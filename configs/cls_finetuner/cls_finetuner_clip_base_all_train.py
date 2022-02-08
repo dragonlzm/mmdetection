@@ -2,7 +2,15 @@ _base_ = './cls_finetuner_clip_full_coco.py'
 
 data_root = 'data/coco/'
 
-classes = ("toilet","bicycle","apple","train","laptop","carrot","motorcycle","oven","chair","mouse","boat","kite","sheep","horse","sandwich","clock","tv","backpack","toaster","bowl","microwave","bench","book","orange","bird","pizza","fork","frisbee","bear","vase","toothbrush","spoon","giraffe","handbag","broccoli","refrigerator","remote","surfboard","car","bed","banana","donut","skis","person","truck","bottle","suitcase","zebra","background")
+classes = ('person', 'bicycle', 'car', 'motorcycle', 'train', 
+            'truck', 'boat', 'bench', 'bird', 'horse', 'sheep', 
+            'bear', 'zebra', 'giraffe', 'backpack', 'handbag', 
+            'suitcase', 'frisbee', 'skis', 'kite', 'surfboard', 
+            'bottle', 'fork', 'spoon', 'bowl', 'banana', 'apple', 
+            'sandwich', 'orange', 'broccoli', 'carrot', 'pizza', 
+            'donut', 'chair', 'bed', 'toilet', 'tv', 'laptop', 
+            'mouse', 'remote', 'microwave', 'oven', 'toaster', 
+            'refrigerator', 'book', 'clock', 'vase', 'toothbrush')
 
 data = dict(
     train=dict(classes=classes),
@@ -13,11 +21,12 @@ data = dict(
 
 model = dict(
     rpn_head=dict(
-        cate_names=["toilet","bicycle","apple","train","laptop","carrot",
-        "motorcycle","oven","chair","mouse","boat","kite","sheep","horse",
-        "sandwich","clock","tv","backpack","toaster","bowl","microwave",
-        "bench","book","orange","bird","pizza","fork","frisbee","bear","vase",
-        "toothbrush","spoon","giraffe","handbag","broccoli","refrigerator",
-        "remote","surfboard","car","bed","banana","donut","skis","person",
-        "truck","bottle","suitcase","zebra","background"]    
+        cate_names=['person', 'bicycle', 'car', 'motorcycle', 'train', 
+        'truck', 'boat', 'bench', 'bird', 'horse', 'sheep', 'bear', 'zebra', 
+        'giraffe', 'backpack', 'handbag', 'suitcase', 'frisbee', 'skis', 
+        'kite', 'surfboard', 'bottle', 'fork', 'spoon', 'bowl', 'banana', 
+        'apple', 'sandwich', 'orange', 'broccoli', 'carrot', 'pizza', 
+        'donut', 'chair', 'bed', 'toilet', 'tv', 'laptop', 'mouse', 'remote', 
+        'microwave', 'oven', 'toaster', 'refrigerator', 'book', 'clock', 
+        'vase', 'toothbrush']  
         ))
