@@ -72,7 +72,7 @@ class ClsFinetuner(BaseDetector):
             all_gt_bboxes = gt_bboxes[img_idx]
             img = imgs[img_idx]
             result = []
-            for bbox in all_gt_bboxes:
+            for box_i, bbox in enumerate(all_gt_bboxes):
                 # for each bbox we need to calculate whether the bbox is inside the grid
                 tl_x, tl_y, br_x, br_y = bbox[0], bbox[1], bbox[2], bbox[3]
                 x = tl_x
@@ -99,6 +99,9 @@ class ClsFinetuner(BaseDetector):
                         y_end = y_start + gt_h
                         empty_patch[y_start: y_end] = now_patch
                     now_patch = empty_patch
+                
+                #data = Image.fromarray(np.uint8(now_patch))
+                #data.save('/data2/lwll/zhuoming/detection/test/cls_finetuner_clip_base_100shots_train/patch_visualize/' + img_metas[img_idx]['ori_filename'] + '_' + str(box_i) + '.png')
                 #new_patch, w_scale, h_scale = mmcv.imresize(now_patch, (224, 224), return_scale=True)
                 # convert the numpy to PIL image
                 PIL_image = Image.fromarray(np.uint8(now_patch))
