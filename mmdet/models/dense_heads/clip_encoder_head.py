@@ -271,7 +271,7 @@ class ClipEncoderHead(AnchorFreeHead):
         # obtain the text embedding [number of cls * num_of_template, 512]
         text_embeddings = self.encode_text(self.all_cate_tokenize_res)
         # group by the cate_name [number of cls, num_of_template, 512]
-        text_embeddings = text_embeddings.view(self.num_class, -1, text_embeddings.shape[-1])
+        text_embeddings = text_embeddings.view(len(self.cate_names), -1, text_embeddings.shape[-1])
         # average over all templates: [number_of_cls, 512]
         text_embeddings = torch.mean(text_embeddings, dim=1)
 
