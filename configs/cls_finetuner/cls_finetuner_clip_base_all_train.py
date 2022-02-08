@@ -10,3 +10,14 @@ data = dict(
     test=dict(classes=classes))
 
 #["umbrella","cow","cup","bus","keyboard","skateboard","dog","couch","tie","snowboard","sink","elephant","cake","scissors","airplane","cat","knife"]
+
+model = dict(
+    rpn_head=dict(
+        cate_names=["toilet","bicycle","apple","train","laptop","carrot",
+        "motorcycle","oven","chair","mouse","boat","kite","sheep","horse",
+        "sandwich","clock","tv","backpack","toaster","bowl","microwave",
+        "bench","book","orange","bird","pizza","fork","frisbee","bear","vase",
+        "toothbrush","spoon","giraffe","handbag","broccoli","refrigerator",
+        "remote","surfboard","car","bed","banana","donut","skis","person",
+        "truck","bottle","suitcase","zebra","background"]    
+        ))
