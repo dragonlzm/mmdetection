@@ -79,6 +79,8 @@ class ClipEncoderHead(AnchorFreeHead):
                  context_length,
                  fixed_param=True,
                  open_ln=True,
+                 test_with_attribute=False,
+                 cate_attribute=None,
                  loss_cls=None,
                  train_cfg=None,
                  test_cfg=None,
@@ -128,6 +130,9 @@ class ClipEncoderHead(AnchorFreeHead):
         self.template_num = len(self.sentence_templates)
         self.fixed_param = fixed_param
         self.open_ln = open_ln
+        self.test_with_attribute = test_with_attribute
+        self.cate_attribute = cate_attribute
+
         # create the layers
         self._init_layers()
         # fix the model parameter
@@ -135,17 +140,7 @@ class ClipEncoderHead(AnchorFreeHead):
             self.fix_model_parameter()        
 
         # prepare the template with categories name
-        self.all_cate_tokenize_res = []
-        for cate_name in self.cate_names:
-            #sentences_result_for_cate = []
-            for template in self.sentence_templates:
-                now_sentence = template.replace('{}', cate_name)
-                #print(now_sentence)
-                tokenized_result = self.tokenize(now_sentence).cuda()
-                #sentences_result_for_cate.append(tokenized_result)
-                #sentences_result_for_cate = torch.cat(sentences_result_for_cate, dim=0)
-                self.all_cate_tokenize_res.append(tokenized_result)
-        self.all_cate_tokenize_res = torch.cat(self.all_cate_tokenize_res, dim=0)
+        self.prepare_the_text_embedding()
 
         if loss_cls != None:
             self.loss_cls = build_loss(loss_cls)
@@ -156,6 +151,47 @@ class ClipEncoderHead(AnchorFreeHead):
         else:
             self.loss_cls = None
         #self.activate = build_activation_layer(self.act_cfg)
+
+    def prepare_the_text_embedding(self):
+        # if do not use the attribute
+        self.all_cate_tokenize_res = []
+        self.from_id_to_cate_name = {}
+        for i, cate_name in enumerate(self.cate_names):
+            self.from_id_to_cate_name[i] = cate_name
+            #sentences_result_for_cate = []
+            for template in self.sentence_templates:
+                now_sentence = template.replace('{}', cate_name)
+                #print(now_sentence)
+                tokenized_result = self.tokenize(now_sentence).cuda()
+                #sentences_result_for_cate.append(tokenized_result)
+                #sentences_result_for_cate = torch.cat(sentences_result_for_cate, dim=0)
+                self.all_cate_tokenize_res.append(tokenized_result)
+        
+        # deal with the attributes
+        # need a mapping from the cate_name to attribute
+        if self.test_with_attribute:
+            self.from_cate_id_to_attr_id = {}
+            for cate_id, key in enumerate(self.cate_attribute):
+                now_attribute = self.cate_attribute[key]
+                # if there is no attribute for this categories
+                # just skip this cate
+                self.from_cate_id_to_attr_id[cate_id] = []
+                if len(now_attribute) == 0:
+                    continue 
+                for attribute in now_attribute:
+                    now_id = int(len(self.all_cate_tokenize_res) / len(self.sentence_templates))
+                    self.from_id_to_cate_name[now_id] = attribute
+                    for template in self.sentence_templates:
+                        now_sentence = template.replace('{}', attribute)
+                        #print(now_sentence)
+                        tokenized_result = self.tokenize(now_sentence).cuda()
+                        #sentences_result_for_cate.append(tokenized_result)
+                        #sentences_result_for_cate = torch.cat(sentences_result_for_cate, dim=0)
+                        self.all_cate_tokenize_res.append(tokenized_result)
+                    self.from_cate_id_to_attr_id[cate_id].append(now_id)
+
+        # concatenate all the result to torch tensor
+        self.all_cate_tokenize_res = torch.cat(self.all_cate_tokenize_res, dim=0)
 
     def fix_model_parameter(self):
         if self.open_ln == False:
@@ -271,7 +307,8 @@ class ClipEncoderHead(AnchorFreeHead):
         # obtain the text embedding [number of cls * num_of_template, 512]
         text_embeddings = self.encode_text(self.all_cate_tokenize_res)
         # group by the cate_name [number of cls, num_of_template, 512]
-        text_embeddings = text_embeddings.view(len(self.cate_names), -1, text_embeddings.shape[-1])
+        #text_embeddings = text_embeddings.view(len(self.cate_names), -1, text_embeddings.shape[-1])
+        text_embeddings = text_embeddings.view(-1, len(self.sentence_templates), text_embeddings.shape[-1])
         # average over all templates: [number_of_cls, 512]
         text_embeddings = torch.mean(text_embeddings, dim=1)
 
@@ -387,6 +424,34 @@ class ClipEncoderHead(AnchorFreeHead):
         # forward of this head requires img_metas
         outs = self.forward(feats, img_metas)
         #out list[tensor] tensor with shape [gt_per_img, channel]
+        m = nn.Softmax(dim=1)
+
+        # deal with the score aggregation
+        if self.test_with_attribute:
+            new_out = []
+            for pred_res, img_meta in zip(outs, img_metas):
+                pred_res = m(pred_res)
+
+                # print the top prediction
+                for i, box_res in enumerate(pred_res):
+                    values, indices = box_res.topk(5)
+                    # Print the result
+                    print("\nTop predictions:\n" + img_meta['filename'] + 'bbox:' , i)
+                    for value, index in zip(values, indices):
+                        #print(imagenet_cate_name[str(index.item())], 100 * value.item())
+                        print(self.from_id_to_cate_name[index.item()], 100 * value.item())
+
+                # pred_res is all prediction of all bboxes in the cate
+                for cate_id in self.from_cate_id_to_attr_id:
+                    attri_ids = self.from_cate_id_to_attr_id[cate_id]
+                    if len(attri_ids) == 0:
+                        continue
+                    first_id = attri_ids[0]
+                    last_id = attri_ids[-1]
+                    sum_for_cate_i = torch.sum(pred_res[:, first_id:last_id+1], dim=1)
+                    pred_res[:, cate_id] = pred_res[:, cate_id] + sum_for_cate_i
+                new_out.append(pred_res[:, :len(self.cate_names)])
+            outs = new_out
 
         # calculate the acc
         # predict_results list(tensor) each tensor is a true false tensor shape [gt_per_img]
