@@ -1,4 +1,4 @@
-_base_ = './cls_finetuner_clip_base_all_train.py'
+_base_ = './cls_finetuner_clip_base60_all_train.py'
 
 # model settings
 model = dict(

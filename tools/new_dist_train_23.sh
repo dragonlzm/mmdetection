@@ -5,7 +5,7 @@ GPUS=$2
 WORK_DIR=$3
 DATA_DIR=$4
 
-PORT=${PORT:-29500}
+PORT=${PORT:-29501}
 
 rm -rf ./data
 ln -sf ${DATA_DIR} ./data

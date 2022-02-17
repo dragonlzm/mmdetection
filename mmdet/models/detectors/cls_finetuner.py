@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+from cgi import test
 import warnings
 
 import mmcv
@@ -11,6 +12,7 @@ from .base import BaseDetector
 from PIL import Image
 import numpy as np
 import math
+import random
 from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normalize
 try:
     from torchvision.transforms import InterpolationMode
@@ -60,7 +62,22 @@ class ClsFinetuner(BaseDetector):
         self.test_cfg = test_cfg
         self.preprocess = _transform(self.backbone.input_resolution)
 
+        # deal with the crop size and location
+        self.test_crop_size_modi_ratio = self.test_cfg.get('crop_size_modi', 1.2) if self.test_cfg is not None else 1.2
+        self.test_crop_loca_modi_ratio = self.test_cfg.get('crop_loca_modi', 0) if self.test_cfg is not None else 0
+
+        self.train_crop_size_modi_ratio = self.train_cfg.get('crop_size_modi', 1.2) if self.train_cfg is not None else 1.2
+        self.train_crop_loca_modi_ratio = self.train_cfg.get('crop_loca_modi', 0) if self.train_cfg is not None else 0        
+
     def crop_img_to_patches(self, imgs, gt_bboxes, img_metas):
+        # handle the test config
+        if self.training: 
+            crop_size_modi_ratio = self.train_crop_size_modi_ratio
+            crop_loca_modi_ratio = self.train_crop_loca_modi_ratio
+        else:
+            crop_size_modi_ratio = self.test_crop_size_modi_ratio
+            crop_loca_modi_ratio = self.test_crop_loca_modi_ratio            
+        
         bs, c, _, _ = imgs.shape
         #'img_shape':  torch.Size([2, 3, 800, 1184])
         # what we need is [800, 1184, 3]
@@ -70,19 +87,41 @@ class ClsFinetuner(BaseDetector):
         for img_idx in range(bs):
             H, W, channel = img_metas[img_idx]['img_shape']
             all_gt_bboxes = gt_bboxes[img_idx]
+            if len(all_gt_bboxes) == 0:
+                continue
             img = imgs[img_idx]
             result = []
             for box_i, bbox in enumerate(all_gt_bboxes):
-                # for each bbox we need to calculate whether the bbox is inside the grid
+                # the original bbox location
                 tl_x, tl_y, br_x, br_y = bbox[0], bbox[1], bbox[2], bbox[3]
                 x = tl_x
                 y = tl_y
                 w = br_x - tl_x
                 h = br_y - tl_y
-                x_start_pos = math.floor(max(x-0.1*w, 0))
-                y_start_pos = math.floor(max(y-0.1*h, 0))
-                x_end_pos = math.ceil(min(x+1.1*w, W-1))
-                y_end_pos = math.ceil(min(y+1.1*h, H-1))
+                # change the bbox location by changing the top left position
+                # bbox change direction
+                x_direction_sign = random.randint(-1,1)
+                y_direction_sign = random.randint(-1,1)
+                # bbox direction change ratio(the ration should be 1/2, 1/3, 1/4, 1/5)
+                # commonly we will mantain the size of the bbox unchange while changing
+                # the localization of the bbox
+                x_change_pixel = w * crop_loca_modi_ratio * x_direction_sign
+                y_change_pixel = h * crop_loca_modi_ratio * y_direction_sign
+
+                # change the bbox size ratio
+                x_change_for_size = ((crop_size_modi_ratio - 1) / 2) * w
+                y_change_for_size = ((crop_size_modi_ratio - 1) / 2) * h
+
+                # the final format for the
+                x_start_pos = math.floor(max(x-x_change_for_size+x_change_pixel , 0))
+                y_start_pos = math.floor(max(y-y_change_for_size+y_change_pixel, 0))
+                x_end_pos = math.ceil(min(x+x_change_for_size+w, W-1))
+                y_end_pos = math.ceil(min(y+y_change_for_size+h, H-1))
+
+                #x_start_pos = math.floor(max(x-0.1*w, 0))
+                #y_start_pos = math.floor(max(y-0.1*h, 0))
+                #x_end_pos = math.ceil(min(x+1.1*w, W-1))
+                #y_end_pos = math.ceil(min(y+1.1*h, H-1))
 
                 now_patch = img[y_start_pos: y_end_pos, x_start_pos: x_end_pos, :]           
                 # crop the GT bbox and place it in the center of the zero square
