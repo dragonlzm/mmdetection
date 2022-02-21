@@ -366,11 +366,13 @@ class CocoDataset(CustomDataset):
         person_gt_num = 0
         person_correct_num = 0
         
+        all_entropy = 0
 
         for ele in results:
             pred_res = torch.from_numpy(ele[0])
             gt_res = torch.from_numpy(ele[1])
             scale_info = torch.from_numpy(ele[2])
+            entro_result = torch.from_numpy(ele[3])
 
             # calculate the acc over all scale
             gt_num = pred_res.shape[0]
@@ -381,10 +383,8 @@ class CocoDataset(CustomDataset):
             # calculate the acc over different scale 
             s_pred = pred_res[scale_info==0]
             s_gt = gt_res[scale_info==0]
-
             m_pred = pred_res[scale_info==1]
             m_gt = gt_res[scale_info==1]
-
             l_pred = pred_res[scale_info==2]
             l_gt = gt_res[scale_info==2]
 
@@ -400,9 +400,11 @@ class CocoDataset(CustomDataset):
             # deal with the person categories
             person_pred = pred_res[gt_res==0]
             person_gt = gt_res[gt_res==0]
-
             person_gt_num += person_pred.shape[0]
             person_correct_num += (person_pred == person_gt).sum().item()
+
+            # aggregate the entropy
+            all_entropy += entro_result.sum().item()
 
         over_all_acc = correct_num / all_gts
         acc_over_scales = corr_num_over_scales / gt_num_over_scales
@@ -410,7 +412,8 @@ class CocoDataset(CustomDataset):
         m_acc = acc_over_scales[1]
         l_acc = acc_over_scales[2]
         person_acc = person_correct_num / person_gt_num
-        return over_all_acc, s_acc, m_acc, l_acc, person_acc
+        all_entropy = all_entropy / all_gts
+        return over_all_acc, s_acc, m_acc, l_acc, person_acc, all_entropy
 
     def fast_eval_recall(self, results, proposal_nums, iou_thrs, logger=None):
         gt_bboxes = []
@@ -532,18 +535,20 @@ class CocoDataset(CustomDataset):
                 print_log(log_msg, logger=logger)
                 continue
             if metric == 'gt_acc':
-                over_all_acc, s_acc, m_acc, l_acc, person_acc = self.calc_gt_acc(results)
+                over_all_acc, s_acc, m_acc, l_acc, person_acc, overall_entropy = self.calc_gt_acc(results)
                 eval_results['over_all_acc'] = over_all_acc
                 eval_results['s_acc'] = s_acc
                 eval_results['m_acc'] = m_acc
                 eval_results['l_acc'] = l_acc
                 eval_results['person_acc'] = person_acc
+                eval_results['overall_entropy'] = overall_entropy
 
                 log_msg = f'\n over_all_acc\t{over_all_acc:.4f}' + \
-                    f'\n s_acc\t{s_acc:.4f}'+ \
+                    f'\n s_acc\t{s_acc:.4f}' + \
                     f'\n m_acc\t{m_acc:.4f}' + \
                     f'\n l_acc\t{l_acc:.4f}' + \
-                    f'\n person_acc\t{person_acc:.4f}'
+                    f'\n person_acc\t{person_acc:.4f}' + \
+                    f'\n overall_entropy\t{overall_entropy:.4f}'
                 print_log(log_msg, logger=logger)
                 continue
             if metric == 'proposal_fast':

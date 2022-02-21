@@ -431,7 +431,6 @@ class ClipEncoderHead(AnchorFreeHead):
             new_out = []
             for pred_res, img_meta in zip(outs, img_metas):
                 pred_res = softmax(pred_res)
-
                 # print the top prediction
                 #for i, box_res in enumerate(pred_res):
                 #    values, indices = box_res.topk(5)
@@ -479,9 +478,15 @@ class ClipEncoderHead(AnchorFreeHead):
             size_result[area < 32 **2] = 0
             #size_result.cuda()
             #print('size_result:', size_result.shape, size_result)
-            
+            # calculate the entropy
+            prepared_gt_pred = pred
+            prepared_gt_pred[prepared_gt_pred == 0] = 1e-5
+            log_result = - torch.log(prepared_gt_pred)
+            entro = (log_result * pred).sum(dim=-1)
+            #print("entro.shape", entro.shape, "gt_label.shape", gt_label.shape)
+
             # concat the gt and the pred result
-            pred_and_gt = torch.cat([pred_idx.unsqueeze(dim=0).cuda(), gt_label.unsqueeze(dim=0).cuda(), size_result.unsqueeze(dim=0).cuda()], dim=0)
+            pred_and_gt = torch.cat([pred_idx.unsqueeze(dim=0).cuda(), gt_label.unsqueeze(dim=0).cuda(), size_result.unsqueeze(dim=0).cuda(), entro.unsqueeze(dim=0).cuda()], dim=0)
             predict_results.append(pred_and_gt)
 
         return predict_results
