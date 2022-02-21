@@ -424,22 +424,22 @@ class ClipEncoderHead(AnchorFreeHead):
         # forward of this head requires img_metas
         outs = self.forward(feats, img_metas)
         #out list[tensor] tensor with shape [gt_per_img, channel]
-        m = nn.Softmax(dim=1)
+        softmax = nn.Softmax(dim=1)
 
         # deal with the score aggregation
         if self.test_with_attribute:
             new_out = []
             for pred_res, img_meta in zip(outs, img_metas):
-                pred_res = m(pred_res)
+                pred_res = softmax(pred_res)
 
                 # print the top prediction
-                for i, box_res in enumerate(pred_res):
-                    values, indices = box_res.topk(5)
-                    # Print the result
-                    print("\nTop predictions:\n" + img_meta['filename'] + 'bbox:' , i)
-                    for value, index in zip(values, indices):
-                        #print(imagenet_cate_name[str(index.item())], 100 * value.item())
-                        print(self.from_id_to_cate_name[index.item()], 100 * value.item())
+                #for i, box_res in enumerate(pred_res):
+                #    values, indices = box_res.topk(5)
+                #    # Print the result
+                #    print("\nTop predictions:\n" + img_meta['filename'] + 'bbox:' , i)
+                #    for value, index in zip(values, indices):
+                #        #print(imagenet_cate_name[str(index.item())], 100 * value.item())
+                #        print(self.from_id_to_cate_name[index.item()], 100 * value.item())
 
                 # pred_res is all prediction of all bboxes in the cate
                 for cate_id in self.from_cate_id_to_attr_id:
@@ -448,8 +448,12 @@ class ClipEncoderHead(AnchorFreeHead):
                         continue
                     first_id = attri_ids[0]
                     last_id = attri_ids[-1]
-                    sum_for_cate_i = torch.sum(pred_res[:, first_id:last_id+1], dim=1)
-                    pred_res[:, cate_id] = pred_res[:, cate_id] + sum_for_cate_i
+                    #sum_for_cate_i = torch.sum(pred_res[:, first_id:last_id+1], dim=1)
+                    temp = torch.cat([pred_res[:, cate_id].unsqueeze(dim=-1), pred_res[:, first_id:last_id+1]], dim=1)
+                    #print(temp.shape)
+                    max_for_cate_i = torch.max(temp, dim=1)[0]
+                    #pred_res[:, cate_id] = pred_res[:, cate_id] + sum_for_cate_i
+                    pred_res[:, cate_id] = max_for_cate_i
                 new_out.append(pred_res[:, :len(self.cate_names)])
             outs = new_out
 
