@@ -460,7 +460,13 @@ class ClipEncoderHead(AnchorFreeHead):
         # predict_results list(tensor) each tensor is a true false tensor shape [gt_per_img]
         predict_results = []
         for pred, gt_label, gt_bbox, img_meta in zip(outs, gt_labels, gt_bboxes, img_metas):
-            pred_idx = torch.argmax(pred, dim=1)
+            # turning the logit to the prob score
+            pred = softmax(pred)
+            #pred_idx = torch.argmax(pred, dim=1)
+            temp = torch.max(pred, dim=1)
+            pred_idx = temp[1]
+            max_val = temp[0]
+            #print('pred_idx', pred_idx, 'test[0]', test[0], 'test[1]', test[1])
             #result = (pred_idx == gt)
             #predict_results.append(result)
             # scale the gt bboxes back to the original size 
@@ -486,7 +492,7 @@ class ClipEncoderHead(AnchorFreeHead):
             #print("entro.shape", entro.shape, "gt_label.shape", gt_label.shape)
 
             # concat the gt and the pred result
-            pred_and_gt = torch.cat([pred_idx.unsqueeze(dim=0).cuda(), gt_label.unsqueeze(dim=0).cuda(), size_result.unsqueeze(dim=0).cuda(), entro.unsqueeze(dim=0).cuda()], dim=0)
+            pred_and_gt = torch.cat([pred_idx.unsqueeze(dim=0).cuda(), gt_label.unsqueeze(dim=0).cuda(), size_result.unsqueeze(dim=0).cuda(), entro.unsqueeze(dim=0).cuda(), max_val.unsqueeze(dim=0)], dim=0)
             predict_results.append(pred_and_gt)
 
         return predict_results

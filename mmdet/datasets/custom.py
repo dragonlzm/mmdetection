@@ -67,7 +67,8 @@ class CustomDataset(Dataset):
                  test_mode=False,
                  filter_empty_gt=True,
                  patches_file=None,
-                 eval_filter_empty_gt=False):
+                 eval_filter_empty_gt=False,
+                 visualization_path=None):
         self.ann_file = ann_file
         self.data_root = data_root
         self.img_prefix = img_prefix
@@ -77,6 +78,7 @@ class CustomDataset(Dataset):
         self.filter_empty_gt = filter_empty_gt
         self.CLASSES = self.get_classes(classes)
         self.patches_file = patches_file
+        self.visualization_path = visualization_path
 
         # join paths if data_root is specified
         if self.data_root is not None:

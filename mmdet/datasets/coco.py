@@ -16,6 +16,10 @@ from .api_wrappers import COCO, COCOeval
 from .builder import DATASETS
 from .custom import CustomDataset
 import torch
+import seaborn as sns
+import matplotlib.pyplot as plt
+import time
+import os
 
 
 @DATASETS.register_module()
@@ -312,7 +316,7 @@ class CocoDataset(CustomDataset):
                 values are corresponding filenames.
         """
         result_files = dict()
-        if isinstance(results[0], np.ndarray) and results[0].shape[0] == 3:
+        if isinstance(results[0], np.ndarray) and results[0].shape[0] == 5:
             json_results = self._gtacc2json(results)
             result_files['gt_acc'] = f'{outfile_prefix}.gt_acc.json'
             mmcv.dump(json_results, result_files['gt_acc'])
@@ -359,20 +363,22 @@ class CocoDataset(CustomDataset):
     def calc_gt_acc(self, results):
         all_gts = 0
         correct_num = 0
-
         gt_num_over_scales = np.array([0,0,0])
         corr_num_over_scales = np.array([0,0,0])
-
         person_gt_num = 0
         person_correct_num = 0
         
         all_entropy = 0
+        all_max_score = []
 
         for ele in results:
             pred_res = torch.from_numpy(ele[0])
             gt_res = torch.from_numpy(ele[1])
             scale_info = torch.from_numpy(ele[2])
             entro_result = torch.from_numpy(ele[3])
+            max_score = torch.from_numpy(ele[4])
+
+            all_max_score.append(max_score)
 
             # calculate the acc over all scale
             gt_num = pred_res.shape[0]
@@ -413,6 +419,20 @@ class CocoDataset(CustomDataset):
         l_acc = acc_over_scales[2]
         person_acc = person_correct_num / person_gt_num
         all_entropy = all_entropy / all_gts
+
+        # distri visualization
+        all_max_score = torch.cat(all_max_score).cpu().numpy()
+        #print(all_max_score.shape)
+        if self.visualization_path != None:
+            sns.displot(all_max_score, kde=True)
+            #plt.show()
+            file_name = str(time.time()) + '.png'
+            # create path if path is not exist
+            if not os.path.exists(self.visualization_path):
+                os.makedirs(self.visualization_path)            
+            plt.savefig(os.path.join(self.visualization_path, file_name))
+
+
         return over_all_acc, s_acc, m_acc, l_acc, person_acc, all_entropy
 
     def fast_eval_recall(self, results, proposal_nums, iou_thrs, logger=None):

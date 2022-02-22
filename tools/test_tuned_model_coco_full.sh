@@ -23,172 +23,172 @@ PYTHONPATH="/home1/liuzhuom/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /home1/liuzhuom/mmdetection/tools/test.py \
     /home1/liuzhuom/mmdetection/configs/cls_finetuner/cls_finetuner_clip_base48_all_train.py \
-    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/latest.pth \
+    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_full_coco/epoch_12.pth \
     --launcher pytorch --eval=gt_acc --options jsonfile_prefix=/home1/liuzhuom/mmdetection/results \
-    --cfg-options data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_base48
+    --cfg-options data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_full
 
 PYTHONPATH="/home1/liuzhuom/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /home1/liuzhuom/mmdetection/tools/test.py \
     /home1/liuzhuom/mmdetection/configs/cls_finetuner/cls_finetuner_clip_novel17_all_train.py \
-    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/latest.pth \
+    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_full_coco/epoch_12.pth \
     --launcher pytorch --eval=gt_acc --options jsonfile_prefix=/home1/liuzhuom/mmdetection/results \
-    --cfg-options data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_base48
+    --cfg-options data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_full
 
 PYTHONPATH="/home1/liuzhuom/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /home1/liuzhuom/mmdetection/tools/test.py \
     /home1/liuzhuom/mmdetection/configs/cls_finetuner/cls_finetuner_clip_full_coco.py \
-    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/latest.pth \
+    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_full_coco/epoch_12.pth \
     --launcher pytorch --eval=gt_acc --options jsonfile_prefix=/home1/liuzhuom/mmdetection/results \
-    --cfg-options data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_base48
+    --cfg-options data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_full
 
 # 1.5
 PYTHONPATH="/home1/liuzhuom/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /home1/liuzhuom/mmdetection/tools/test.py \
     /home1/liuzhuom/mmdetection/configs/cls_finetuner/cls_finetuner_clip_base48_all_train.py \
-    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/latest.pth \
+    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_full_coco/epoch_12.pth \
     --launcher pytorch --eval=gt_acc --options jsonfile_prefix=/home1/liuzhuom/mmdetection/results \
-    --cfg-options model.test_cfg.crop_size_modi=1.5 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_base48
+    --cfg-options model.test_cfg.crop_size_modi=1.5 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_full
 
 PYTHONPATH="/home1/liuzhuom/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /home1/liuzhuom/mmdetection/tools/test.py \
     /home1/liuzhuom/mmdetection/configs/cls_finetuner/cls_finetuner_clip_novel17_all_train.py \
-    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/latest.pth \
+    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_full_coco/epoch_12.pth \
     --launcher pytorch --eval=gt_acc --options jsonfile_prefix=/home1/liuzhuom/mmdetection/results \
-    --cfg-options model.test_cfg.crop_size_modi=1.5 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_base48
+    --cfg-options model.test_cfg.crop_size_modi=1.5 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_full
 
 PYTHONPATH="/home1/liuzhuom/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /home1/liuzhuom/mmdetection/tools/test.py \
     /home1/liuzhuom/mmdetection/configs/cls_finetuner/cls_finetuner_clip_full_coco.py \
-    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/latest.pth \
+    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_full_coco/epoch_12.pth \
     --launcher pytorch --eval=gt_acc --options jsonfile_prefix=/home1/liuzhuom/mmdetection/results \
-    --cfg-options model.test_cfg.crop_size_modi=1.5 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_base48
+    --cfg-options model.test_cfg.crop_size_modi=1.5 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_full
 
 # 2
 PYTHONPATH="/home1/liuzhuom/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /home1/liuzhuom/mmdetection/tools/test.py \
     /home1/liuzhuom/mmdetection/configs/cls_finetuner/cls_finetuner_clip_base48_all_train.py \
-    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/latest.pth \
+    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_full_coco/epoch_12.pth \
     --launcher pytorch --eval=gt_acc --options jsonfile_prefix=/home1/liuzhuom/mmdetection/results \
-    --cfg-options model.test_cfg.crop_size_modi=2 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_base48
+    --cfg-options model.test_cfg.crop_size_modi=2 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_full
 
 PYTHONPATH="/home1/liuzhuom/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /home1/liuzhuom/mmdetection/tools/test.py \
     /home1/liuzhuom/mmdetection/configs/cls_finetuner/cls_finetuner_clip_novel17_all_train.py \
-    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/latest.pth \
+    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_full_coco/epoch_12.pth \
     --launcher pytorch --eval=gt_acc --options jsonfile_prefix=/home1/liuzhuom/mmdetection/results \
-    --cfg-options model.test_cfg.crop_size_modi=2 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_base48
+    --cfg-options model.test_cfg.crop_size_modi=2 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_full
 
 PYTHONPATH="/home1/liuzhuom/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /home1/liuzhuom/mmdetection/tools/test.py \
     /home1/liuzhuom/mmdetection/configs/cls_finetuner/cls_finetuner_clip_full_coco.py \
-    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/latest.pth \
+    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_full_coco/epoch_12.pth \
     --launcher pytorch --eval=gt_acc --options jsonfile_prefix=/home1/liuzhuom/mmdetection/results \
-    --cfg-options model.test_cfg.crop_size_modi=2 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_base48
+    --cfg-options model.test_cfg.crop_size_modi=2 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_full
 
 # 1.0
 PYTHONPATH="/home1/liuzhuom/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /home1/liuzhuom/mmdetection/tools/test.py \
     /home1/liuzhuom/mmdetection/configs/cls_finetuner/cls_finetuner_clip_base48_all_train.py \
-    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/latest.pth \
+    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_full_coco/epoch_12.pth \
     --launcher pytorch --eval=gt_acc --options jsonfile_prefix=/home1/liuzhuom/mmdetection/results \
-    --cfg-options model.test_cfg.crop_size_modi=1.0 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_base48
+    --cfg-options model.test_cfg.crop_size_modi=1.0 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_full
 
 PYTHONPATH="/home1/liuzhuom/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /home1/liuzhuom/mmdetection/tools/test.py \
     /home1/liuzhuom/mmdetection/configs/cls_finetuner/cls_finetuner_clip_novel17_all_train.py \
-    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/latest.pth \
+    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_full_coco/epoch_12.pth \
     --launcher pytorch --eval=gt_acc --options jsonfile_prefix=/home1/liuzhuom/mmdetection/results \
-    --cfg-options model.test_cfg.crop_size_modi=1.0 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_base48
+    --cfg-options model.test_cfg.crop_size_modi=1.0 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_full
 
 PYTHONPATH="/home1/liuzhuom/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /home1/liuzhuom/mmdetection/tools/test.py \
     /home1/liuzhuom/mmdetection/configs/cls_finetuner/cls_finetuner_clip_full_coco.py \
-    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/latest.pth \
+    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_full_coco/epoch_12.pth \
     --launcher pytorch --eval=gt_acc --options jsonfile_prefix=/home1/liuzhuom/mmdetection/results \
-    --cfg-options model.test_cfg.crop_size_modi=1.0 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_base48
+    --cfg-options model.test_cfg.crop_size_modi=1.0 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_full
 
 # 0.9
 PYTHONPATH="/home1/liuzhuom/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /home1/liuzhuom/mmdetection/tools/test.py \
     /home1/liuzhuom/mmdetection/configs/cls_finetuner/cls_finetuner_clip_base48_all_train.py \
-    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/latest.pth \
+    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_full_coco/epoch_12.pth \
     --launcher pytorch --eval=gt_acc --options jsonfile_prefix=/home1/liuzhuom/mmdetection/results \
-    --cfg-options model.test_cfg.crop_size_modi=0.9 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_base48
+    --cfg-options model.test_cfg.crop_size_modi=0.9 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_full
 
 PYTHONPATH="/home1/liuzhuom/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /home1/liuzhuom/mmdetection/tools/test.py \
     /home1/liuzhuom/mmdetection/configs/cls_finetuner/cls_finetuner_clip_novel17_all_train.py \
-    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/latest.pth \
+    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_full_coco/epoch_12.pth \
     --launcher pytorch --eval=gt_acc --options jsonfile_prefix=/home1/liuzhuom/mmdetection/results \
-    --cfg-options model.test_cfg.crop_size_modi=0.9 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_base48
+    --cfg-options model.test_cfg.crop_size_modi=0.9 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_full
 
 PYTHONPATH="/home1/liuzhuom/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /home1/liuzhuom/mmdetection/tools/test.py \
     /home1/liuzhuom/mmdetection/configs/cls_finetuner/cls_finetuner_clip_full_coco.py \
-    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/latest.pth \
+    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_full_coco/epoch_12.pth \
     --launcher pytorch --eval=gt_acc --options jsonfile_prefix=/home1/liuzhuom/mmdetection/results \
-    --cfg-options model.test_cfg.crop_size_modi=0.9 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_base48
+    --cfg-options model.test_cfg.crop_size_modi=0.9 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_full
 
 # 0.75
 PYTHONPATH="/home1/liuzhuom/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /home1/liuzhuom/mmdetection/tools/test.py \
     /home1/liuzhuom/mmdetection/configs/cls_finetuner/cls_finetuner_clip_base48_all_train.py \
-    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/latest.pth \
+    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_full_coco/epoch_12.pth \
     --launcher pytorch --eval=gt_acc --options jsonfile_prefix=/home1/liuzhuom/mmdetection/results \
-    --cfg-options model.test_cfg.crop_size_modi=0.75 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_base48
+    --cfg-options model.test_cfg.crop_size_modi=0.75 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_full
 
 PYTHONPATH="/home1/liuzhuom/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /home1/liuzhuom/mmdetection/tools/test.py \
     /home1/liuzhuom/mmdetection/configs/cls_finetuner/cls_finetuner_clip_novel17_all_train.py \
-    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/latest.pth \
+    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_full_coco/epoch_12.pth \
     --launcher pytorch --eval=gt_acc --options jsonfile_prefix=/home1/liuzhuom/mmdetection/results \
-    --cfg-options model.test_cfg.crop_size_modi=0.75 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_base48
+    --cfg-options model.test_cfg.crop_size_modi=0.75 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_full
 
 PYTHONPATH="/home1/liuzhuom/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /home1/liuzhuom/mmdetection/tools/test.py \
     /home1/liuzhuom/mmdetection/configs/cls_finetuner/cls_finetuner_clip_full_coco.py \
-    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/latest.pth \
+    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_full_coco/epoch_12.pth \
     --launcher pytorch --eval=gt_acc --options jsonfile_prefix=/home1/liuzhuom/mmdetection/results \
-    --cfg-options model.test_cfg.crop_size_modi=0.75 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_base48
+    --cfg-options model.test_cfg.crop_size_modi=0.75 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_full
 
 # 0.5
 PYTHONPATH="/home1/liuzhuom/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /home1/liuzhuom/mmdetection/tools/test.py \
     /home1/liuzhuom/mmdetection/configs/cls_finetuner/cls_finetuner_clip_base48_all_train.py \
-    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/latest.pth \
+    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_full_coco/epoch_12.pth \
     --launcher pytorch --eval=gt_acc --options jsonfile_prefix=/home1/liuzhuom/mmdetection/results \
-    --cfg-options model.test_cfg.crop_size_modi=0.5 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_base48
+    --cfg-options model.test_cfg.crop_size_modi=0.5 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_full
 
 PYTHONPATH="/home1/liuzhuom/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /home1/liuzhuom/mmdetection/tools/test.py \
     /home1/liuzhuom/mmdetection/configs/cls_finetuner/cls_finetuner_clip_novel17_all_train.py \
-    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/latest.pth \
+    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_full_coco/epoch_12.pth \
     --launcher pytorch --eval=gt_acc --options jsonfile_prefix=/home1/liuzhuom/mmdetection/results \
-    --cfg-options model.test_cfg.crop_size_modi=0.5 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_base48
+    --cfg-options model.test_cfg.crop_size_modi=0.5 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_full
 
 PYTHONPATH="/home1/liuzhuom/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /home1/liuzhuom/mmdetection/tools/test.py \
     /home1/liuzhuom/mmdetection/configs/cls_finetuner/cls_finetuner_clip_full_coco.py \
-    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/latest.pth \
+    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_full_coco/epoch_12.pth \
     --launcher pytorch --eval=gt_acc --options jsonfile_prefix=/home1/liuzhuom/mmdetection/results \
-    --cfg-options model.test_cfg.crop_size_modi=0.5 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_base48
+    --cfg-options model.test_cfg.crop_size_modi=0.5 data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_full
