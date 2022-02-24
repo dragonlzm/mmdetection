@@ -5,7 +5,8 @@ import random
 random.seed(42)
 
 #bbox_per_cate = 100
-bbox_per_cate = 10
+#bbox_per_cate = 10
+bbox_per_cate = 1
 
 json_content = json.load(open('/data2/lwll/zhuoming/detection/coco/annotations/instances_train2017.json'))
 selected_image = {}
@@ -51,6 +52,7 @@ result_json_content['images'] = selected_image_anno
 result_json_content['annotations'] = selected_annotation
 
 #file = open('/data2/lwll/zhuoming/detection/coco/annotations/train_100shots.json', 'w')
-file = open('/data2/lwll/zhuoming/detection/coco/annotations/train_10shots.json', 'w')
+#file = open('/data2/lwll/zhuoming/detection/coco/annotations/train_10shots.json', 'w')
+file = open('/data2/lwll/zhuoming/detection/coco/annotations/train_1shots.json', 'w')
 file.write(json.dumps(result_json_content))
 file.close()

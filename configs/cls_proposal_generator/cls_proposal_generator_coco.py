@@ -1,5 +1,5 @@
 _base_ = [
-    '../_base_/models/cls_finetuner.py', '../_base_/datasets/coco_detection.py',
+    '../_base_/models/cls_proposal_generator.py', '../_base_/datasets/coco_detection.py',
     '../_base_/schedules/schedule_1x.py', '../_base_/default_runtime.py'
 ]
 #img_norm_cfg = dict(
@@ -47,10 +47,24 @@ test_pipeline = [
         ])
 ]'''
 
+classes = ('person', 'bicycle', 'car', 'motorcycle', 
+'airplane', 'bus', 'train', 'boat', 'bird', 'cat', 
+'dog', 'horse', 'sheep', 'cow', 'bottle', 'chair', 
+'couch', 'potted plant', 'dining table', 'tv')
+
+data_root = 'data/coco/'
 data = dict(train=dict(pipeline=train_pipeline),
-            val=dict(eval_filter_empty_gt=True, pipeline=test_pipeline),
-            test=dict(eval_filter_empty_gt=True, pipeline=test_pipeline))
-evaluation = dict(interval=1, metric='gt_acc')
+            val=dict(eval_filter_empty_gt=True, 
+                pipeline=test_pipeline, 
+                ann_file=data_root + 'annotations/train_1shots.json',
+                img_prefix=data_root + 'train2017/',
+                classes=classes),
+            test=dict(eval_filter_empty_gt=True, 
+                pipeline=test_pipeline, 
+                ann_file=data_root + 'annotations/train_1shots.json',
+                img_prefix=data_root + 'train2017/',
+                classes=classes))
+evaluation = dict(interval=1, metric='clip_proposal')
 
 lr_config = dict(step=[])
 runner = dict(type='EpochBasedRunner', max_epochs=6)

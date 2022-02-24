@@ -69,7 +69,7 @@ class ClsProposalGenerator(BaseDetector):
         # anchor generator
         self.anchor_generator = build_anchor_generator(anchor_generator)
         self.anchor_per_grid = len(anchor_generator['scales']) * len(anchor_generator['ratios'])
-
+        self.down_sample_rate = anchor_generator['strides'][0]
         # deal with the crop size and location
         self.test_crop_size_modi_ratio = self.test_cfg.get('crop_size_modi', 1.0) if self.test_cfg is not None else 1.0
         self.test_crop_loca_modi_ratio = self.test_cfg.get('crop_loca_modi', 0) if self.test_cfg is not None else 0
@@ -190,7 +190,7 @@ class ClsProposalGenerator(BaseDetector):
         # in the original C4 setting the feature map is downsampled by 16
         # calculate the respective feat map size for the images in each batch
         # (the multiple images in one batch will share the same size)
-        featmap_sizes = (padded_img_size[0] / 16, padded_img_size[1] / 16)
+        featmap_sizes = (padded_img_size[0] / self.down_sample_rate, padded_img_size[1] / self.down_sample_rate)
         # assuming that the len(multi_level_anchors) = 1
         anchors = self.anchor_generator.grid_anchors([featmap_sizes], device='cpu')
         anchors_for_each_img = anchors * bs
@@ -207,7 +207,7 @@ class ClsProposalGenerator(BaseDetector):
             result_per_img = []
             # need to divide the anchor into different sections
             # reducing the overload of the gpu
-            patches_per_img.view(-1, self.anchor_per_grid, 3, 224, 224)
+            patches_per_img = patches_per_img.view(-1, self.anchor_per_grid, 3, 224, 224)
             for patches_per_grid_point in patches_per_img:
                 x = self.backbone(patches_per_grid_point.cuda())
                 #result_per_img.append(x.unsqueeze(dim=0))
@@ -299,9 +299,9 @@ class ClsProposalGenerator(BaseDetector):
             max_score_per_grid_idx = max_score_per_grid[1]
             
             result_proposal_per_img = []
-            anchor_per_img = anchor_per_img.view(-1, self.anchor_per_grid)
-            for i, max_grid_val, max_grid_idx in enumerate(zip(max_score_per_grid_val, max_score_per_grid_idx)):
-                if max_grid_val < 0.5:
+            anchor_per_img = anchor_per_img.view(-1, self.anchor_per_grid, 4)
+            for i, (max_grid_val, max_grid_idx) in enumerate(zip(max_score_per_grid_val, max_score_per_grid_idx)):
+                if max_grid_val < 0.9:
                     continue
                 selected_anchor = anchor_per_img[i, max_grid_idx]
                 # adjust the cordinate to make the bbox valid
@@ -316,7 +316,7 @@ class ClsProposalGenerator(BaseDetector):
             result_proposal_per_img[:, :4] /= result_proposal_per_img.new_tensor(img_info['scale_factor'])
             proposal_for_all_imgs.append(result_proposal_per_img)
 
-        return [proposal.cpu().numpy() for proposal in result_proposal_per_img]
+        return [proposal.cpu().numpy() for proposal in proposal_for_all_imgs]
 
     def aug_test(self, imgs, img_metas, rescale=False):
         """Test function with test time augmentation.
