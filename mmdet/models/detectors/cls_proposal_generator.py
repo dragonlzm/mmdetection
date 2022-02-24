@@ -186,7 +186,7 @@ class ClsProposalGenerator(BaseDetector):
         # cropped_patches_list:len = batch_size, list[tensor] each tensor shape [gt_num_of_image, 3, 224, 224]
         bs = img.shape[0]
         # get the size of the paded image size in the batch (max_w, max_h)
-        padded_img_size = (max([ele['pad_shape'][0] for ele in img_metas]), max([ele['pad_shape'][0] for ele in img_metas]))
+        padded_img_size = (max([ele['pad_shape'][0] for ele in img_metas]), max([ele['pad_shape'][1] for ele in img_metas]))
         # in the original C4 setting the feature map is downsampled by 16
         # calculate the respective feat map size for the images in each batch
         # (the multiple images in one batch will share the same size)
@@ -286,7 +286,7 @@ class ClsProposalGenerator(BaseDetector):
         
         proposal_for_all_imgs = []
         for logits_per_img, anchor_per_img, img_info in zip(pred_logits, anchors_for_imgs, img_metas):
-            w, h, _ = img_info['img_shape']
+            h, w, _ = img_info['img_shape']
 
             pred_prob = softmax(logits_per_img)
             max_pred_prob = torch.max(pred_prob, dim=1)
