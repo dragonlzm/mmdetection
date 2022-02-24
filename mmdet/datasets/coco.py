@@ -241,6 +241,18 @@ class CocoDataset(CustomDataset):
             json_results.append(data)
         return json_results
 
+    def _clipproposal2json(self, results):
+        """Convert detection results to COCO json style."""
+        json_results = []
+        for idx in range(len(self)):
+            img_id = self.img_ids[idx]
+            result = results[idx]
+            data = dict()
+            data['image_id'] = img_id
+            data['score'] = result
+            json_results.append(data)
+        return json_results
+
     def _det2json(self, results):
         """Convert detection results to COCO json style."""
         json_results = []
@@ -320,6 +332,10 @@ class CocoDataset(CustomDataset):
             json_results = self._gtacc2json(results)
             result_files['gt_acc'] = f'{outfile_prefix}.gt_acc.json'
             mmcv.dump(json_results, result_files['gt_acc'])
+        elif isinstance(results[0], np.ndarray) and len(results[0]) > 100:
+            json_results = self._clipproposal2json(results)
+            result_files['clip_proposal'] = f'{outfile_prefix}.clip_proposal.json'
+            mmcv.dump(json_results, result_files['clip_proposal'])
         elif isinstance(results[0], np.ndarray) and len(results[0]) > 5:
             json_results = self._patchacc2json(results)
             result_files['patch_acc'] = f'{outfile_prefix}.patch_acc.json'
@@ -359,6 +375,13 @@ class CocoDataset(CustomDataset):
         aver_acc = aver_acc.item()
         aver_acc /= len(self.img_ids)
         return aver_acc
+
+    def calc_clip_proposal(self, results):
+        aver_proposal_num = 0
+        for i in range(len(self.img_ids)):
+            aver_proposal_num += results[i].shape[0]
+        aver_proposal_num /= len(self.img_ids)
+        return aver_proposal_num
 
     def calc_gt_acc(self, results):
         all_gts = 0
@@ -528,7 +551,7 @@ class CocoDataset(CustomDataset):
         """
 
         metrics = metric if isinstance(metric, list) else [metric]
-        allowed_metrics = ['bbox', 'segm', 'proposal', 'proposal_fast', 'patch_acc', 'gt_acc']
+        allowed_metrics = ['bbox', 'segm', 'proposal', 'proposal_fast', 'patch_acc', 'gt_acc', 'clip_proposal']
         for metric in metrics:
             if metric not in allowed_metrics:
                 raise KeyError(f'metric {metric} is not supported')
@@ -548,6 +571,12 @@ class CocoDataset(CustomDataset):
             if logger is None:
                 msg = '\n' + msg
             print_log(msg, logger=logger)
+            if metric == 'clip_proposal':
+                avg_proposal_num = self.calc_clip_proposal(results)
+                eval_results['clip_proposal'] = avg_proposal_num
+                log_msg = f'\navg_proposal_num\t{avg_proposal_num:.4f}'
+                print_log(log_msg, logger=logger)
+                continue
             if metric == 'patch_acc':
                 acc = self.calc_patch_acc(results)
                 eval_results['patch_acc'] = acc

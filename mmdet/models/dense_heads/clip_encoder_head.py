@@ -85,6 +85,7 @@ class ClipEncoderHead(AnchorFreeHead):
                  train_cfg=None,
                  test_cfg=None,
                  init_cfg=None,
+                 return_test_score=False,
                  **kwargs):
         # NOTE here use `AnchorFreeHead` instead of `TransformerHead`,
         # since it brings inconvenience when the initialization of
@@ -132,6 +133,7 @@ class ClipEncoderHead(AnchorFreeHead):
         self.open_ln = open_ln
         self.test_with_attribute = test_with_attribute
         self.cate_attribute = cate_attribute
+        self.return_test_score = return_test_score
 
         # create the layers
         self._init_layers()
@@ -421,10 +423,15 @@ class ClipEncoderHead(AnchorFreeHead):
                 The shape of the second tensor in the tuple is ``labels``
                 with shape (n,)
         """
-        # forward of this head requires img_metas
-        outs = self.forward(feats, img_metas)
         #out list[tensor] tensor with shape [gt_per_img, channel]
         softmax = nn.Softmax(dim=1)
+
+        # forward of this head requires img_metas
+        outs = self.forward(feats, img_metas)
+        
+        # return the raw predicted result
+        if self.return_test_score:
+            return outs
 
         # deal with the score aggregation
         if self.test_with_attribute:

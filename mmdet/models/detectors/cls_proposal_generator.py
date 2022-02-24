@@ -16,6 +16,7 @@ import numpy as np
 import math
 import random
 from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normalize
+import torch.nn as nn
 try:
     from torchvision.transforms import InterpolationMode
     BICUBIC = InterpolationMode.BICUBIC
@@ -209,13 +210,16 @@ class ClsProposalGenerator(BaseDetector):
             patches_per_img.view(-1, self.anchor_per_grid, 3, 224, 224)
             for patches_per_grid_point in patches_per_img:
                 x = self.backbone(patches_per_grid_point.cuda())
-                result_per_img.append(x.unsqueeze(dim=0))
-            result_per_img = torch.cat(result_per_img)
+                #result_per_img.append(x.unsqueeze(dim=0))
+                result_per_img.append(x)
+            result_per_img = torch.cat(result_per_img, dim=0)
+            # the shape of result_per_img should be [anchors_num_of_img, 512]
             print(result_per_img.shape)
             result_list.append(result_per_img)
-        # convert the feature [bs*64, 512] to [bs, 64, 512]
-        #x = x.view(bs, -1, x.shape[-1])
-        return result_list
+        # len(result_list) == batch_size, len(anchors_for_each_img) == batch_size
+        # the shape of each tensor in result_list is [anchors_num_of_img, 512]
+        # the shape of each tensor in anchors_for_each_img [anchors_num_of_img, 512]
+        return result_list, anchors_for_each_img
 
     def forward_dummy(self, img):
         """Dummy forward function."""
@@ -271,19 +275,48 @@ class ClsProposalGenerator(BaseDetector):
         img = img.unsqueeze(dim=0)
         img_metas = [img_metas]
 
-        x = self.extract_feat(img, gt_bboxes, img_metas)
+        result_list, anchors_for_imgs = self.extract_feat(img, gt_bboxes, img_metas)
         # get origin input shape to onnx dynamic input shape
         if torch.onnx.is_in_onnx_export():
             img_shape = torch._shape_as_tensor(img)[2:]
             img_metas[0]['img_shape_for_onnx'] = img_shape
-        proposal_list = self.rpn_head.simple_test_bboxes(x, gt_labels, img_metas, gt_bboxes)
-        #if rescale:
-        #    for proposals, meta in zip(proposal_list, img_metas):
-        #        proposals[:, :4] /= proposals.new_tensor(meta['scale_factor'])
-        if torch.onnx.is_in_onnx_export():
-            return proposal_list
+        # the len(pred_logits) == batch_size, with each ele in [num_anchors, num_cates]
+        pred_logits = self.rpn_head.simple_test_bboxes(result_list, gt_labels, img_metas, gt_bboxes)
+        softmax = nn.Softmax(dim=1)
+        
+        proposal_for_all_imgs = []
+        for logits_per_img, anchor_per_img, img_info in zip(pred_logits, anchors_for_imgs, img_metas):
+            w, h, _ = img_info['img_shape']
 
-        return [proposal.cpu().numpy() for proposal in proposal_list]
+            pred_prob = softmax(logits_per_img)
+            max_pred_prob = torch.max(pred_prob, dim=1)
+            #pred_idx = temp[1]
+            max_score_per_anchor = max_pred_prob[0]
+            max_score_per_anchor = max_score_per_anchor.view(-1, self.anchor_per_grid)
+            max_score_per_grid = torch.max(max_score_per_anchor, dim=1)
+            # the shape of the anchors_for_imgs (num_of_grid, )
+            max_score_per_grid_val = max_score_per_grid[0]
+            max_score_per_grid_idx = max_score_per_grid[1]
+            
+            result_proposal_per_img = []
+            anchor_per_img = anchor_per_img.view(-1, self.anchor_per_grid)
+            for i, max_grid_val, max_grid_idx in enumerate(zip(max_score_per_grid_val, max_score_per_grid_idx)):
+                if max_grid_val < 0.5:
+                    continue
+                selected_anchor = anchor_per_img[i, max_grid_idx]
+                # adjust the cordinate to make the bbox valid
+                selected_anchor[0] = 0 if selected_anchor[0] < 0 else selected_anchor[0]
+                selected_anchor[1] = 0 if selected_anchor[1] < 0 else selected_anchor[1]
+                selected_anchor[2] = w if selected_anchor[2] > w else selected_anchor[2]
+                selected_anchor[3] = h if selected_anchor[3] > h else selected_anchor[3]
+                # rescale the proposal
+                result_proposal_per_img.append(selected_anchor.unsqueeze(dim=0))
+            
+            result_proposal_per_img = torch.cat(result_proposal_per_img, dim=0)
+            result_proposal_per_img[:, :4] /= result_proposal_per_img.new_tensor(img_info['scale_factor'])
+            proposal_for_all_imgs.append(result_proposal_per_img)
+
+        return [proposal.cpu().numpy() for proposal in result_proposal_per_img]
 
     def aug_test(self, imgs, img_metas, rescale=False):
         """Test function with test time augmentation.
