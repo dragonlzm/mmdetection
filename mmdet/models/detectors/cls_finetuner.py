@@ -70,7 +70,27 @@ class ClsFinetuner(BaseDetector):
         self.train_crop_loca_modi_ratio = self.train_cfg.get('crop_loca_modi', 0) if self.train_cfg is not None else 0   
 
         # deal with test with random bbox
-        self.test_with_rand_bboxes = self.test_cfg.get('test_with_rand_bboxes', False) if self.test_cfg is not None else False   
+        self.test_with_rand_bboxes = self.test_cfg.get('test_with_rand_bboxes', False) if self.test_cfg is not None else False
+        self.random_bbox_ratio = np.array([[0.03812099, 0.1246973 , 0.1567792 , 0.471805],
+                                            [0.07846305, 0.22583963, 0.26636887, 0.53013974],
+                                            [0.03403394, 0.19394968, 0.5586628 , 0.60602045],
+                                            [0.2912608 , 0.3863904 , 0.56289893, 0.6689288 ],
+                                            [0.3689884 , 0.5417925 , 0.6688337 , 0.9174508 ],
+                                            [0.09272877, 0.1583625 , 0.2519423 , 0.69672775],
+                                            [0.11482508, 0.14463812, 0.23085949, 0.2314202 ],
+                                            [0.1052089 , 0.20848957, 0.3131087 , 0.5212259 ],
+                                            [0.04902116, 0.12331651, 0.34464923, 0.83339787],
+                                            [0.09481055, 0.29099643, 0.52733064, 0.6294881 ],
+                                            [0.01094328, 0.17070575, 0.18592599, 0.3123052 ],
+                                            [0.0101631 , 0.05262033, 0.21019223, 0.50707436],
+                                            [0.05525111, 0.27284765, 0.37640604, 0.5716847 ],
+                                            [0.12920067, 0.34694892, 0.975627  , 1.        ],
+                                            [0.02174921, 0.09076384, 0.55178654, 0.69162697],
+                                            [0.01173266, 0.05343585, 0.18350743, 0.82870215],
+                                            [0.08867376, 0.11362713, 0.54698116, 0.6118346 ],
+                                            [0.00457672, 0.03498916, 0.15158056, 0.30793586],
+                                            [0.18690076, 0.44750714, 0.5645605 , 0.6233114 ],
+                                            [0.1466113 , 0.24437143, 0.41279247, 0.7994327 ]])
 
     def crop_img_to_patches(self, imgs, gt_bboxes, img_metas):
         # handle the test config
@@ -250,7 +270,17 @@ class ClsFinetuner(BaseDetector):
         img_metas = [img_metas]
 
         if self.test_with_rand_bboxes:
-        
+            all_bbox = []
+            h, w, _ = img_metas[0]['img_shape']
+            for ratio in self.random_bbox_ratio:
+                tl_x = ratio[0] * w
+                tl_y = ratio[1] * h
+                br_x = ratio[2] * w
+                br_y = ratio[3] * h
+                bbox = torch.tensor([[tl_x, tl_y, br_x, br_y]])
+                all_bbox.append(bbox)
+            all_bbox = torch.cat(all_bbox, dim=0)
+            x = self.extract_feat(img, [all_bbox], img_metas)
         else:
             x = self.extract_feat(img, gt_bboxes, img_metas)
         # get origin input shape to onnx dynamic input shape

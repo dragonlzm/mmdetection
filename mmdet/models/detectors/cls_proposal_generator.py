@@ -215,7 +215,7 @@ class ClsProposalGenerator(BaseDetector):
                 result_per_img.append(x)
             result_per_img = torch.cat(result_per_img, dim=0)
             # the shape of result_per_img should be [anchors_num_of_img, 512]
-            print(result_per_img.shape)
+            #print(result_per_img.shape)
             result_list.append(result_per_img)
         # len(result_list) == batch_size, len(anchors_for_each_img) == batch_size
         # the shape of each tensor in result_list is [anchors_num_of_img, 512]

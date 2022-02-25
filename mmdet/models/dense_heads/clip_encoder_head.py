@@ -134,6 +134,7 @@ class ClipEncoderHead(AnchorFreeHead):
         self.test_with_attribute = test_with_attribute
         self.cate_attribute = cate_attribute
         self.return_test_score = return_test_score
+        self.test_with_rand_bboxes = self.test_cfg.get('test_with_rand_bboxes', False) if self.test_cfg is not None else False
 
         # create the layers
         self._init_layers()
@@ -499,7 +500,10 @@ class ClipEncoderHead(AnchorFreeHead):
             #print("entro.shape", entro.shape, "gt_label.shape", gt_label.shape)
 
             # concat the gt and the pred result
-            pred_and_gt = torch.cat([pred_idx.unsqueeze(dim=0).cuda(), gt_label.unsqueeze(dim=0).cuda(), size_result.unsqueeze(dim=0).cuda(), entro.unsqueeze(dim=0).cuda(), max_val.unsqueeze(dim=0)], dim=0)
+            if self.test_with_rand_bboxes:
+                pred_and_gt = torch.cat([pred_idx.unsqueeze(dim=0).cuda(), torch.full(pred_idx.shape, -1).unsqueeze(dim=0).cuda(), torch.full(pred_idx.shape, -1).unsqueeze(dim=0).cuda(), entro.unsqueeze(dim=0).cuda(), max_val.unsqueeze(dim=0)], dim=0)
+            else:
+                pred_and_gt = torch.cat([pred_idx.unsqueeze(dim=0).cuda(), gt_label.unsqueeze(dim=0).cuda(), size_result.unsqueeze(dim=0).cuda(), entro.unsqueeze(dim=0).cuda(), max_val.unsqueeze(dim=0)], dim=0)
             predict_results.append(pred_and_gt)
 
         return predict_results

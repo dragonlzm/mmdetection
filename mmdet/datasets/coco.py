@@ -402,46 +402,50 @@ class CocoDataset(CustomDataset):
             max_score = torch.from_numpy(ele[4])
 
             all_max_score.append(max_score)
+            # if -1 in the gt_res it means, it using the random bbox for prediction
+            if -1 in gt_res:
+                # calculate the acc over all scale
+                gt_num = pred_res.shape[0]
+                all_gts += gt_num
+                matched_res = (pred_res == gt_res)
+                correct_num += matched_res.sum().item()
 
-            # calculate the acc over all scale
-            gt_num = pred_res.shape[0]
-            all_gts += gt_num
-            matched_res = (pred_res == gt_res)
-            correct_num += matched_res.sum().item()
+                # calculate the acc over different scale 
+                s_pred = pred_res[scale_info==0]
+                s_gt = gt_res[scale_info==0]
+                m_pred = pred_res[scale_info==1]
+                m_gt = gt_res[scale_info==1]
+                l_pred = pred_res[scale_info==2]
+                l_gt = gt_res[scale_info==2]
 
-            # calculate the acc over different scale 
-            s_pred = pred_res[scale_info==0]
-            s_gt = gt_res[scale_info==0]
-            m_pred = pred_res[scale_info==1]
-            m_gt = gt_res[scale_info==1]
-            l_pred = pred_res[scale_info==2]
-            l_gt = gt_res[scale_info==2]
+                # deal with small, median and large
+                gt_num_over_scales[0] += s_pred.shape[0]
+                gt_num_over_scales[1] += m_pred.shape[0]
+                gt_num_over_scales[2] += l_pred.shape[0]
 
-            # deal with small, median and large
-            gt_num_over_scales[0] += s_pred.shape[0]
-            gt_num_over_scales[1] += m_pred.shape[0]
-            gt_num_over_scales[2] += l_pred.shape[0]
+                corr_num_over_scales[0] += (s_pred == s_gt).sum().item()
+                corr_num_over_scales[1] += (m_pred == m_gt).sum().item()
+                corr_num_over_scales[2] += (l_pred == l_gt).sum().item()
 
-            corr_num_over_scales[0] += (s_pred == s_gt).sum().item()
-            corr_num_over_scales[1] += (m_pred == m_gt).sum().item()
-            corr_num_over_scales[2] += (l_pred == l_gt).sum().item()
-
-            # deal with the person categories
-            person_pred = pred_res[gt_res==0]
-            person_gt = gt_res[gt_res==0]
-            person_gt_num += person_pred.shape[0]
-            person_correct_num += (person_pred == person_gt).sum().item()
+                # deal with the person categories
+                person_pred = pred_res[gt_res==0]
+                person_gt = gt_res[gt_res==0]
+                person_gt_num += person_pred.shape[0]
+                person_correct_num += (person_pred == person_gt).sum().item()
 
             # aggregate the entropy
             all_entropy += entro_result.sum().item()
 
-        over_all_acc = correct_num / all_gts
-        acc_over_scales = corr_num_over_scales / gt_num_over_scales
-        s_acc = acc_over_scales[0]
-        m_acc = acc_over_scales[1]
-        l_acc = acc_over_scales[2]
-        person_acc = person_correct_num / person_gt_num
-        all_entropy = all_entropy / all_gts
+        if -1 not in gt_res:
+            over_all_acc = correct_num / all_gts
+            acc_over_scales = corr_num_over_scales / gt_num_over_scales
+            s_acc = acc_over_scales[0]
+            m_acc = acc_over_scales[1]
+            l_acc = acc_over_scales[2]
+            person_acc = person_correct_num / person_gt_num
+            all_entropy = all_entropy / all_gts
+        else:
+            over_all_acc, s_acc, m_acc, l_acc, person_acc = 0, 0, 0, 0, 0
 
         # distri visualization
         all_max_score = torch.cat(all_max_score).cpu().numpy()
