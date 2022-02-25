@@ -67,7 +67,10 @@ class ClsFinetuner(BaseDetector):
         self.test_crop_loca_modi_ratio = self.test_cfg.get('crop_loca_modi', 0) if self.test_cfg is not None else 0
 
         self.train_crop_size_modi_ratio = self.train_cfg.get('crop_size_modi', 1.2) if self.train_cfg is not None else 1.2
-        self.train_crop_loca_modi_ratio = self.train_cfg.get('crop_loca_modi', 0) if self.train_cfg is not None else 0        
+        self.train_crop_loca_modi_ratio = self.train_cfg.get('crop_loca_modi', 0) if self.train_cfg is not None else 0   
+
+        # deal with test with random bbox
+        self.test_with_rand_bboxes = self.test_cfg.get('test_with_rand_bboxes', False) if self.test_cfg is not None else False   
 
     def crop_img_to_patches(self, imgs, gt_bboxes, img_metas):
         # handle the test config
@@ -246,7 +249,10 @@ class ClsFinetuner(BaseDetector):
         img = img.unsqueeze(dim=0)
         img_metas = [img_metas]
 
-        x = self.extract_feat(img, gt_bboxes, img_metas)
+        if self.test_with_rand_bboxes:
+        
+        else:
+            x = self.extract_feat(img, gt_bboxes, img_metas)
         # get origin input shape to onnx dynamic input shape
         if torch.onnx.is_in_onnx_export():
             img_shape = torch._shape_as_tensor(img)[2:]
