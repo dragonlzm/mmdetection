@@ -403,10 +403,10 @@ class CocoDataset(CustomDataset):
 
             all_max_score.append(max_score)
             # if -1 in the gt_res it means, it using the random bbox for prediction
+            gt_num = pred_res.shape[0]
+            all_gts += gt_num
             if -1 in gt_res:
                 # calculate the acc over all scale
-                gt_num = pred_res.shape[0]
-                all_gts += gt_num
                 matched_res = (pred_res == gt_res)
                 correct_num += matched_res.sum().item()
 
@@ -443,9 +443,10 @@ class CocoDataset(CustomDataset):
             m_acc = acc_over_scales[1]
             l_acc = acc_over_scales[2]
             person_acc = person_correct_num / person_gt_num
-            all_entropy = all_entropy / all_gts
         else:
             over_all_acc, s_acc, m_acc, l_acc, person_acc = 0, 0, 0, 0, 0
+
+        all_entropy = all_entropy / all_gts
 
         # distri visualization
         all_max_score = torch.cat(all_max_score).cpu().numpy()
