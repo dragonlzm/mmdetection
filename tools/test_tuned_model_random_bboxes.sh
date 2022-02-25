@@ -25,7 +25,7 @@ python -m torch.distributed.launch --nproc_per_node=2 \
     /home1/liuzhuom/mmdetection/configs/cls_finetuner/cls_finetuner_clip_full_coco.py \
     /home1/liuzhuom/epoch_0.pth \
     --launcher pytorch --eval=gt_acc --options jsonfile_prefix=/home1/liuzhuom/mmdetection/results \
-    --cfg-options data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_raw_model \
+    --cfg-options data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_random_bbox \
     model.test_cfg.test_with_rand_bboxes=True model.test_cfg.rpn_head.test_with_rand_bboxes=True
 
 # 48 finetune
@@ -35,7 +35,7 @@ python -m torch.distributed.launch --nproc_per_node=2 \
     /home1/liuzhuom/mmdetection/configs/cls_finetuner/cls_finetuner_clip_full_coco.py \
     /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/latest.pth \
     --launcher pytorch --eval=gt_acc --options jsonfile_prefix=/home1/liuzhuom/mmdetection/results \
-    --cfg-options data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_raw_model \
+    --cfg-options data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_random_bbox \
     model.test_cfg.test_with_rand_bboxes=True model.test_cfg.rpn_head.test_with_rand_bboxes=True
 
 # full finetune
@@ -45,5 +45,5 @@ python -m torch.distributed.launch --nproc_per_node=2 \
     /home1/liuzhuom/mmdetection/configs/cls_finetuner/cls_finetuner_clip_full_coco.py \
     /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_full_coco/epoch_12.pth \
     --launcher pytorch --eval=gt_acc --options jsonfile_prefix=/home1/liuzhuom/mmdetection/results \
-    --cfg-options data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_raw_model \
+    --cfg-options data.test.visualization_path=/home1/liuzhuom/mmdetection/visualization_random_bbox \
     model.test_cfg.test_with_rand_bboxes=True model.test_cfg.rpn_head.test_with_rand_bboxes=True
