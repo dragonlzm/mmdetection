@@ -16,7 +16,10 @@ from PIL import Image
 #proposal_file_path = "C:\\Users\\XPS\\Desktop\\results.proposal.json"
 #proposal_file_path = "C:\\Users\\XPS\\Desktop\\results_4_by_4.proposal.json"
 #proposal_file_path = "C:\\Users\\XPS\\Desktop\\new_rpn_4_by_4_2x.proposal.json"
-proposal_file_path = "C:\\Users\\XPS\\Desktop\\results.clip_proposal_09.json"
+#proposal_file_path = "C:\\Users\\XPS\\Desktop\\results.clip_proposal_09.json"
+#proposal_file_path = "C:\\Users\\XPS\\Desktop\\results.clip_proposal_095.json"
+#proposal_file_path = "C:\\Users\\XPS\\Desktop\\results.clip_proposal_09_nms07.json"
+proposal_file_path = "C:\\Users\\XPS\\Desktop\\results.clip_proposal_09_nms05.json"
 proposal_result = json.load(open(proposal_file_path))
 
 #gt_annotation_path = "C:\\Users\\XPS\\Desktop\\annotations\\instances_val2017.json"
@@ -61,8 +64,10 @@ all_img_info = {info['id']:info for info in gt_anno_result['images']}
 #save_root = 'C:\\Users\\XPS\\Desktop\\visualization_4_by_4\\'
 #save_root = 'C:\\Users\\XPS\\Desktop\\visualization_4_by_4_2x\\'
 #save_root = 'C:\\Users\\XPS\\Desktop\\clip_proposal_05\\'
-save_root = 'C:\\Users\\XPS\\Desktop\\clip_proposal_09\\'
-
+#save_root = 'C:\\Users\\XPS\\Desktop\\clip_proposal_09\\'
+#save_root = 'C:\\Users\\XPS\\Desktop\\clip_proposal_095\\'
+#save_root = 'C:\\Users\\XPS\\Desktop\\clip_proposal_09_nms07\\'
+save_root = 'C:\\Users\\XPS\\Desktop\\clip_proposal_09_nms05\\'
 
 #print(all_img_annotation)
 for img_id in from_img_id_to_pred:

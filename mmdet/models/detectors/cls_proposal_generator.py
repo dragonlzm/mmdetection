@@ -5,6 +5,7 @@ import warnings
 import mmcv
 import torch
 from mmcv.image import tensor2imgs
+from mmcv.ops import batched_nms
 
 from mmdet.core import (bbox_mapping, anchor_inside_flags, build_anchor_generator,
                         build_assigner, build_bbox_coder, build_sampler,
@@ -299,6 +300,7 @@ class ClsProposalGenerator(BaseDetector):
             max_score_per_grid_idx = max_score_per_grid[1]
             
             result_proposal_per_img = []
+            result_score_per_img = []
             anchor_per_img = anchor_per_img.view(-1, self.anchor_per_grid, 4)
             for i, (max_grid_val, max_grid_idx) in enumerate(zip(max_score_per_grid_val, max_score_per_grid_idx)):
                 if max_grid_val < 0.9:
@@ -311,10 +313,20 @@ class ClsProposalGenerator(BaseDetector):
                 selected_anchor[3] = h if selected_anchor[3] > h else selected_anchor[3]
                 # rescale the proposal
                 result_proposal_per_img.append(selected_anchor.unsqueeze(dim=0))
+                result_score_per_img.append(max_grid_val.unsqueeze(dim=0))
             
             result_proposal_per_img = torch.cat(result_proposal_per_img, dim=0)
-            result_proposal_per_img[:, :4] /= result_proposal_per_img.new_tensor(img_info['scale_factor'])
-            proposal_for_all_imgs.append(result_proposal_per_img)
+            result_score_per_img = torch.cat(result_score_per_img, dim=0)
+            #print('result_proposal_per_img', result_proposal_per_img.shape, 'result_score_per_img', result_score_per_img.shape)
+            
+            # prepare for nms
+            nms=dict(type='nms', iou_threshold=0.5)
+            # regard all anchor as one category
+            ids = torch.zeros(result_score_per_img.shape)
+            dets, keep = batched_nms(result_proposal_per_img.cuda(), result_score_per_img.cuda(), ids.cuda(), nms)
+            # resize the proposal
+            dets[:, :4] /= dets.new_tensor(img_info['scale_factor'])
+            proposal_for_all_imgs.append(dets)
 
         return [proposal.cpu().numpy() for proposal in proposal_for_all_imgs]
 
