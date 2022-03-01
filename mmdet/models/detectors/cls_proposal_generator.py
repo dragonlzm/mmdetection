@@ -6,7 +6,7 @@ import mmcv
 import torch
 from mmcv.image import tensor2imgs
 from mmcv.ops import batched_nms
-
+from mmcv.utils import Registry, build_from_cfg
 from mmdet.core import (bbox_mapping, anchor_inside_flags, build_anchor_generator,
                         build_assigner, build_bbox_coder, build_sampler,
                         images_to_levels, multi_apply, multiclass_nms, unmap)
@@ -35,6 +35,12 @@ def _transform(n_px):
         ToTensor(),
         Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
     ])
+
+
+IOU_CALCULATORS = Registry('IoU calculator')
+def build_iou_calculator(cfg, default_args=None):
+    """Builder of IoU calculator."""
+    return build_from_cfg(cfg, IOU_CALCULATORS, default_args)
 
 
 @DETECTORS.register_module()
@@ -76,7 +82,14 @@ class ClsProposalGenerator(BaseDetector):
         self.test_crop_loca_modi_ratio = self.test_cfg.get('crop_loca_modi', 0) if self.test_cfg is not None else 0
 
         self.train_crop_size_modi_ratio = self.train_cfg.get('crop_size_modi', 1.0) if self.train_cfg is not None else 1.0
-        self.train_crop_loca_modi_ratio = self.train_cfg.get('crop_loca_modi', 0) if self.train_cfg is not None else 0        
+        self.train_crop_loca_modi_ratio = self.train_cfg.get('crop_loca_modi', 0) if self.train_cfg is not None else 0
+
+        # anchor gt calculator
+        self.calc_gt_anchor_iou = self.test_cfg.get('calc_gt_anchor_iou', False) if self.test_cfg is not None else False
+        
+        if self.calc_gt_anchor_iou:
+            iou_calculator=dict(type='BboxOverlaps2D')
+            self.iou_calculator = build_iou_calculator(iou_calculator)  
 
     def crop_img_to_patches(self, imgs, gt_bboxes, img_metas):
         # handle the test config
@@ -185,19 +198,7 @@ class ClsProposalGenerator(BaseDetector):
         # crop the img into the patches with normalization and reshape
         # (a function to convert the img)
         # cropped_patches_list:len = batch_size, list[tensor] each tensor shape [gt_num_of_image, 3, 224, 224]
-        bs = img.shape[0]
-        # get the size of the paded image size in the batch (max_w, max_h)
-        padded_img_size = (max([ele['pad_shape'][0] for ele in img_metas]), max([ele['pad_shape'][1] for ele in img_metas]))
-        # in the original C4 setting the feature map is downsampled by 16
-        # calculate the respective feat map size for the images in each batch
-        # (the multiple images in one batch will share the same size)
-        featmap_sizes = (padded_img_size[0] / self.down_sample_rate, padded_img_size[1] / self.down_sample_rate)
-        # assuming that the len(multi_level_anchors) = 1
-        anchors = self.anchor_generator.grid_anchors([featmap_sizes], device='cpu')
-        anchors_for_each_img = anchors * bs
-
-        # crop the bbox 
-        cropped_patches_list = self.crop_img_to_patches(img.cpu(), anchors_for_each_img, img_metas)
+        cropped_patches_list = self.crop_img_to_patches(img.cpu(), gt_bboxes, img_metas)
 
         # convert dimension from [bs, 64, 3, 224, 224] to [bs*64, 3, 224, 224]
         #converted_img_patches = converted_img_patches.view(bs, -1, self.backbone.input_resolution, self.backbone.input_resolution)
@@ -219,8 +220,7 @@ class ClsProposalGenerator(BaseDetector):
             result_list.append(result_per_img)
         # len(result_list) == batch_size, len(anchors_for_each_img) == batch_size
         # the shape of each tensor in result_list is [anchors_num_of_img, 512]
-        # the shape of each tensor in anchors_for_each_img [anchors_num_of_img, 512]
-        return result_list, anchors_for_each_img
+        return result_list
 
     def forward_dummy(self, img):
         """Dummy forward function."""
@@ -254,8 +254,18 @@ class ClsProposalGenerator(BaseDetector):
         #if (isinstance(self.train_cfg.rpn, dict)
         #        and self.train_cfg.rpn.get('debug', False)):
         #    self.rpn_head.debug_imgs = tensor2imgs(img)
+        bs = img.shape[0]
+        # get the size of the paded image size in the batch (max_w, max_h)
+        padded_img_size = (max([ele['pad_shape'][0] for ele in img_metas]), max([ele['pad_shape'][1] for ele in img_metas]))
+        # in the original C4 setting the feature map is downsampled by 16
+        # calculate the respective feat map size for the images in each batch
+        # (the multiple images in one batch will share the same size)
+        featmap_sizes = (padded_img_size[0] / self.down_sample_rate, padded_img_size[1] / self.down_sample_rate)
+        # assuming that the len(multi_level_anchors) = 1
+        anchors = self.anchor_generator.grid_anchors([featmap_sizes], device='cpu')
+        anchors_for_each_img = anchors * bs
 
-        x = self.extract_feat(img, gt_bboxes, img_metas)
+        x = self.extract_feat(img, anchors_for_each_img, img_metas)
         # x: list[tensor] each tensor shape [gt_num_of_image, 512]
         losses = self.rpn_head.forward_train(x, img_metas, gt_bboxes, gt_labels,
                                              gt_bboxes_ignore)
@@ -276,57 +286,77 @@ class ClsProposalGenerator(BaseDetector):
         img = img.unsqueeze(dim=0)
         img_metas = [img_metas]
 
-        result_list, anchors_for_imgs = self.extract_feat(img, gt_bboxes, img_metas)
-        # get origin input shape to onnx dynamic input shape
-        if torch.onnx.is_in_onnx_export():
-            img_shape = torch._shape_as_tensor(img)[2:]
-            img_metas[0]['img_shape_for_onnx'] = img_shape
-        # the len(pred_logits) == batch_size, with each ele in [num_anchors, num_cates]
-        pred_logits = self.rpn_head.simple_test_bboxes(result_list, gt_labels, img_metas, gt_bboxes)
-        softmax = nn.Softmax(dim=1)
-        
-        proposal_for_all_imgs = []
-        for logits_per_img, anchor_per_img, img_info in zip(pred_logits, anchors_for_imgs, img_metas):
-            h, w, _ = img_info['img_shape']
+        bs = img.shape[0]
+        # get the size of the paded image size in the batch (max_w, max_h)
+        padded_img_size = (max([ele['pad_shape'][0] for ele in img_metas]), max([ele['pad_shape'][1] for ele in img_metas]))
+        # in the original C4 setting the feature map is downsampled by 16
+        # calculate the respective feat map size for the images in each batch
+        # (the multiple images in one batch will share the same size)
+        featmap_sizes = (padded_img_size[0] / self.down_sample_rate, padded_img_size[1] / self.down_sample_rate)
+        # assuming that the len(multi_level_anchors) = 1
+        anchors = self.anchor_generator.grid_anchors([featmap_sizes], device='cpu')
+        # len(anchors_for_each_img) == batch_size
+        # the shape of each tensor in anchors_for_each_img [anchors_num_of_img, 4]
+        anchors_for_each_img = anchors * bs
 
-            pred_prob = softmax(logits_per_img)
-            max_pred_prob = torch.max(pred_prob, dim=1)
-            #pred_idx = temp[1]
-            max_score_per_anchor = max_pred_prob[0]
-            max_score_per_anchor = max_score_per_anchor.view(-1, self.anchor_per_grid)
-            max_score_per_grid = torch.max(max_score_per_anchor, dim=1)
-            # the shape of the anchors_for_imgs (num_of_grid, )
-            max_score_per_grid_val = max_score_per_grid[0]
-            max_score_per_grid_idx = max_score_per_grid[1]
-            
-            result_proposal_per_img = []
-            result_score_per_img = []
-            anchor_per_img = anchor_per_img.view(-1, self.anchor_per_grid, 4)
-            for i, (max_grid_val, max_grid_idx) in enumerate(zip(max_score_per_grid_val, max_score_per_grid_idx)):
-                if max_grid_val < 0.9:
-                    continue
-                selected_anchor = anchor_per_img[i, max_grid_idx]
-                # adjust the cordinate to make the bbox valid
-                selected_anchor[0] = 0 if selected_anchor[0] < 0 else selected_anchor[0]
-                selected_anchor[1] = 0 if selected_anchor[1] < 0 else selected_anchor[1]
-                selected_anchor[2] = w if selected_anchor[2] > w else selected_anchor[2]
-                selected_anchor[3] = h if selected_anchor[3] > h else selected_anchor[3]
-                # rescale the proposal
-                result_proposal_per_img.append(selected_anchor.unsqueeze(dim=0))
-                result_score_per_img.append(max_grid_val.unsqueeze(dim=0))
-            
-            result_proposal_per_img = torch.cat(result_proposal_per_img, dim=0)
-            result_score_per_img = torch.cat(result_score_per_img, dim=0)
-            #print('result_proposal_per_img', result_proposal_per_img.shape, 'result_score_per_img', result_score_per_img.shape)
-            
-            # prepare for nms
-            nms=dict(type='nms', iou_threshold=0.5)
-            # regard all anchor as one category
-            ids = torch.zeros(result_score_per_img.shape)
-            dets, keep = batched_nms(result_proposal_per_img.cuda(), result_score_per_img.cuda(), ids.cuda(), nms)
-            # resize the proposal
-            dets[:, :4] /= dets.new_tensor(img_info['scale_factor'])
-            proposal_for_all_imgs.append(dets)
+        if self.calc_gt_anchor_iou:
+            proposal_for_all_imgs = []
+            for gt_bboxes_per_img, anchor_per_img in zip(gt_bboxes, anchors_for_each_img):
+                iou_result = self.iou_calculator(gt_bboxes_per_img, anchor_per_img)
+                max_iou_per_gt = torch.max(iou_result, dim=0)[0]
+                proposal_for_all_imgs.append(max_iou_per_gt)
+        else:
+            result_list = self.extract_feat(img, anchors_for_each_img, img_metas)
+            # get origin input shape to onnx dynamic input shape
+            if torch.onnx.is_in_onnx_export():
+                img_shape = torch._shape_as_tensor(img)[2:]
+                img_metas[0]['img_shape_for_onnx'] = img_shape
+            # the len(pred_logits) == batch_size, with each ele in [num_anchors, num_cates]
+            pred_logits = self.rpn_head.simple_test_bboxes(result_list, gt_labels, img_metas, gt_bboxes)
+            softmax = nn.Softmax(dim=1)
+
+            proposal_for_all_imgs = []
+            for logits_per_img, anchor_per_img, img_info in zip(pred_logits, anchors_for_each_img, img_metas):
+                h, w, _ = img_info['img_shape']
+
+                pred_prob = softmax(logits_per_img)
+                max_pred_prob = torch.max(pred_prob, dim=1)
+                #pred_idx = temp[1]
+                max_score_per_anchor = max_pred_prob[0]
+                max_score_per_anchor = max_score_per_anchor.view(-1, self.anchor_per_grid)
+                max_score_per_grid = torch.max(max_score_per_anchor, dim=1)
+                # the shape of the anchors_for_imgs (num_of_grid, )
+                max_score_per_grid_val = max_score_per_grid[0]
+                max_score_per_grid_idx = max_score_per_grid[1]
+                
+                result_proposal_per_img = []
+                result_score_per_img = []
+                anchor_per_img = anchor_per_img.view(-1, self.anchor_per_grid, 4)
+                for i, (max_grid_val, max_grid_idx) in enumerate(zip(max_score_per_grid_val, max_score_per_grid_idx)):
+                    if max_grid_val < 0.9:
+                        continue
+                    selected_anchor = anchor_per_img[i, max_grid_idx]
+                    # adjust the cordinate to make the bbox valid
+                    selected_anchor[0] = 0 if selected_anchor[0] < 0 else selected_anchor[0]
+                    selected_anchor[1] = 0 if selected_anchor[1] < 0 else selected_anchor[1]
+                    selected_anchor[2] = w if selected_anchor[2] > w else selected_anchor[2]
+                    selected_anchor[3] = h if selected_anchor[3] > h else selected_anchor[3]
+                    # rescale the proposal
+                    result_proposal_per_img.append(selected_anchor.unsqueeze(dim=0))
+                    result_score_per_img.append(max_grid_val.unsqueeze(dim=0))
+                
+                result_proposal_per_img = torch.cat(result_proposal_per_img, dim=0)
+                result_score_per_img = torch.cat(result_score_per_img, dim=0)
+                #print('result_proposal_per_img', result_proposal_per_img.shape, 'result_score_per_img', result_score_per_img.shape)
+                
+                # prepare for nms
+                nms=dict(type='nms', iou_threshold=0.5)
+                # regard all anchor as one category
+                ids = torch.zeros(result_score_per_img.shape)
+                dets, keep = batched_nms(result_proposal_per_img.cuda(), result_score_per_img.cuda(), ids.cuda(), nms)
+                # resize the proposal
+                dets[:, :4] /= dets.new_tensor(img_info['scale_factor'])
+                proposal_for_all_imgs.append(dets)
 
         return [proposal.cpu().numpy() for proposal in proposal_for_all_imgs]
 

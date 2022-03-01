@@ -376,6 +376,15 @@ class CocoDataset(CustomDataset):
         aver_acc /= len(self.img_ids)
         return aver_acc
 
+    def calc_gt_anchor_iou(self, results):
+        total_iou = 0
+        total_proposal = 0
+        for i in range(len(results)):
+            total_proposal += results[i].shape[0]
+            total_iou += results[i].sum()
+        aver_iou = total_iou / total_proposal
+        return aver_iou
+    
     def calc_clip_proposal(self, results):
         aver_proposal_num = 0
         for i in range(len(self.img_ids)):
@@ -582,6 +591,12 @@ class CocoDataset(CustomDataset):
                 log_msg = f'\navg_proposal_num\t{avg_proposal_num:.4f}'
                 print_log(log_msg, logger=logger)
                 continue
+            if metric == 'gt_anchor_iou':
+                acc = self.calc_gt_anchor_iou(results)
+                eval_results['gt_anchor_iou'] = acc
+                log_msg = f'\gt_anchor_iou\t{acc:.4f}'
+                print_log(log_msg, logger=logger)
+                continue                
             if metric == 'patch_acc':
                 acc = self.calc_patch_acc(results)
                 eval_results['patch_acc'] = acc
