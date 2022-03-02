@@ -56,17 +56,17 @@ data_root = 'data/coco/'
 data = dict(train=dict(pipeline=train_pipeline),
             val=dict(eval_filter_empty_gt=True, 
                 pipeline=test_pipeline, 
-                ann_file=data_root + 'annotations/train_1shots.json',
+                ann_file=data_root + 'annotations/train_100imgs.json',
                 img_prefix=data_root + 'train2017/',
-                classes=classes
+                #classes=classes
                 ),
             test=dict(eval_filter_empty_gt=True, 
                 pipeline=test_pipeline, 
-                ann_file=data_root + 'annotations/train_1shots.json',
+                ann_file=data_root + 'annotations/train_100imgs.json',
                 img_prefix=data_root + 'train2017/',
-                classes=classes
+                #classes=classes
                 ))
-evaluation = dict(interval=1, metric='clip_proposal')
+evaluation = dict(interval=1, metric='proposal_fast')
 
 lr_config = dict(step=[])
 runner = dict(type='EpochBasedRunner', max_epochs=6)

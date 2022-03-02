@@ -87,7 +87,7 @@ class ClsProposalGenerator(BaseDetector):
             self.iou_calculator = build_iou_calculator(iou_calculator)
 
         # pad the proposal result to a fixed length
-        self.paded_proposal_num = self.test_cfg.get('paded_proposal_num', 100) if self.test_cfg is not None else 100
+        self.paded_proposal_num = self.test_cfg.get('paded_proposal_num', 1000) if self.test_cfg is not None else 1000
 
     def crop_img_to_patches(self, imgs, gt_bboxes, img_metas):
         # handle the test config
