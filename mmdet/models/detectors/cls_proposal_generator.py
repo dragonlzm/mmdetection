@@ -84,7 +84,10 @@ class ClsProposalGenerator(BaseDetector):
         
         if self.calc_gt_anchor_iou:
             iou_calculator=dict(type='BboxOverlaps2D')
-            self.iou_calculator = build_iou_calculator(iou_calculator)  
+            self.iou_calculator = build_iou_calculator(iou_calculator)
+
+        # pad the proposal result to a fixed length
+        self.paded_proposal_num = self.test_cfg.get('paded_proposal_num', 100) if self.test_cfg is not None else 100
 
     def crop_img_to_patches(self, imgs, gt_bboxes, img_metas):
         # handle the test config
@@ -107,7 +110,7 @@ class ClsProposalGenerator(BaseDetector):
             if len(all_gt_bboxes) == 0:
                 continue
             img = imgs[img_idx]
-            result = []
+            result_per_img = []
             for box_i, bbox in enumerate(all_gt_bboxes):
                 # the original bbox location
                 tl_x, tl_y, br_x, br_y = bbox[0], bbox[1], bbox[2], bbox[3]
@@ -164,9 +167,13 @@ class ClsProposalGenerator(BaseDetector):
                 # do the preprocessing
                 new_patch = self.preprocess(PIL_image)
                 #image_result.append(np.expand_dims(new_patch, axis=0))
-                result.append(new_patch.unsqueeze(dim=0))
-            result = torch.cat(result, dim=0)
-            all_results.append(result)
+                new_patch = new_patch.unsqueeze(dim=0)
+                # extract feat for a patch
+                x = self.backbone(new_patch.cuda())
+                
+                result_per_img.append(x)
+            result_per_img = torch.cat(result_per_img, dim=0)
+            all_results.append(result_per_img)
 
         #cropped_patches = np.concatenate(result, axis=0)
         # the shape of the cropped_patches: torch.Size([gt_num_in_batch, 3, 224, 224])
@@ -193,26 +200,26 @@ class ClsProposalGenerator(BaseDetector):
         # crop the img into the patches with normalization and reshape
         # (a function to convert the img)
         # cropped_patches_list:len = batch_size, list[tensor] each tensor shape [gt_num_of_image, 3, 224, 224]
-        cropped_patches_list = self.crop_img_to_patches(img.cpu(), gt_bboxes, img_metas)
+        result_list = self.crop_img_to_patches(img.cpu(), gt_bboxes, img_metas)
 
         # convert dimension from [bs, 64, 3, 224, 224] to [bs*64, 3, 224, 224]
         #converted_img_patches = converted_img_patches.view(bs, -1, self.backbone.input_resolution, self.backbone.input_resolution)
 
         # the input of the vision transformer should be torch.Size([64, 3, 224, 224])
-        result_list = []
-        for patches_per_img in cropped_patches_list:
-            result_per_img = []
+        #result_list = []
+        #for patches_per_img in cropped_patches_list:
+        #    result_per_img = []
             # need to divide the anchor into different sections
             # reducing the overload of the gpu
-            patches_per_img = patches_per_img.view(-1, self.anchor_per_grid, 3, 224, 224)
-            for patches_per_grid_point in patches_per_img:
-                x = self.backbone(patches_per_grid_point.cuda())
+        #    patches_per_img = patches_per_img.view(-1, self.anchor_per_grid, 3, 224, 224)
+        #    for patches_per_grid_point in patches_per_img:
+        #        x = self.backbone(patches_per_grid_point.cuda())
                 #result_per_img.append(x.unsqueeze(dim=0))
-                result_per_img.append(x)
-            result_per_img = torch.cat(result_per_img, dim=0)
+        #        result_per_img.append(x)
+        #    result_per_img = torch.cat(result_per_img, dim=0)
             # the shape of result_per_img should be [anchors_num_of_img, 512]
             #print(result_per_img.shape)
-            result_list.append(result_per_img)
+        #    result_list.append(result_per_img)
         # len(result_list) == batch_size, len(anchors_for_each_img) == batch_size
         # the shape of each tensor in result_list is [anchors_num_of_img, 512]
         return result_list
@@ -351,6 +358,13 @@ class ClsProposalGenerator(BaseDetector):
                 dets, keep = batched_nms(result_proposal_per_img.cuda(), result_score_per_img.cuda(), ids.cuda(), nms)
                 # resize the proposal
                 dets[:, :4] /= dets.new_tensor(img_info['scale_factor'])
+                # pad the proposal result to the fixed length
+                dets = dets[:self.paded_proposal_num]
+                if len(dets) < self.paded_proposal_num:
+                    gap = self.paded_proposal_num - len(dets)
+                    padded_empty_proposals = torch.zeros(gap, 5).cuda()
+                    dets = torch.cat([dets, padded_empty_proposals], dim=0)
+
                 proposal_for_all_imgs.append(dets)
 
         return [proposal.cpu().numpy() for proposal in proposal_for_all_imgs]
