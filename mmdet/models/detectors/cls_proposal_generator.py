@@ -10,6 +10,8 @@ from mmcv.utils import Registry, build_from_cfg
 from mmdet.core import (bbox_mapping, anchor_inside_flags, build_anchor_generator,
                         build_assigner, build_bbox_coder, build_sampler,
                         images_to_levels, multi_apply, multiclass_nms, unmap)
+from mmdet.core.bbox.iou_calculators import build_iou_calculator
+
 from ..builder import DETECTORS, build_backbone, build_head, build_neck
 from .base import BaseDetector
 from PIL import Image
@@ -35,13 +37,6 @@ def _transform(n_px):
         ToTensor(),
         Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
     ])
-
-
-IOU_CALCULATORS = Registry('IoU calculator')
-def build_iou_calculator(cfg, default_args=None):
-    """Builder of IoU calculator."""
-    return build_from_cfg(cfg, IOU_CALCULATORS, default_args)
-
 
 @DETECTORS.register_module()
 class ClsProposalGenerator(BaseDetector):
@@ -302,8 +297,8 @@ class ClsProposalGenerator(BaseDetector):
         if self.calc_gt_anchor_iou:
             proposal_for_all_imgs = []
             for gt_bboxes_per_img, anchor_per_img in zip(gt_bboxes, anchors_for_each_img):
-                iou_result = self.iou_calculator(gt_bboxes_per_img, anchor_per_img)
-                max_iou_per_gt = torch.max(iou_result, dim=0)[0]
+                iou_result = self.iou_calculator(gt_bboxes_per_img.cuda(), anchor_per_img.cuda())
+                max_iou_per_gt = torch.max(iou_result, dim=1)[0]
                 proposal_for_all_imgs.append(max_iou_per_gt)
         else:
             result_list = self.extract_feat(img, anchors_for_each_img, img_metas)

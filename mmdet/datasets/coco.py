@@ -332,7 +332,10 @@ class CocoDataset(CustomDataset):
             json_results = self._gtacc2json(results)
             result_files['gt_acc'] = f'{outfile_prefix}.gt_acc.json'
             mmcv.dump(json_results, result_files['gt_acc'])
-        elif isinstance(results[0], np.ndarray) and len(results[0]) > 100:
+        # remove the len(results[0]) > 100 for calculate the iou between
+        # gt and the anchor
+        elif isinstance(results[0], np.ndarray):            
+        #elif isinstance(results[0], np.ndarray) and len(results[0]) > 100:
             json_results = self._clipproposal2json(results)
             result_files['clip_proposal'] = f'{outfile_prefix}.clip_proposal.json'
             mmcv.dump(json_results, result_files['clip_proposal'])
@@ -565,7 +568,7 @@ class CocoDataset(CustomDataset):
         """
 
         metrics = metric if isinstance(metric, list) else [metric]
-        allowed_metrics = ['bbox', 'segm', 'proposal', 'proposal_fast', 'patch_acc', 'gt_acc', 'clip_proposal']
+        allowed_metrics = ['bbox', 'segm', 'proposal', 'proposal_fast', 'patch_acc', 'gt_acc', 'clip_proposal', 'gt_anchor_iou']
         for metric in metrics:
             if metric not in allowed_metrics:
                 raise KeyError(f'metric {metric} is not supported')
