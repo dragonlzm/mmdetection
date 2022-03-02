@@ -334,11 +334,11 @@ class CocoDataset(CustomDataset):
             mmcv.dump(json_results, result_files['gt_acc'])
         # remove the len(results[0]) > 100 for calculate the iou between
         # gt and the anchor
-        elif isinstance(results[0], np.ndarray):            
+        #elif isinstance(results[0], np.ndarray):            
         #elif isinstance(results[0], np.ndarray) and len(results[0]) > 100:
-            json_results = self._clipproposal2json(results)
-            result_files['clip_proposal'] = f'{outfile_prefix}.clip_proposal.json'
-            mmcv.dump(json_results, result_files['clip_proposal'])
+        #    json_results = self._clipproposal2json(results)
+        #    result_files['clip_proposal'] = f'{outfile_prefix}.clip_proposal.json'
+        #    mmcv.dump(json_results, result_files['clip_proposal'])
         elif isinstance(results[0], np.ndarray) and len(results[0]) > 5:
             json_results = self._patchacc2json(results)
             result_files['patch_acc'] = f'{outfile_prefix}.patch_acc.json'
@@ -388,12 +388,12 @@ class CocoDataset(CustomDataset):
         aver_iou = total_iou / total_proposal
         return aver_iou
     
-    def calc_clip_proposal(self, results):
-        aver_proposal_num = 0
-        for i in range(len(self.img_ids)):
-            aver_proposal_num += results[i].shape[0]
-        aver_proposal_num /= len(self.img_ids)
-        return aver_proposal_num
+    #def calc_clip_proposal(self, results):
+    #    aver_proposal_num = 0
+    #    for i in range(len(self.img_ids)):
+    #        aver_proposal_num += results[i].shape[0]
+    #    aver_proposal_num /= len(self.img_ids)
+    #    return aver_proposal_num
 
     def calc_gt_acc(self, results):
         all_gts = 0
@@ -568,7 +568,7 @@ class CocoDataset(CustomDataset):
         """
 
         metrics = metric if isinstance(metric, list) else [metric]
-        allowed_metrics = ['bbox', 'segm', 'proposal', 'proposal_fast', 'patch_acc', 'gt_acc', 'clip_proposal', 'gt_anchor_iou']
+        allowed_metrics = ['bbox', 'segm', 'proposal', 'proposal_fast', 'patch_acc', 'gt_acc', 'gt_anchor_iou']
         for metric in metrics:
             if metric not in allowed_metrics:
                 raise KeyError(f'metric {metric} is not supported')
@@ -588,12 +588,12 @@ class CocoDataset(CustomDataset):
             if logger is None:
                 msg = '\n' + msg
             print_log(msg, logger=logger)
-            if metric == 'clip_proposal':
-                avg_proposal_num = self.calc_clip_proposal(results)
-                eval_results['clip_proposal'] = avg_proposal_num
-                log_msg = f'\navg_proposal_num\t{avg_proposal_num:.4f}'
-                print_log(log_msg, logger=logger)
-                continue
+            #if metric == 'clip_proposal':
+            #    avg_proposal_num = self.calc_clip_proposal(results)
+            #    eval_results['clip_proposal'] = avg_proposal_num
+            #    log_msg = f'\navg_proposal_num\t{avg_proposal_num:.4f}'
+            #    print_log(log_msg, logger=logger)
+            #    continue
             if metric == 'gt_anchor_iou':
                 acc = self.calc_gt_anchor_iou(results)
                 eval_results['gt_anchor_iou'] = acc
