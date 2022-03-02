@@ -88,6 +88,8 @@ class ClsProposalGenerator(BaseDetector):
 
         # pad the proposal result to a fixed length
         self.paded_proposal_num = self.test_cfg.get('paded_proposal_num', 1000) if self.test_cfg is not None else 1000
+        # use min-entropy instead of max-confidence
+        self.min_entropy = self.test_cfg.get('min_entropy', False) if self.test_cfg is not None else False
 
     def crop_img_to_patches(self, imgs, gt_bboxes, img_metas):
         # handle the test config
@@ -301,6 +303,7 @@ class ClsProposalGenerator(BaseDetector):
         # the shape of each tensor in anchors_for_each_img [anchors_num_of_img, 4]
         anchors_for_each_img = anchors * bs
 
+        # calcluate the iou between the gt and all anchors
         if self.calc_gt_anchor_iou:
             proposal_for_all_imgs = []
             for gt_bboxes_per_img, anchor_per_img in zip(gt_bboxes, anchors_for_each_img):
@@ -322,14 +325,31 @@ class ClsProposalGenerator(BaseDetector):
                 h, w, _ = img_info['img_shape']
 
                 pred_prob = softmax(logits_per_img)
-                max_pred_prob = torch.max(pred_prob, dim=1)
-                #pred_idx = temp[1]
-                max_score_per_anchor = max_pred_prob[0]
-                max_score_per_anchor = max_score_per_anchor.view(-1, self.anchor_per_grid)
-                max_score_per_grid = torch.max(max_score_per_anchor, dim=1)
-                # the shape of the anchors_for_imgs (num_of_grid, )
-                max_score_per_grid_val = max_score_per_grid[0]
-                max_score_per_grid_idx = max_score_per_grid[1]
+
+                # use the max confidence 
+                if not self.min_entropy:
+                    # select the max pred score in the prediction distribution
+                    max_pred_prob = torch.max(pred_prob, dim=1)
+                    max_score_per_anchor = max_pred_prob[0]
+                    max_score_per_anchor = max_score_per_anchor.view(-1, self.anchor_per_grid)
+                    # select the anchor with highest max confidence score in each grid
+                    max_score_per_grid = torch.max(max_score_per_anchor, dim=1)
+                    # the shape of the anchors_for_imgs (num_of_grid, )
+                    max_score_per_grid_val = max_score_per_grid[0]
+                    max_score_per_grid_idx = max_score_per_grid[1]
+                else:
+                    # calculate the entropy for each anchor
+                    prepared_gt_pred = pred_prob
+                    prepared_gt_pred[prepared_gt_pred == 0] = 1e-5
+                    log_result = - torch.log(prepared_gt_pred)
+                    entro = (log_result * pred_prob).sum(dim=-1)
+                    entro = -entro
+                    entro = entro.view(-1, self.anchor_per_grid)
+                    # select the anchor with the max negative entropy in each grid
+                    max_score_per_grid = torch.max(entro, dim=1)
+                    # the shape of the anchors_for_imgs (num_of_grid, )
+                    max_score_per_grid_val = max_score_per_grid[0]
+                    max_score_per_grid_idx = max_score_per_grid[1]              
                 
                 result_proposal_per_img = []
                 result_score_per_img = []
