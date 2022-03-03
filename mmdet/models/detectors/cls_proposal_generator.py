@@ -330,8 +330,25 @@ class ClsProposalGenerator(BaseDetector):
                 for logits_per_img, anchor_per_img, img_info in zip(pred_logits, anchors_for_each_img, img_metas):
                     h, w, _ = img_info['img_shape']
                     pred_prob = softmax(logits_per_img)
-                    max_pred_prob = torch.max(pred_prob, dim=1)
-                    max_score_per_anchor = max_pred_prob[0]
+                    if not self.min_entropy:
+                        max_pred_prob = torch.max(pred_prob, dim=1)
+                        max_score_per_anchor = max_pred_prob[0]
+                    else:
+                        cate_num = pred_prob.shape[-1]
+                        #print(cate_num)
+                        factor = torch.log(torch.tensor(cate_num))
+                        # calculate the entropy for each anchor
+                        prepared_gt_pred = pred_prob
+                        prepared_gt_pred[prepared_gt_pred == 0] = 1e-5
+                        log_result = - torch.log(prepared_gt_pred)
+                        entro = (log_result * pred_prob).sum(dim=-1)
+                        max_score_per_anchor = - entro + factor.item()
+                        #entro = entro.view(-1, self.anchor_per_grid)
+                        # select the anchor with the max negative entropy in each grid
+                        #max_score_per_grid = torch.max(entro, dim=1)
+                        # the shape of the anchors_for_imgs (num_of_grid, )
+                        #max_score_per_grid_val = max_score_per_grid[0]
+                        #max_score_per_grid_idx = max_score_per_grid[1] 
 
                     result_proposal_per_img = []
                     for anchor in anchor_per_img:
@@ -362,33 +379,15 @@ class ClsProposalGenerator(BaseDetector):
                     h, w, _ = img_info['img_shape']
                     pred_prob = softmax(logits_per_img)
 
-                    # use the max confidence 
-                    if not self.min_entropy:
-                        # select the max pred score in the prediction distribution
-                        max_pred_prob = torch.max(pred_prob, dim=1)
-                        max_score_per_anchor = max_pred_prob[0]
-                        max_score_per_anchor = max_score_per_anchor.view(-1, self.anchor_per_grid)
-                        # select the anchor with highest max confidence score in each grid
-                        max_score_per_grid = torch.max(max_score_per_anchor, dim=1)
-                        # the shape of the anchors_for_imgs (num_of_grid, )
-                        max_score_per_grid_val = max_score_per_grid[0]
-                        max_score_per_grid_idx = max_score_per_grid[1]
-                    else:
-                        cate_num = pred_prob.shape[-1]
-                        #print(cate_num)
-                        factor = torch.log(torch.tensor(cate_num))
-                        # calculate the entropy for each anchor
-                        prepared_gt_pred = pred_prob
-                        prepared_gt_pred[prepared_gt_pred == 0] = 1e-5
-                        log_result = - torch.log(prepared_gt_pred)
-                        entro = (log_result * pred_prob).sum(dim=-1)
-                        entro = - entro + factor.item()
-                        entro = entro.view(-1, self.anchor_per_grid)
-                        # select the anchor with the max negative entropy in each grid
-                        max_score_per_grid = torch.max(entro, dim=1)
-                        # the shape of the anchors_for_imgs (num_of_grid, )
-                        max_score_per_grid_val = max_score_per_grid[0]
-                        max_score_per_grid_idx = max_score_per_grid[1]              
+                    # select the max pred score in the prediction distribution
+                    max_pred_prob = torch.max(pred_prob, dim=1)
+                    max_score_per_anchor = max_pred_prob[0]
+                    max_score_per_anchor = max_score_per_anchor.view(-1, self.anchor_per_grid)
+                    # select the anchor with highest max confidence score in each grid
+                    max_score_per_grid = torch.max(max_score_per_anchor, dim=1)
+                    # the shape of the anchors_for_imgs (num_of_grid, )
+                    max_score_per_grid_val = max_score_per_grid[0]
+                    max_score_per_grid_idx = max_score_per_grid[1]
                     
                     result_proposal_per_img = []
                     result_score_per_img = []
