@@ -338,12 +338,15 @@ class ClsProposalGenerator(BaseDetector):
                     max_score_per_grid_val = max_score_per_grid[0]
                     max_score_per_grid_idx = max_score_per_grid[1]
                 else:
+                    cate_num = pred_prob.shape[-1]
+                    #print(cate_num)
+                    factor = torch.log(torch.tensor(cate_num))
                     # calculate the entropy for each anchor
                     prepared_gt_pred = pred_prob
                     prepared_gt_pred[prepared_gt_pred == 0] = 1e-5
                     log_result = - torch.log(prepared_gt_pred)
                     entro = (log_result * pred_prob).sum(dim=-1)
-                    entro = -entro
+                    entro = - entro + factor.item()
                     entro = entro.view(-1, self.anchor_per_grid)
                     # select the anchor with the max negative entropy in each grid
                     max_score_per_grid = torch.max(entro, dim=1)
@@ -355,7 +358,7 @@ class ClsProposalGenerator(BaseDetector):
                 result_score_per_img = []
                 anchor_per_img = anchor_per_img.view(-1, self.anchor_per_grid, 4)
                 for i, (max_grid_val, max_grid_idx) in enumerate(zip(max_score_per_grid_val, max_score_per_grid_idx)):
-                    if max_grid_val < 0.9:
+                    if not self.min_entropy and max_grid_val < 0.9:
                         continue
                     selected_anchor = anchor_per_img[i, max_grid_idx]
                     # adjust the cordinate to make the bbox valid
