@@ -90,6 +90,8 @@ class ClsProposalGenerator(BaseDetector):
         self.paded_proposal_num = self.test_cfg.get('paded_proposal_num', 1000) if self.test_cfg is not None else 1000
         # use min-entropy instead of max-confidence
         self.min_entropy = self.test_cfg.get('min_entropy', False) if self.test_cfg is not None else False
+        # nms on all anchor
+        self.num_on_all_anchors = self.test_cfg.get('num_on_all_anchors', False) if self.test_cfg is not None else False
 
     def crop_img_to_patches(self, imgs, gt_bboxes, img_metas):
         # handle the test config
@@ -319,76 +321,103 @@ class ClsProposalGenerator(BaseDetector):
             # the len(pred_logits) == batch_size, with each ele in [num_anchors, num_cates]
             pred_logits = self.rpn_head.simple_test_bboxes(result_list, gt_labels, img_metas, gt_bboxes)
             softmax = nn.Softmax(dim=1)
+            # prepare for nms
+            nms=dict(type='nms', iou_threshold=0.5)
 
-            proposal_for_all_imgs = []
-            for logits_per_img, anchor_per_img, img_info in zip(pred_logits, anchors_for_each_img, img_metas):
-                h, w, _ = img_info['img_shape']
+            if self.num_on_all_anchors:
+                proposal_for_all_imgs = []
+                for logits_per_img, anchor_per_img, img_info in zip(pred_logits, anchors_for_each_img, img_metas):
+                    pred_prob = softmax(logits_per_img)
 
-                pred_prob = softmax(logits_per_img)
+                    result_proposal_per_img = []
+                    for anchor in anchor_per_img:
+                        anchor[0] = 0 if anchor[0] < 0 else anchor[0]
+                        anchor[1] = 0 if anchor[1] < 0 else anchor[1]
+                        anchor[2] = w if anchor[2] > w else anchor[2]
+                        anchor[3] = h if anchor[3] > h else anchor[3]
+                        # rescale the proposal
+                        result_proposal_per_img.append(anchor.unsqueeze(dim=0))
+                    result_proposal_per_img = torch.cat(result_proposal_per_img, dim=0)
 
-                # use the max confidence 
-                if not self.min_entropy:
-                    # select the max pred score in the prediction distribution
-                    max_pred_prob = torch.max(pred_prob, dim=1)
-                    max_score_per_anchor = max_pred_prob[0]
-                    max_score_per_anchor = max_score_per_anchor.view(-1, self.anchor_per_grid)
-                    # select the anchor with highest max confidence score in each grid
-                    max_score_per_grid = torch.max(max_score_per_anchor, dim=1)
-                    # the shape of the anchors_for_imgs (num_of_grid, )
-                    max_score_per_grid_val = max_score_per_grid[0]
-                    max_score_per_grid_idx = max_score_per_grid[1]
-                else:
-                    cate_num = pred_prob.shape[-1]
-                    #print(cate_num)
-                    factor = torch.log(torch.tensor(cate_num))
-                    # calculate the entropy for each anchor
-                    prepared_gt_pred = pred_prob
-                    prepared_gt_pred[prepared_gt_pred == 0] = 1e-5
-                    log_result = - torch.log(prepared_gt_pred)
-                    entro = (log_result * pred_prob).sum(dim=-1)
-                    entro = - entro + factor.item()
-                    entro = entro.view(-1, self.anchor_per_grid)
-                    # select the anchor with the max negative entropy in each grid
-                    max_score_per_grid = torch.max(entro, dim=1)
-                    # the shape of the anchors_for_imgs (num_of_grid, )
-                    max_score_per_grid_val = max_score_per_grid[0]
-                    max_score_per_grid_idx = max_score_per_grid[1]              
-                
-                result_proposal_per_img = []
-                result_score_per_img = []
-                anchor_per_img = anchor_per_img.view(-1, self.anchor_per_grid, 4)
-                for i, (max_grid_val, max_grid_idx) in enumerate(zip(max_score_per_grid_val, max_score_per_grid_idx)):
-                    if not self.min_entropy and max_grid_val < 0.9:
-                        continue
-                    selected_anchor = anchor_per_img[i, max_grid_idx]
-                    # adjust the cordinate to make the bbox valid
-                    selected_anchor[0] = 0 if selected_anchor[0] < 0 else selected_anchor[0]
-                    selected_anchor[1] = 0 if selected_anchor[1] < 0 else selected_anchor[1]
-                    selected_anchor[2] = w if selected_anchor[2] > w else selected_anchor[2]
-                    selected_anchor[3] = h if selected_anchor[3] > h else selected_anchor[3]
-                    # rescale the proposal
-                    result_proposal_per_img.append(selected_anchor.unsqueeze(dim=0))
-                    result_score_per_img.append(max_grid_val.unsqueeze(dim=0))
-                
-                result_proposal_per_img = torch.cat(result_proposal_per_img, dim=0)
-                result_score_per_img = torch.cat(result_score_per_img, dim=0)
-                #print('result_proposal_per_img', result_proposal_per_img.shape, 'result_score_per_img', result_score_per_img.shape)
-                
-                # prepare for nms
-                nms=dict(type='nms', iou_threshold=0.5)
-                # regard all anchor as one category
-                ids = torch.zeros(result_score_per_img.shape)
-                dets, keep = batched_nms(result_proposal_per_img.cuda(), result_score_per_img.cuda(), ids.cuda(), nms)
-                # resize the proposal
-                dets[:, :4] /= dets.new_tensor(img_info['scale_factor'])
-                # pad the proposal result to the fixed length
-                dets = dets[:self.paded_proposal_num]
-                if len(dets) < self.paded_proposal_num:
-                    gap = self.paded_proposal_num - len(dets)
-                    padded_empty_proposals = torch.zeros(gap, 5).cuda()
-                    dets = torch.cat([dets, padded_empty_proposals], dim=0)
+                    # regard all anchor as one category
+                    ids = torch.zeros(result_score_per_img.shape)
+                    dets, keep = batched_nms(result_proposal_per_img.cuda(), pred_prob.cuda(), ids.cuda(), nms)
+                    # resize the proposal
+                    dets[:, :4] /= dets.new_tensor(img_info['scale_factor'])
+                    # pad the proposal result to the fixed length
+                    dets = dets[:self.paded_proposal_num]
+                    if len(dets) < self.paded_proposal_num:
+                        gap = self.paded_proposal_num - len(dets)
+                        padded_empty_proposals = torch.zeros(gap, 5).cuda()
+                        dets = torch.cat([dets, padded_empty_proposals], dim=0)
+                    proposal_for_all_imgs.append(dets)
+        
+            else:
+                proposal_for_all_imgs = []
+                for logits_per_img, anchor_per_img, img_info in zip(pred_logits, anchors_for_each_img, img_metas):
+                    h, w, _ = img_info['img_shape']
+                    pred_prob = softmax(logits_per_img)
 
-                proposal_for_all_imgs.append(dets)
+                    # use the max confidence 
+                    if not self.min_entropy:
+                        # select the max pred score in the prediction distribution
+                        max_pred_prob = torch.max(pred_prob, dim=1)
+                        max_score_per_anchor = max_pred_prob[0]
+                        max_score_per_anchor = max_score_per_anchor.view(-1, self.anchor_per_grid)
+                        # select the anchor with highest max confidence score in each grid
+                        max_score_per_grid = torch.max(max_score_per_anchor, dim=1)
+                        # the shape of the anchors_for_imgs (num_of_grid, )
+                        max_score_per_grid_val = max_score_per_grid[0]
+                        max_score_per_grid_idx = max_score_per_grid[1]
+                    else:
+                        cate_num = pred_prob.shape[-1]
+                        #print(cate_num)
+                        factor = torch.log(torch.tensor(cate_num))
+                        # calculate the entropy for each anchor
+                        prepared_gt_pred = pred_prob
+                        prepared_gt_pred[prepared_gt_pred == 0] = 1e-5
+                        log_result = - torch.log(prepared_gt_pred)
+                        entro = (log_result * pred_prob).sum(dim=-1)
+                        entro = - entro + factor.item()
+                        entro = entro.view(-1, self.anchor_per_grid)
+                        # select the anchor with the max negative entropy in each grid
+                        max_score_per_grid = torch.max(entro, dim=1)
+                        # the shape of the anchors_for_imgs (num_of_grid, )
+                        max_score_per_grid_val = max_score_per_grid[0]
+                        max_score_per_grid_idx = max_score_per_grid[1]              
+                    
+                    result_proposal_per_img = []
+                    result_score_per_img = []
+                    anchor_per_img = anchor_per_img.view(-1, self.anchor_per_grid, 4)
+                    for i, (max_grid_val, max_grid_idx) in enumerate(zip(max_score_per_grid_val, max_score_per_grid_idx)):
+                        if not self.min_entropy and max_grid_val < 0.9:
+                            continue
+                        selected_anchor = anchor_per_img[i, max_grid_idx]
+                        # adjust the cordinate to make the bbox valid
+                        selected_anchor[0] = 0 if selected_anchor[0] < 0 else selected_anchor[0]
+                        selected_anchor[1] = 0 if selected_anchor[1] < 0 else selected_anchor[1]
+                        selected_anchor[2] = w if selected_anchor[2] > w else selected_anchor[2]
+                        selected_anchor[3] = h if selected_anchor[3] > h else selected_anchor[3]
+                        # rescale the proposal
+                        result_proposal_per_img.append(selected_anchor.unsqueeze(dim=0))
+                        result_score_per_img.append(max_grid_val.unsqueeze(dim=0))
+                    
+                    result_proposal_per_img = torch.cat(result_proposal_per_img, dim=0)
+                    result_score_per_img = torch.cat(result_score_per_img, dim=0)
+
+                    # regard all anchor as one category
+                    ids = torch.zeros(result_score_per_img.shape)
+                    dets, keep = batched_nms(result_proposal_per_img.cuda(), result_score_per_img.cuda(), ids.cuda(), nms)
+                    # resize the proposal
+                    dets[:, :4] /= dets.new_tensor(img_info['scale_factor'])
+                    # pad the proposal result to the fixed length
+                    dets = dets[:self.paded_proposal_num]
+                    if len(dets) < self.paded_proposal_num:
+                        gap = self.paded_proposal_num - len(dets)
+                        padded_empty_proposals = torch.zeros(gap, 5).cuda()
+                        dets = torch.cat([dets, padded_empty_proposals], dim=0)
+
+                    proposal_for_all_imgs.append(dets)
 
         return [proposal.cpu().numpy() for proposal in proposal_for_all_imgs]
 
