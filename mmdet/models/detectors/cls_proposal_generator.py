@@ -91,7 +91,8 @@ class ClsProposalGenerator(BaseDetector):
         # use min-entropy instead of max-confidence
         self.min_entropy = self.test_cfg.get('min_entropy', False) if self.test_cfg is not None else False
         # nms on all anchor
-        self.num_on_all_anchors = self.test_cfg.get('num_on_all_anchors', False) if self.test_cfg is not None else False
+        self.nms_on_all_anchors = self.test_cfg.get('nms_on_all_anchors', False) if self.test_cfg is not None else False
+        self.nms_threshold = self.test_cfg.get('nms_threshold', 0.5) if self.test_cfg is not None else 0.5
 
     def crop_img_to_patches(self, imgs, gt_bboxes, img_metas):
         # handle the test config
@@ -322,12 +323,15 @@ class ClsProposalGenerator(BaseDetector):
             pred_logits = self.rpn_head.simple_test_bboxes(result_list, gt_labels, img_metas, gt_bboxes)
             softmax = nn.Softmax(dim=1)
             # prepare for nms
-            nms=dict(type='nms', iou_threshold=0.5)
+            nms=dict(type='nms', iou_threshold=self.nms_threshold)
 
-            if self.num_on_all_anchors:
+            if self.nms_on_all_anchors:
                 proposal_for_all_imgs = []
                 for logits_per_img, anchor_per_img, img_info in zip(pred_logits, anchors_for_each_img, img_metas):
+                    h, w, _ = img_info['img_shape']
                     pred_prob = softmax(logits_per_img)
+                    max_pred_prob = torch.max(pred_prob, dim=1)
+                    max_score_per_anchor = max_pred_prob[0]
 
                     result_proposal_per_img = []
                     for anchor in anchor_per_img:
@@ -340,8 +344,8 @@ class ClsProposalGenerator(BaseDetector):
                     result_proposal_per_img = torch.cat(result_proposal_per_img, dim=0)
 
                     # regard all anchor as one category
-                    ids = torch.zeros(result_score_per_img.shape)
-                    dets, keep = batched_nms(result_proposal_per_img.cuda(), pred_prob.cuda(), ids.cuda(), nms)
+                    ids = torch.zeros(max_score_per_anchor.shape)
+                    dets, keep = batched_nms(result_proposal_per_img.cuda(), max_score_per_anchor.cuda(), ids.cuda(), nms)
                     # resize the proposal
                     dets[:, :4] /= dets.new_tensor(img_info['scale_factor'])
                     # pad the proposal result to the fixed length
