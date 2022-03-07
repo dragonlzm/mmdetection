@@ -94,6 +94,10 @@ class ClsProposalGenerator(BaseDetector):
         self.nms_on_all_anchors = self.test_cfg.get('nms_on_all_anchors', False) if self.test_cfg is not None else False
         self.nms_threshold = self.test_cfg.get('nms_threshold', 0.5) if self.test_cfg is not None else 0.5
 
+        print('parameters:', 'anchor_generator["scales"]', anchor_generator['scales'], "anchor_generator['ratios']", anchor_generator['ratios'],
+            "anchor_generator['strides']", anchor_generator['strides'], "self.paded_proposal_num", self.paded_proposal_num, "self.min_entropy", self.min_entropy,
+            "self.nms_on_all_anchors", self.nms_on_all_anchors, "self.nms_threshold", self.nms_threshold)
+
     def crop_img_to_patches(self, imgs, gt_bboxes, img_metas):
         # handle the test config
         if self.training: 

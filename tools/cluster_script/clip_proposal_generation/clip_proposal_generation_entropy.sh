@@ -19,13 +19,31 @@ rm -rf ./data
 ln -sf /project/nevatia_174/zhuoming/detection ./data
 
 # 16_32_512 nms all anchor
+#PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+#python -m torch.distributed.launch --nproc_per_node=2 \
+#    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/test.py \
+#    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/configs/cls_proposal_generator/cls_proposal_generator_coco.py \
+#    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/latest.pth \
+#    --launcher pytorch --eval=proposal_fast --options jsonfile_prefix=/project/nevatia_174/zhuoming/detection/test/cls_proposal_generator_coco/results_16_32_512_nms_on_all_entropy_fixed \
+#    --cfg-options model.anchor_generator.strides=[16] model.test_cfg.nms_on_all_anchors=True model.test_cfg.min_entropy=True
+
+# 16_32_512 nms all anchor nms07
+#PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+#python -m torch.distributed.launch --nproc_per_node=2 \
+#    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/test.py \
+#    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/configs/cls_proposal_generator/cls_proposal_generator_coco.py \
+#    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/latest.pth \
+#    --launcher pytorch --eval=proposal_fast --options jsonfile_prefix=/project/nevatia_174/zhuoming/detection/test/cls_proposal_generator_coco/results_16_32_512_nms_on_all_07_entropy_fixed \
+#    --cfg-options model.anchor_generator.strides=[16] model.test_cfg.nms_on_all_anchors=True model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=True
+
+# 16_32_512 nms all anchor
 PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/test.py \
     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/configs/cls_proposal_generator/cls_proposal_generator_coco.py \
     /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/latest.pth \
-    --launcher pytorch --eval=proposal_fast --options jsonfile_prefix=/project/nevatia_174/zhuoming/detection/test/cls_proposal_generator_coco/results_16_32_512_nms_on_all \
-    --cfg-options model.anchor_generator.strides=[16] --cfg-options model.test_cfg.nms_on_all_anchors=True model.test_cfg.min_entropy=True
+    --launcher pytorch --eval=proposal_fast --options jsonfile_prefix=/project/nevatia_174/zhuoming/detection/test/cls_proposal_generator_coco/results_32_64_1024_nms_on_all_entropy_fixed \
+    --cfg-options model.test_cfg.nms_on_all_anchors=True model.test_cfg.min_entropy=True
 
 # 16_32_512 nms all anchor nms07
 PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
@@ -33,6 +51,5 @@ python -m torch.distributed.launch --nproc_per_node=2 \
     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/test.py \
     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/configs/cls_proposal_generator/cls_proposal_generator_coco.py \
     /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/latest.pth \
-    --launcher pytorch --eval=proposal_fast --options jsonfile_prefix=/project/nevatia_174/zhuoming/detection/test/cls_proposal_generator_coco/results_16_32_512_nms_on_all_07 \
-    --cfg-options model.anchor_generator.strides=[16] --cfg-options model.test_cfg.nms_on_all_anchors=True model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=True
-
+    --launcher pytorch --eval=proposal_fast --options jsonfile_prefix=/project/nevatia_174/zhuoming/detection/test/cls_proposal_generator_coco/results_32_64_1024_nms_on_all_07_entropy_fixed \
+    --cfg-options model.test_cfg.nms_on_all_anchors=True model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=True

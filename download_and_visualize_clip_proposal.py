@@ -19,11 +19,17 @@ from PIL import Image
 #proposal_file_path = "C:\\Users\\XPS\\Desktop\\results.clip_proposal_09.json"
 #proposal_file_path = "C:\\Users\\XPS\\Desktop\\results.clip_proposal_095.json"
 #proposal_file_path = "C:\\Users\\XPS\\Desktop\\results.clip_proposal_09_nms07.json"
-proposal_file_path = "C:\\Users\\XPS\\Desktop\\results.clip_proposal_09_nms05.json"
+#proposal_file_path = "C:\\Users\\XPS\\Desktop\\results.clip_proposal_09_nms05.json"
+#proposal_file_path = "C:\\Users\\Zhuoming Liu\\Desktop\\results_32_64_1024.patch_acc.json"
+#proposal_file_path = "C:\\Users\\Zhuoming Liu\\Desktop\\results_16_32_512_nms_on_all_07.patch_acc.json"
+#proposal_file_path = "C:\\Users\\Zhuoming Liu\\Desktop\\results_32_64_1024_nms07.patch_acc.json"
+proposal_file_path = "C:\\Users\\Zhuoming Liu\\Desktop\\results_16_16_1024_nms07.patch_acc.json"
+
+
 proposal_result = json.load(open(proposal_file_path))
 
 #gt_annotation_path = "C:\\Users\\XPS\\Desktop\\annotations\\instances_val2017.json"
-gt_annotation_path = "C:\\Users\\XPS\\Desktop\\annotations\\instances_train2017.json"
+gt_annotation_path = "C:\\Users\\Zhuoming Liu\\Desktop\\annotations\\instances_train2017.json"
 gt_anno_result = json.load(open(gt_annotation_path))
 
 
@@ -34,7 +40,7 @@ for ele in proposal_result:
     img_id = ele['image_id']
     bbox = ele['score']
     #if img_id not in from_img_id_to_pred:
-    from_img_id_to_pred[img_id] = bbox
+    from_img_id_to_pred[img_id] = bbox[:100]
     #from_img_id_to_pred[img_id].append(bbox)
 
 for ele in gt_anno_result['annotations']:
@@ -67,10 +73,15 @@ all_img_info = {info['id']:info for info in gt_anno_result['images']}
 #save_root = 'C:\\Users\\XPS\\Desktop\\clip_proposal_09\\'
 #save_root = 'C:\\Users\\XPS\\Desktop\\clip_proposal_095\\'
 #save_root = 'C:\\Users\\XPS\\Desktop\\clip_proposal_09_nms07\\'
-save_root = 'C:\\Users\\XPS\\Desktop\\clip_proposal_09_nms05\\'
+#save_root = 'C:\\Users\\Zhuoming Liu\\Desktop\\results_16_32_512_nms_on_all_07\\'
+#save_root = 'C:\\Users\\Zhuoming Liu\\Desktop\\results_32_64_1024_nms07\\'
+save_root = 'C:\\Users\\Zhuoming Liu\\Desktop\\results_16_16_1024_nms07.patch_acc\\'
+
+
+
 
 #print(all_img_annotation)
-for img_id in from_img_id_to_pred:
+for i, img_id in enumerate(from_img_id_to_pred):
     #print(type(image_id))
     url = all_img_info[img_id]['coco_url']
     file_name = all_img_info[img_id]['file_name']
@@ -108,3 +119,6 @@ for img_id in from_img_id_to_pred:
 
     plt.savefig(print_path+file_name)
     plt.close()
+
+    if i > 20:
+        break
