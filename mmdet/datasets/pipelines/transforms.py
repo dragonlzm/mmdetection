@@ -3,7 +3,8 @@ import copy
 import inspect
 import math
 import warnings
-
+import torch
+from PIL import Image
 import cv2
 import mmcv
 import numpy as np
@@ -24,6 +25,26 @@ try:
 except ImportError:
     albumentations = None
     Compose = None
+
+from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normalize
+try:
+    from torchvision.transforms import InterpolationMode
+    BICUBIC = InterpolationMode.BICUBIC
+except ImportError:
+    BICUBIC = Image.BICUBIC
+
+def _convert_image_to_rgb(image):
+    return image.convert("RGB")
+
+def _transform(n_px):
+    return Compose([
+        Resize(n_px, interpolation=BICUBIC),
+        CenterCrop(n_px),
+        _convert_image_to_rgb,
+        ToTensor(),
+        Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
+    ])
+
 
 
 @PIPELINES.register_module()
@@ -2632,8 +2653,6 @@ class RandomAffine:
         return translation_matrix
 
 
-
-
 @PIPELINES.register_module()
 class GenerateCroppedPatches:
     """Generate the cropped patches for the CLIP model
@@ -2643,185 +2662,101 @@ class GenerateCroppedPatches:
     def __init__(self,
                  use_gt_bboxes=True,
                  use_rand_bboxes=True,
-                 num_of_rand_bboxes=20):
+                 num_of_rand_bboxes=20,
+                 input_resolution=224):
         self.use_gt_bboxes = use_gt_bboxes
         self.use_rand_bboxes = use_rand_bboxes
         self.num_of_rand_bboxes = num_of_rand_bboxes
+        # deal with the crop size and location
+        self.test_crop_size_modi_ratio = self.test_cfg.get('crop_size_modi', 1.2) if self.test_cfg is not None else 1.2
+        self.test_crop_loca_modi_ratio = self.test_cfg.get('crop_loca_modi', 0) if self.test_cfg is not None else 0
 
-    @staticmethod
-    def random_select(img_scales):
-        """Randomly select an img_scale from given candidates.
+        self.train_crop_size_modi_ratio = self.train_cfg.get('crop_size_modi', 1.2) if self.train_cfg is not None else 1.2
+        self.train_crop_loca_modi_ratio = self.train_cfg.get('crop_loca_modi', 0) if self.train_cfg is not None else 0   
 
-        Args:
-            img_scales (list[tuple]): Images scales for selection.
-
-        Returns:
-            (tuple, int): Returns a tuple ``(img_scale, scale_dix)``, \
-                where ``img_scale`` is the selected image scale and \
-                ``scale_idx`` is the selected index in the given candidates.
-        """
-
-        assert mmcv.is_list_of(img_scales, tuple)
-        scale_idx = np.random.randint(len(img_scales))
-        img_scale = img_scales[scale_idx]
-        return img_scale, scale_idx
-
-    @staticmethod
-    def random_sample(img_scales):
-        """Randomly sample an img_scale when ``multiscale_mode=='range'``.
-
-        Args:
-            img_scales (list[tuple]): Images scale range for sampling.
-                There must be two tuples in img_scales, which specify the lower
-                and upper bound of image scales.
-
-        Returns:
-            (tuple, None): Returns a tuple ``(img_scale, None)``, where \
-                ``img_scale`` is sampled scale and None is just a placeholder \
-                to be consistent with :func:`random_select`.
-        """
-
-        assert mmcv.is_list_of(img_scales, tuple) and len(img_scales) == 2
-        img_scale_long = [max(s) for s in img_scales]
-        img_scale_short = [min(s) for s in img_scales]
-        long_edge = np.random.randint(
-            min(img_scale_long),
-            max(img_scale_long) + 1)
-        short_edge = np.random.randint(
-            min(img_scale_short),
-            max(img_scale_short) + 1)
-        img_scale = (long_edge, short_edge)
-        return img_scale, None
-
-    @staticmethod
-    def random_sample_ratio(img_scale, ratio_range):
-        """Randomly sample an img_scale when ``ratio_range`` is specified.
-
-        A ratio will be randomly sampled from the range specified by
-        ``ratio_range``. Then it would be multiplied with ``img_scale`` to
-        generate sampled scale.
-
-        Args:
-            img_scale (tuple): Images scale base to multiply with ratio.
-            ratio_range (tuple[float]): The minimum and maximum ratio to scale
-                the ``img_scale``.
-
-        Returns:
-            (tuple, None): Returns a tuple ``(scale, None)``, where \
-                ``scale`` is sampled ratio multiplied with ``img_scale`` and \
-                None is just a placeholder to be consistent with \
-                :func:`random_select`.
-        """
-
-        assert isinstance(img_scale, tuple) and len(img_scale) == 2
-        min_ratio, max_ratio = ratio_range
-        assert min_ratio <= max_ratio
-        ratio = np.random.random_sample() * (max_ratio - min_ratio) + min_ratio
-        scale = int(img_scale[0] * ratio), int(img_scale[1] * ratio)
-        return scale, None
-
-    def _random_scale(self, results):
-        """Randomly sample an img_scale according to ``ratio_range`` and
-        ``multiscale_mode``.
-
-        If ``ratio_range`` is specified, a ratio will be sampled and be
-        multiplied with ``img_scale``.
-        If multiple scales are specified by ``img_scale``, a scale will be
-        sampled according to ``multiscale_mode``.
-        Otherwise, single scale will be used.
-
-        Args:
-            results (dict): Result dict from :obj:`dataset`.
-
-        Returns:
-            dict: Two new keys 'scale` and 'scale_idx` are added into \
-                ``results``, which would be used by subsequent pipelines.
-        """
-
-        if self.ratio_range is not None:
-            scale, scale_idx = self.random_sample_ratio(
-                self.img_scale[0], self.ratio_range)
-        elif len(self.img_scale) == 1:
-            scale, scale_idx = self.img_scale[0], 0
-        elif self.multiscale_mode == 'range':
-            scale, scale_idx = self.random_sample(self.img_scale)
-        elif self.multiscale_mode == 'value':
-            scale, scale_idx = self.random_select(self.img_scale)
-        else:
-            raise NotImplementedError
-
-        results['scale'] = scale
-        results['scale_idx'] = scale_idx
-
-    def _resize_img(self, results):
-        """Resize images with ``results['scale']``."""
-        for key in results.get('img_fields', ['img']):
-            if self.keep_ratio:
-                img, scale_factor = mmcv.imrescale(
-                    results[key],
-                    results['scale'],
-                    return_scale=True,
-                    backend=self.backend)
-                # the w_scale and h_scale has minor difference
-                # a real fix should be done in the mmcv.imrescale in the future
-                new_h, new_w = img.shape[:2]
-                h, w = results[key].shape[:2]
-                w_scale = new_w / w
-                h_scale = new_h / h
-            else:
-                img, w_scale, h_scale = mmcv.imresize(
-                    results[key],
-                    results['scale'],
-                    return_scale=True,
-                    backend=self.backend)
-            results[key] = img
-
-            scale_factor = np.array([w_scale, h_scale, w_scale, h_scale],
-                                    dtype=np.float32)
-            results['img_shape'] = img.shape
-            # in case that there is no padding
-            results['pad_shape'] = img.shape
-            results['scale_factor'] = scale_factor
-            results['keep_ratio'] = self.keep_ratio
-
-    def _resize_bboxes(self, results):
-        """Resize bounding boxes with ``results['scale_factor']``."""
-        for key in results.get('bbox_fields', []):
-            bboxes = results[key] * results['scale_factor']
-            if self.bbox_clip_border:
-                img_shape = results['img_shape']
-                bboxes[:, 0::2] = np.clip(bboxes[:, 0::2], 0, img_shape[1])
-                bboxes[:, 1::2] = np.clip(bboxes[:, 1::2], 0, img_shape[0])
-            results[key] = bboxes
-
-    def _resize_masks(self, results):
-        """Resize masks with ``results['scale']``"""
-        for key in results.get('mask_fields', []):
-            if results[key] is None:
-                continue
-            if self.keep_ratio:
-                results[key] = results[key].rescale(results['scale'])
-            else:
-                results[key] = results[key].resize(results['img_shape'][:2])
-
-    def _resize_seg(self, results):
-        """Resize semantic segmentation map with ``results['scale']``."""
-        for key in results.get('seg_fields', []):
-            if self.keep_ratio:
-                gt_seg = mmcv.imrescale(
-                    results[key],
-                    results['scale'],
-                    interpolation='nearest',
-                    backend=self.backend)
-            else:
-                gt_seg = mmcv.imresize(
-                    results[key],
-                    results['scale'],
-                    interpolation='nearest',
-                    backend=self.backend)
-            results[key] = gt_seg
+        self.input_resolution = input_resolution
+        self.preprocess = _transform(self.input_resolution)
 
     def generate_rand_bboxes(self):
+        # generate the top left position base on a evenly distribution
+        tl_x = torch.rand(self.num_of_rand_bboxes, 1)
+        tl_y = torch.rand(self.num_of_rand_bboxes, 1)
+        
+        # generate the w and the h base on the average and the std of w and h
+        #w_mean: 103.89474514564517 h_mean: 107.41877275724094
+        #w_std: 127.61796789111433 h_std: 114.85251970283936
+        w = (torch.randn(self.num_of_rand_bboxes, 1) * 127.61796789111433) + 103.89474514564517
+        h = (torch.randn(self.num_of_rand_bboxes, 1) * 114.85251970283936) + 107.41877275724094
+        
+        return tl_x, tl_y, w, h
+
+    def crop_img_to_patches(self, img, bboxes, img_metas):
+        # the shape of the img is [800, 1184, 3]
+        
+        # handle the test config
+        if self.training: 
+            crop_size_modi_ratio = self.train_crop_size_modi_ratio
+            crop_loca_modi_ratio = self.train_crop_loca_modi_ratio
+        else:
+            crop_size_modi_ratio = self.test_crop_size_modi_ratio
+            crop_loca_modi_ratio = self.test_crop_loca_modi_ratio
+
+        H, W, channel = img_metas['img_shape']
+        result = []
+        for box_i, bbox in enumerate(bboxes):
+            # the original bbox location
+            tl_x, tl_y, br_x, br_y = bbox[0], bbox[1], bbox[2], bbox[3]
+            x = tl_x
+            y = tl_y
+            w = br_x - tl_x
+            h = br_y - tl_y
+            # change the bbox location by changing the top left position
+            # bbox change direction
+            x_direction_sign = random.randint(-1,1)
+            y_direction_sign = random.randint(-1,1)
+            # bbox direction change ratio(the ration should be 1/2, 1/3, 1/4, 1/5)
+            # commonly we will mantain the size of the bbox unchange while changing
+            # the localization of the bbox
+            x_change_pixel = w * crop_loca_modi_ratio * x_direction_sign
+            y_change_pixel = h * crop_loca_modi_ratio * y_direction_sign
+            # change the bbox size ratio
+            x_change_for_size = ((crop_size_modi_ratio - 1) / 2) * w
+            y_change_for_size = ((crop_size_modi_ratio - 1) / 2) * h
+
+            # the final format for the
+            x_start_pos = math.floor(max(x-x_change_for_size+x_change_pixel , 0))
+            y_start_pos = math.floor(max(y-y_change_for_size+y_change_pixel, 0))
+            x_end_pos = math.ceil(min(x+x_change_for_size+w, W-1))
+            y_end_pos = math.ceil(min(y+y_change_for_size+h, H-1))
+
+            now_patch = img[y_start_pos: y_end_pos, x_start_pos: x_end_pos, :]           
+            # crop the GT bbox and place it in the center of the zero square
+            gt_h, gt_w, c = now_patch.shape
+            if gt_h != gt_w:
+                long_edge = max((gt_h, gt_w))
+                empty_patch = np.zeros((long_edge, long_edge, 3))
+                if gt_h > gt_w:
+                    x_start = (long_edge - gt_w) // 2
+                    x_end = x_start + gt_w
+                    empty_patch[:, x_start: x_end] = now_patch
+                else:
+                    y_start = (long_edge - gt_h) // 2
+                    y_end = y_start + gt_h
+                    empty_patch[y_start: y_end] = now_patch
+                now_patch = empty_patch
+            
+            #data = Image.fromarray(np.uint8(now_patch))
+            #data.save('/data2/lwll/zhuoming/detection/test/cls_finetuner_clip_base_100shots_train/patch_visualize/' + img_metas[img_idx]['ori_filename'] + '_' + str(box_i) + '.png')
+            #new_patch, w_scale, h_scale = mmcv.imresize(now_patch, (224, 224), return_scale=True)
+            # convert the numpy to PIL image
+            PIL_image = Image.fromarray(np.uint8(now_patch))
+            # do the preprocessing
+            new_patch = self.preprocess(PIL_image)
+            #image_result.append(np.expand_dims(new_patch, axis=0))
+            result.append(new_patch.unsqueeze(dim=0))
+        result = torch.cat(result, dim=0)
+
+        return result
 
     def __call__(self, results):
         """Call function to resize images, bounding boxes, masks, semantic
@@ -2834,14 +2769,30 @@ class GenerateCroppedPatches:
             dict: Resized results, 'img_shape', 'pad_shape', 'scale_factor', \
                 'keep_ratio' keys are added into result dict.
         """
-        # obtain the gt bboxes
-        gt_bboxes = results.get('bbox_fields', [])
-        # generate the random bbox
-        rand_bboxes = self.generate_rand_bboxes()
+        # generate the random bbox (ratio)
+        tl_x, tl_y, w, h = self.generate_rand_bboxes()
+        # make the w and h valid
+        w[w < 20] = 20
+        h[h < 20] = 20
         
-        # conduct the preprocessing
+        # conduct the preprocessing for one img
+        img = results['img']
+        bboxes = results['gt_bboxes']
+        img_shape = results['img_shape']
+        h, w, _ = img_shape
+        
+        # handle the random bboxes
+        real_tl_x = tl_x * w
+        real_tl_y = tl_y * h
+        now_rand_bbox = torch.cat([real_tl_x, real_tl_y, w, h], dim=-1)
+            
+        all_bboxes = torch.cat([bboxes, now_rand_bbox], dim=0)
+        temp_img_metas = {'img_shape': img_shape}
+        result = self.crop_img_to_patches(img, all_bboxes, temp_img_metas)
         
         # it need to save the random_bboxes to the results
+        results['cropped_patches'] = result
+        results['rand_bboxes'] = now_rand_bbox
         
         return results
 

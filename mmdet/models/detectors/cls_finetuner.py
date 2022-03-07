@@ -179,7 +179,7 @@ class ClsFinetuner(BaseDetector):
         #cropped_patches = torch.cat(result, dim=0).cuda()
         return all_results
 
-    def extract_feat(self, img, gt_bboxes, img_metas=None):
+    def extract_feat(self, img, gt_bboxes, cropped_patches, img_metas=None):
         """Extract features.
 
         Args:
@@ -199,7 +199,11 @@ class ClsFinetuner(BaseDetector):
         # crop the img into the patches with normalization and reshape
         # (a function to convert the img)
         #cropped_patches_list:len = batch_size, list[tensor] each tensor shape [gt_num_of_image, 3, 224, 224]
-        cropped_patches_list = self.crop_img_to_patches(img.cpu(), gt_bboxes, img_metas)
+        if cropped_patches == None:
+            cropped_patches_list = self.crop_img_to_patches(img.cpu(), gt_bboxes, img_metas)
+        else:
+            print('testing cropped_patches')
+            cropped_patches_list = cropped_patches
 
         # convert dimension from [bs, 64, 3, 224, 224] to [bs*64, 3, 224, 224]
         #converted_img_patches = converted_img_patches.view(bs, -1, self.backbone.input_resolution, self.backbone.input_resolution)
@@ -254,7 +258,7 @@ class ClsFinetuner(BaseDetector):
                                              gt_bboxes_ignore)
         return losses
 
-    def simple_test(self, img, img_metas, gt_bboxes, gt_labels, rescale=False):
+    def simple_test(self, img, img_metas, gt_bboxes, gt_labels, cropped_patches=None, rescale=False):
         """Test function without test time augmentation.
 
         Args:
@@ -268,7 +272,7 @@ class ClsFinetuner(BaseDetector):
         """
         img = img.unsqueeze(dim=0)
         img_metas = [img_metas]
-
+        
         if self.test_with_rand_bboxes:
             all_bbox = []
             h, w, _ = img_metas[0]['img_shape']
@@ -280,9 +284,9 @@ class ClsFinetuner(BaseDetector):
                 bbox = torch.tensor([[tl_x, tl_y, br_x, br_y]])
                 all_bbox.append(bbox)
             all_bbox = torch.cat(all_bbox, dim=0)
-            x = self.extract_feat(img, [all_bbox], img_metas)
+            x = self.extract_feat(img, [all_bbox], cropped_patches, img_metas)
         else:
-            x = self.extract_feat(img, gt_bboxes, img_metas)
+            x = self.extract_feat(img, gt_bboxes, cropped_patches, img_metas)
         # get origin input shape to onnx dynamic input shape
         if torch.onnx.is_in_onnx_export():
             img_shape = torch._shape_as_tensor(img)[2:]
