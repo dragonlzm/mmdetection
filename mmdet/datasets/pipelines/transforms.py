@@ -26,7 +26,11 @@ except ImportError:
     albumentations = None
     Compose = None
 
-from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normalize
+from torchvision.transforms import Compose as t_Compose
+from torchvision.transforms import Resize as t_Resize
+from torchvision.transforms import CenterCrop, ToTensor
+from torchvision.transforms import Normalize as t_Normalize
+
 try:
     from torchvision.transforms import InterpolationMode
     BICUBIC = InterpolationMode.BICUBIC
@@ -37,12 +41,12 @@ def _convert_image_to_rgb(image):
     return image.convert("RGB")
 
 def _transform(n_px):
-    return Compose([
-        Resize(n_px, interpolation=BICUBIC),
+    return t_Compose([
+        t_Resize(n_px, interpolation=BICUBIC),
         CenterCrop(n_px),
         _convert_image_to_rgb,
         ToTensor(),
-        Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
+        t_Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
     ])
 
 
@@ -2663,10 +2667,15 @@ class GenerateCroppedPatches:
                  use_gt_bboxes=True,
                  use_rand_bboxes=True,
                  num_of_rand_bboxes=20,
-                 input_resolution=224):
+                 input_resolution=224,
+                 test_cfg=None,
+                 train_cfg=None):
         self.use_gt_bboxes = use_gt_bboxes
         self.use_rand_bboxes = use_rand_bboxes
         self.num_of_rand_bboxes = num_of_rand_bboxes
+        self.test_cfg = test_cfg
+        self.train_cfg = train_cfg
+        
         # deal with the crop size and location
         self.test_crop_size_modi_ratio = self.test_cfg.get('crop_size_modi', 1.2) if self.test_cfg is not None else 1.2
         self.test_crop_loca_modi_ratio = self.test_cfg.get('crop_loca_modi', 0) if self.test_cfg is not None else 0
@@ -2685,21 +2694,25 @@ class GenerateCroppedPatches:
         # generate the w and the h base on the average and the std of w and h
         #w_mean: 103.89474514564517 h_mean: 107.41877275724094
         #w_std: 127.61796789111433 h_std: 114.85251970283936
+        ratio_list = [0.5, 1, 2]
         w = (torch.randn(self.num_of_rand_bboxes, 1) * 127.61796789111433) + 103.89474514564517
-        h = (torch.randn(self.num_of_rand_bboxes, 1) * 114.85251970283936) + 107.41877275724094
+        h = w * ratio_list[random.randint(0, 3, size=1)[0]]
         
         return tl_x, tl_y, w, h
 
     def crop_img_to_patches(self, img, bboxes, img_metas):
         # the shape of the img is [800, 1184, 3]
+        # for the bboxes format here:
+        # for the gt bboxes [tl_x, tl_y, br_x, br_y]
+        # for the rand bboxes [tl_x, tl_y, br_x, br_y]
         
         # handle the test config
-        if self.training: 
-            crop_size_modi_ratio = self.train_crop_size_modi_ratio
-            crop_loca_modi_ratio = self.train_crop_loca_modi_ratio
-        else:
-            crop_size_modi_ratio = self.test_crop_size_modi_ratio
-            crop_loca_modi_ratio = self.test_crop_loca_modi_ratio
+        #if self.training: 
+        #    crop_size_modi_ratio = self.train_crop_size_modi_ratio
+        #    crop_loca_modi_ratio = self.train_crop_loca_modi_ratio
+        #else:
+        crop_size_modi_ratio = self.test_crop_size_modi_ratio
+        crop_loca_modi_ratio = self.test_crop_loca_modi_ratio
 
         H, W, channel = img_metas['img_shape']
         result = []
@@ -2746,7 +2759,7 @@ class GenerateCroppedPatches:
                 now_patch = empty_patch
             
             #data = Image.fromarray(np.uint8(now_patch))
-            #data.save('/data2/lwll/zhuoming/detection/test/cls_finetuner_clip_base_100shots_train/patch_visualize/' + img_metas[img_idx]['ori_filename'] + '_' + str(box_i) + '.png')
+            #data.save('/data2/lwll/zhuoming/detection/test/cls_finetuner_clip_base_100shots_train/patch_visualize/' + img_metas['img_info']['file_name'] + '_' + str(box_i) + '.png')
             #new_patch, w_scale, h_scale = mmcv.imresize(now_patch, (224, 224), return_scale=True)
             # convert the numpy to PIL image
             PIL_image = Image.fromarray(np.uint8(now_patch))
@@ -2769,38 +2782,38 @@ class GenerateCroppedPatches:
             dict: Resized results, 'img_shape', 'pad_shape', 'scale_factor', \
                 'keep_ratio' keys are added into result dict.
         """
-        # generate the random bbox (ratio)
-        tl_x, tl_y, w, h = self.generate_rand_bboxes()
-        # make the w and h valid
-        w[w < 20] = 20
-        h[h < 20] = 20
-        
         # conduct the preprocessing for one img
         img = results['img']
         bboxes = results['gt_bboxes']
         img_shape = results['img_shape']
         h, w, _ = img_shape
         
-        # handle the random bboxes
-        real_tl_x = tl_x * w
-        real_tl_y = tl_y * h
-        now_rand_bbox = torch.cat([real_tl_x, real_tl_y, w, h], dim=-1)
+        if self.use_rand_bboxes:
+            # generate the random bbox (ratio)
+            rand_tl_x, rand_tl_y, rand_w, rand_h = self.generate_rand_bboxes()
+            # make the w and h valid
+            rand_w[rand_w < 20] = 20
+            rand_h[rand_h < 20] = 20
             
-        all_bboxes = torch.cat([bboxes, now_rand_bbox], dim=0)
-        temp_img_metas = {'img_shape': img_shape}
+            # handle the random bboxes
+            real_tl_x = rand_tl_x * w
+            real_tl_y = rand_tl_y * h
+            now_rand_bbox = torch.cat([real_tl_x, real_tl_y, real_tl_x + rand_w, real_tl_y + rand_h], dim=-1)
+            all_bboxes = torch.cat([torch.from_numpy(bboxes), now_rand_bbox], dim=0)
+            results['rand_bboxes'] = now_rand_bbox
+        else:
+            all_bboxes = torch.from_numpy(bboxes)
+        temp_img_metas = {'img_shape': img_shape, 'img_info':results['img_info']}
         result = self.crop_img_to_patches(img, all_bboxes, temp_img_metas)
         
         # it need to save the random_bboxes to the results
         results['cropped_patches'] = result
-        results['rand_bboxes'] = now_rand_bbox
         
         return results
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        repr_str += f'(img_scale={self.img_scale}, '
-        repr_str += f'multiscale_mode={self.multiscale_mode}, '
-        repr_str += f'ratio_range={self.ratio_range}, '
-        repr_str += f'keep_ratio={self.keep_ratio}, '
-        repr_str += f'bbox_clip_border={self.bbox_clip_border})'
+        repr_str += f'(self.use_gt_bboxes={self.use_gt_bboxes}, '
+        repr_str += f'self.use_rand_bboxes={self.use_rand_bboxes}, '
+        repr_str += f'self.num_of_rand_bboxes={self.num_of_rand_bboxes}, '
         return repr_str

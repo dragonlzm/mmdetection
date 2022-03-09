@@ -417,7 +417,7 @@ class CocoDataset(CustomDataset):
             # if -1 in the gt_res it means, it using the random bbox for prediction
             gt_num = pred_res.shape[0]
             all_gts += gt_num
-            if -1 in gt_res:
+            if -1 not in gt_res:
                 # calculate the acc over all scale
                 matched_res = (pred_res == gt_res)
                 correct_num += matched_res.sum().item()

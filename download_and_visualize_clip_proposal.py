@@ -20,10 +20,10 @@ from PIL import Image
 #proposal_file_path = "C:\\Users\\XPS\\Desktop\\results.clip_proposal_095.json"
 #proposal_file_path = "C:\\Users\\XPS\\Desktop\\results.clip_proposal_09_nms07.json"
 #proposal_file_path = "C:\\Users\\XPS\\Desktop\\results.clip_proposal_09_nms05.json"
-#proposal_file_path = "C:\\Users\\Zhuoming Liu\\Desktop\\results_32_64_1024.patch_acc.json"
+proposal_file_path = "C:\\Users\\Zhuoming Liu\\Desktop\\results_32_64_1024.patch_acc.json"
 #proposal_file_path = "C:\\Users\\Zhuoming Liu\\Desktop\\results_16_32_512_nms_on_all_07.patch_acc.json"
 #proposal_file_path = "C:\\Users\\Zhuoming Liu\\Desktop\\results_32_64_1024_nms07.patch_acc.json"
-proposal_file_path = "C:\\Users\\Zhuoming Liu\\Desktop\\results_16_16_1024_nms07.patch_acc.json"
+#proposal_file_path = "C:\\Users\\Zhuoming Liu\\Desktop\\results_16_16_1024_nms07.patch_acc.json"
 
 
 proposal_result = json.load(open(proposal_file_path))
@@ -75,13 +75,16 @@ all_img_info = {info['id']:info for info in gt_anno_result['images']}
 #save_root = 'C:\\Users\\XPS\\Desktop\\clip_proposal_09_nms07\\'
 #save_root = 'C:\\Users\\Zhuoming Liu\\Desktop\\results_16_32_512_nms_on_all_07\\'
 #save_root = 'C:\\Users\\Zhuoming Liu\\Desktop\\results_32_64_1024_nms07\\'
-save_root = 'C:\\Users\\Zhuoming Liu\\Desktop\\results_16_16_1024_nms07.patch_acc\\'
+#save_root = 'C:\\Users\\Zhuoming Liu\\Desktop\\results_16_16_1024_nms07.patch_acc\\'
+#save_root = 'C:\\Users\\Zhuoming Liu\\Desktop\\results_16_16_1024_nms07_novel\\'
+save_root = 'C:\\Users\\Zhuoming Liu\\Desktop\\results_32_64_1024_nms07_novel\\'
 
-
-
+target_list = [526043, 124756, 186317, 256607, 546742, 87871, 397543, 555574, 30068, 89549, 260910, 299325]
 
 #print(all_img_annotation)
 for i, img_id in enumerate(from_img_id_to_pred):
+    if img_id not in target_list:
+        continue
     #print(type(image_id))
     url = all_img_info[img_id]['coco_url']
     file_name = all_img_info[img_id]['file_name']
@@ -120,5 +123,5 @@ for i, img_id in enumerate(from_img_id_to_pred):
     plt.savefig(print_path+file_name)
     plt.close()
 
-    if i > 20:
-        break
+    #if i > 20:
+    #    break

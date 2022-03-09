@@ -13,5 +13,6 @@ test_pipeline = [
 ]
 
 
-data = dict(val=dict(eval_filter_empty_gt=True, pipeline=test_pipeline),
-            test=dict(eval_filter_empty_gt=True, pipeline=test_pipeline))
+data = dict(workers_per_gpu=4,
+    val=dict(eval_filter_empty_gt=True, pipeline=test_pipeline),
+    test=dict(eval_filter_empty_gt=True, pipeline=test_pipeline))

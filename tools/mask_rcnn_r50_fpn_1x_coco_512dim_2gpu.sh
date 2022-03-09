@@ -18,9 +18,16 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 rm -rf ./data
 ln -sf /project/nevatia_174/zhuoming/detection ./data
 
+#PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+#python -m torch.distributed.launch --nproc_per_node=2 \
+#    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#    configs/mask_rcnn/mask_rcnn_r50_fpn_1x_coco_512dim_2gpu.py --launcher pytorch \
+#    --work-dir=/project/nevatia_174/zhuoming/detection/test/mask_rcnn_r50_fpn_1x_coco_512dim_2gpu 
+    #--resume-from=/project/nevatia_174/zhuoming/detection/test/mask_rcnn_r50_fpn_1x_coco_512dim_2gpu/latest.pth
+
 PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
-    configs/mask_rcnn/mask_rcnn_r50_fpn_1x_coco_512dim_2gpu.py --launcher pytorch \
-    --work-dir=/project/nevatia_174/zhuoming/detection/test/mask_rcnn_r50_fpn_1x_coco_512dim_2gpu 
-    #--resume-from=/project/nevatia_174/zhuoming/detection/test/new_rpn_patches246_coco/latest.pth
+    configs/mask_rcnn/mask_rcnn_r50_fpn_1x_coco_512dim_2gpu_base48.py --launcher pytorch \
+    --work-dir=/project/nevatia_174/zhuoming/detection/test/mask_rcnn_r50_fpn_1x_coco_512dim_2gpu_base48 
+    #--resume-from=/project/nevatia_174/zhuoming/detection/test/mask_rcnn_r50_fpn_1x_coco_512dim_2gpu_base48/latest.pth
