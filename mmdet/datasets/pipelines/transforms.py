@@ -2686,7 +2686,7 @@ class GenerateCroppedPatches:
         self.input_resolution = input_resolution
         self.preprocess = _transform(self.input_resolution)
 
-    def generate_rand_bboxes(self):
+    def generate_rand_bboxes(self, scale_factor):
         # generate the top left position base on a evenly distribution
         tl_x = torch.rand(self.num_of_rand_bboxes, 1)
         tl_y = torch.rand(self.num_of_rand_bboxes, 1)
@@ -2695,7 +2695,7 @@ class GenerateCroppedPatches:
         #w_mean: 103.89474514564517 h_mean: 107.41877275724094
         #w_std: 127.61796789111433 h_std: 114.85251970283936
         ratio_list = [0.5, 1, 2]
-        w = (torch.randn(self.num_of_rand_bboxes, 1) * 127.61796789111433) + 103.89474514564517
+        w = ((torch.randn(self.num_of_rand_bboxes, 1) * 127.61796789111433) + 103.89474514564517) * np.max(scale_factor)
         h = w * ratio_list[random.randint(0, 3, size=1)[0]]
         
         return tl_x, tl_y, w, h
@@ -2789,11 +2789,12 @@ class GenerateCroppedPatches:
         h, w, _ = img_shape
         
         if self.use_rand_bboxes:
+            scale_factor = results['scale_factor']
             # generate the random bbox (ratio)
-            rand_tl_x, rand_tl_y, rand_w, rand_h = self.generate_rand_bboxes()
+            rand_tl_x, rand_tl_y, rand_w, rand_h = self.generate_rand_bboxes(scale_factor)
             # make the w and h valid
-            rand_w[rand_w < 36] = 36
-            rand_h[rand_h < 36] = 36
+            rand_w[rand_w < 36 * np.max(scale_factor)] = 36 * np.max(scale_factor)
+            rand_h[rand_h < 36 * np.max(scale_factor)] = 36 * np.max(scale_factor)
             
             # handle the random bboxes
             real_tl_x = rand_tl_x * w
