@@ -337,6 +337,7 @@ class ClsProposalGenerator(BaseDetector):
                     if not self.min_entropy:
                         max_pred_prob = torch.max(pred_prob, dim=1)
                         max_score_per_anchor = max_pred_prob[0]
+                        max_idx_per_anchor = max_pred_prob[1]
                     else:
                         cate_num = pred_prob.shape[-1]
                         #print(cate_num)
@@ -367,6 +368,7 @@ class ClsProposalGenerator(BaseDetector):
                     # regard all anchor as one category
                     ids = torch.zeros(max_score_per_anchor.shape)
                     dets, keep = batched_nms(result_proposal_per_img.cuda(), max_score_per_anchor.cuda(), ids.cuda(), nms)
+                    
                     # resize the proposal
                     dets[:, :4] /= dets.new_tensor(img_info['scale_factor'])
                     # pad the proposal result to the fixed length
@@ -375,6 +377,10 @@ class ClsProposalGenerator(BaseDetector):
                         gap = self.paded_proposal_num - len(dets)
                         padded_empty_proposals = torch.zeros(gap, 5).cuda()
                         dets = torch.cat([dets, padded_empty_proposals], dim=0)
+                    
+                    if img_info['ori_filename'] == '000000002985.jpg':
+                        print(dets[:100], max_idx_per_anchor[keep][:100])
+                        
                     proposal_for_all_imgs.append(dets)
         
             else:

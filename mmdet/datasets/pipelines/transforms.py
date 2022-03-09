@@ -2792,8 +2792,8 @@ class GenerateCroppedPatches:
             # generate the random bbox (ratio)
             rand_tl_x, rand_tl_y, rand_w, rand_h = self.generate_rand_bboxes()
             # make the w and h valid
-            rand_w[rand_w < 20] = 20
-            rand_h[rand_h < 20] = 20
+            rand_w[rand_w < 36] = 36
+            rand_h[rand_h < 36] = 36
             
             # handle the random bboxes
             real_tl_x = rand_tl_x * w
