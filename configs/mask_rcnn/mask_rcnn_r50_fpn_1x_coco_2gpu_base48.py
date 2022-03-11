@@ -14,3 +14,8 @@ data = dict(
     train=dict(classes=classes),
     val=dict(classes=classes),
     test=dict(classes=classes))
+
+# model settings
+model = dict(
+        bbox_head=dict(num_classes=48),
+        mask_head=dict(num_classes=48))
