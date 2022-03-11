@@ -41,6 +41,7 @@ from .newrpn import NEWRPN
 from .distill_backbone_module import DistillBackboneModule
 from .cls_finetuner import ClsFinetuner
 from .cls_proposal_generator import ClsProposalGenerator
+from .mask_rcnn_distillation import MaskRCNNDistill
 
 __all__ = [
     'ATSS', 'BaseDetector', 'SingleStageDetector', 'TwoStageDetector', 'RPN',
@@ -51,5 +52,5 @@ __all__ = [
     'VFNet', 'DETR', 'TridentFasterRCNN', 'SparseRCNN', 'SCNet', 'SOLO',
     'DeformableDETR', 'AutoAssign', 'YOLOF', 'CenterNet', 'YOLOX',
     'TwoStagePanopticSegmentor', 'PanopticFPN', 'NEWRPN', 'DistillBackboneModule',
-    'ClsFinetuner', 'ClsProposalGenerator'
+    'ClsFinetuner', 'ClsProposalGenerator', 'MaskRCNNDistill'
 ]
