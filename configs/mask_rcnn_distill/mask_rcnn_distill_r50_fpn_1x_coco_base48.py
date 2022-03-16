@@ -1,4 +1,4 @@
-_base_ = './mask_rcnn_r50_fpn_1x_coco_2gpu.py'
+_base_ = './mask_rcnn_distill_r50_fpn_1x_coco.py'
 
 classes = ('person', 'bicycle', 'car', 'motorcycle', 'train', 
             'truck', 'boat', 'bench', 'bird', 'horse', 'sheep', 
@@ -18,5 +18,8 @@ data = dict(
 # model settings
 model = dict(
     roi_head=dict(
-        bbox_head=dict(num_classes=48),
+        bbox_head=dict(num_classes=48,
+                       fg_vec_cfg=dict(fixed_param=True, 
+                                       #load_path='/data2/lwll/zhuoming/detection/embeddings/base_finetuned_48cates.pt',
+                                       load_path='/project/nevatia_174/zhuoming/detection/embeddings/base_finetuned_48cates.pt')),
         mask_head=dict(num_classes=48)))

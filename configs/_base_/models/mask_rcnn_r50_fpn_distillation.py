@@ -12,8 +12,8 @@ model = dict(
         fixed_param=True,
         #init_cfg=dict(type='Pretrained', checkpoint="https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt")),
         #init_cfg=dict(type='Pretrained', checkpoint="/data2/lwll/zhuoming/code/new_rpn/mmdetection/data/pretrained/modified_state_dict.pth"),
-        init_cfg=dict(type='Pretrained', checkpoint="/data2/lwll/zhuoming/code/new_rpn/mmdetection/data/pretrained/clip_vitb32_full.pth", prefix='visual.'),
-        #init_cfg=dict(type='Pretrained', checkpoint="/project/nevatia_174/zhuoming/detection/pretrain/clip_vitb32_full.pth", prefix='visual.'),
+        #init_cfg=dict(type='Pretrained', checkpoint="/data2/lwll/zhuoming/code/new_rpn/mmdetection/data/pretrained/clip_vitb32_full.pth", prefix='visual.'),
+        init_cfg=dict(type='Pretrained', checkpoint="/project/nevatia_174/zhuoming/detection/pretrain/clip_vitb32_full.pth", prefix='visual.'),
         ),
     backbone_to=dict(
         type='ResNet',
@@ -24,8 +24,8 @@ model = dict(
         norm_cfg=dict(type='BN', requires_grad=True),
         norm_eval=True,
         style='pytorch',
-        #init_cfg=dict(type='Pretrained', checkpoint='data/pretrain/resnet50-0676ba61.pth')
-        init_cfg=dict(type='Pretrained', checkpoint='torchvision://resnet50')),
+        init_cfg=dict(type='Pretrained', checkpoint='data/pretrain/resnet50-0676ba61.pth')
+        #init_cfg=dict(type='Pretrained', checkpoint='torchvision://resnet50')),
     neck=dict(
         type='FPN',
         in_channels=[256, 512, 1024, 2048],
@@ -69,8 +69,8 @@ model = dict(
                 type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
             loss_bbox=dict(type='L1Loss', loss_weight=1.0),
             learned_bg=True,
-            fg_vec_cfg=dict(fixed_param=True, load_path='/data2/lwll/zhuoming/detection/embeddings/base_finetuned_80cates.pt')),
-            #fg_vec_cfg=dict(fixed_param=True, load_path='/project/nevatia_174/zhuoming/detection/embeddings/base_finetuned_80cates.pt')),
+            #fg_vec_cfg=dict(fixed_param=True, load_path='/data2/lwll/zhuoming/detection/embeddings/base_finetuned_80cates.pt')),
+            fg_vec_cfg=dict(fixed_param=True, load_path='/project/nevatia_174/zhuoming/detection/embeddings/base_finetuned_80cates.pt')),
         mask_roi_extractor=dict(
             type='SingleRoIExtractor',
             roi_layer=dict(type='RoIAlign', output_size=14, sampling_ratio=0),

@@ -17,5 +17,6 @@ data = dict(
 
 # model settings
 model = dict(
+    roi_head=dict(
         bbox_head=dict(num_classes=48),
-        mask_head=dict(num_classes=48))
+        mask_head=dict(num_classes=48)))
