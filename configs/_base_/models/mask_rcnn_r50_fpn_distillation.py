@@ -71,20 +71,6 @@ model = dict(
             learned_bg=True,
             fg_vec_cfg=dict(fixed_param=True, load_path='/data2/lwll/zhuoming/detection/embeddings/base_finetuned_80cates.pt')),
             #fg_vec_cfg=dict(fixed_param=True, load_path='/project/nevatia_174/zhuoming/detection/embeddings/base_finetuned_80cates.pt')),
-        #bbox_head=dict(
-        #    type='Shared2FCBBoxHead',
-        #    in_channels=512,
-        #    fc_out_channels=512,
-        #    roi_feat_size=7,
-        #    num_classes=80,
-        #    bbox_coder=dict(
-        #        type='DeltaXYWHBBoxCoder',
-        #        target_means=[0., 0., 0., 0.],
-        #        target_stds=[0.1, 0.1, 0.2, 0.2]),
-        #    reg_class_agnostic=False,
-        #    loss_cls=dict(
-        #        type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
-        #    loss_bbox=dict(type='L1Loss', loss_weight=1.0)),        
         mask_roi_extractor=dict(
             type='SingleRoIExtractor',
             roi_layer=dict(type='RoIAlign', output_size=14, sampling_ratio=0),
