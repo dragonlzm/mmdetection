@@ -135,9 +135,13 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             x[:self.bbox_roi_extractor.num_inputs], gt_rand_rois)
         # conduct the global averger pooling on the gt_and_rand_bbox_feat
         gt_and_rand_bbox_feat = self.avg_pool(gt_and_rand_bbox_feat)
+        # convert to shape from [221, 512, 1, 1] to [221, 512]
+        gt_and_rand_bbox_feat = gt_and_rand_bbox_feat.view(-1, self.bbox_roi_extractor.out_channels)
+        # concatenate the distilled_feat
+        distilled_feat = torch.cat(distilled_feat, dim=0)
         
         # calculate the distill loss
-        distill_loss_value = self.distillation_loss(gt_rand_rois, distilled_feat)        
+        distill_loss_value = self.distillation_loss(gt_and_rand_bbox_feat, distilled_feat)        
         
         # we use the fpn do not need to consider the share head
         if self.with_shared_head:
@@ -146,7 +150,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         cls_score, bbox_pred = self.bbox_head(bbox_feats)
 
         bbox_results = dict(
-            cls_score=cls_score, bbox_pred=bbox_pred, bbox_feats=bbox_feats, distill_loss_value=distill_loss_value)
+            cls_score=cls_score, bbox_pred=bbox_pred, bbox_feats=bbox_feats, distill_loss_value=dict(distill_loss_value=distill_loss_value))
         return bbox_results
 
     def _bbox_forward_train(self, x, sampling_results, gt_bboxes, gt_labels,

@@ -314,6 +314,10 @@ class ClipEncoderHead(AnchorFreeHead):
         text_embeddings = text_embeddings.view(-1, len(self.sentence_templates), text_embeddings.shape[-1])
         # average over all templates: [number_of_cls, 512]
         text_embeddings = torch.mean(text_embeddings, dim=1)
+        
+        #path = '/data2/lwll/zhuoming/code/new_rpn/mmdetection/embedding.pt'
+        #print(text_embeddings.shape, 'saving to path', path)
+        #torch.save(text_embeddings, path)
 
         # normalized features
         text_embeddings = text_embeddings / text_embeddings.norm(dim=-1, keepdim=True)

@@ -308,12 +308,20 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
             #    self.cls_predictor_cfg,
             #    in_features=self.cls_last_dim,
             #    out_features=cls_channels)
-            if self.learned_bg:
-                self.bg_vec = build_linear_layer(
-                    self.cls_predictor_cfg,
-                    in_features=self.cls_last_dim,
-                    out_features=1)
-                self.fg_vec = torch.load(self.fg_vec_cfg.load_path)
+            self.fc_cls = build_linear_layer(
+                self.cls_predictor_cfg,
+                in_features=self.cls_last_dim,
+                out_features=81)            
+            
+            
+            #if self.learned_bg:
+            #    self.bg_vec = build_linear_layer(
+            #        self.cls_predictor_cfg,
+            #        in_features=self.cls_last_dim,
+            #        out_features=81)
+                #self.fg_vec = torch.load(self.fg_vec_cfg.load_path)
+                #print(self.fg_vec.requires_grad)
+                #self.fg_vec = self.fg_vec.cuda()
                 # normalize the fg word embedding
                 #self.fg_vec = self.fg_vec / self.fg_vec.norm(dim=-1, keepdim=True)
                 
@@ -414,16 +422,18 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         for fc in self.reg_fcs:
             x_reg = self.relu(fc(x_reg))
 
-        #cls_score = self.fc_cls(x_cls) if self.with_cls else None
+        cls_score = self.fc_cls(x_cls) if self.with_cls else None
         # deal with the classification score
         # normalized features
         #x_cls = x_cls / x_cls.norm(dim=-1, keepdim=True)
         
         # cosine similarity as logits
         #logit_scale = self.logit_scale.exp()
-        fg_score = x_cls @ self.fg_vec.t()
-        bg_score = self.bg_vec(x_cls)
-        cls_score = torch.cat([fg_score, bg_score], dim=-1)
+        #fg_score = x_cls @ self.fg_vec.t()
+        #bg_score = self.bg_vec(x_cls)
+        
+        #cls_score = self.bg_vec(x_cls)
+        #cls_score = torch.cat([fg_score, bg_score], dim=-1)
         
         bbox_pred = self.fc_reg(x_reg) if self.with_reg else None
         return cls_score, bbox_pred

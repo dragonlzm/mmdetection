@@ -2667,12 +2667,14 @@ class GenerateCroppedPatches:
                  use_gt_bboxes=True,
                  use_rand_bboxes=True,
                  num_of_rand_bboxes=20,
+                 max_total_distill_bboxes=64,
                  input_resolution=224,
                  test_cfg=None,
                  train_cfg=None):
         self.use_gt_bboxes = use_gt_bboxes
         self.use_rand_bboxes = use_rand_bboxes
         self.num_of_rand_bboxes = num_of_rand_bboxes
+        self.max_total_distill_bboxes = max_total_distill_bboxes
         self.test_cfg = test_cfg
         self.train_cfg = train_cfg
         
@@ -2686,16 +2688,16 @@ class GenerateCroppedPatches:
         self.input_resolution = input_resolution
         self.preprocess = _transform(self.input_resolution)
 
-    def generate_rand_bboxes(self, scale_factor):
+    def generate_rand_bboxes(self, scale_factor, num_of_rand_bbox):
         # generate the top left position base on a evenly distribution
-        tl_x = torch.rand(self.num_of_rand_bboxes, 1)
-        tl_y = torch.rand(self.num_of_rand_bboxes, 1)
+        tl_x = torch.rand(num_of_rand_bbox, 1)
+        tl_y = torch.rand(num_of_rand_bbox, 1)
         
         # generate the w and the h base on the average and the std of w and h
         #w_mean: 103.89474514564517 h_mean: 107.41877275724094
         #w_std: 127.61796789111433 h_std: 114.85251970283936
         ratio_list = [0.5, 1, 2]
-        w = ((torch.randn(self.num_of_rand_bboxes, 1) * 127.61796789111433) + 103.89474514564517) * np.max(scale_factor)
+        w = ((torch.randn(num_of_rand_bbox, 1) * 127.61796789111433) + 103.89474514564517) * np.max(scale_factor)
         h = w * ratio_list[random.randint(0, 3, size=1)[0]]
         
         return tl_x, tl_y, w, h
@@ -2791,7 +2793,9 @@ class GenerateCroppedPatches:
         if self.use_rand_bboxes:
             scale_factor = results['scale_factor']
             # generate the random bbox (ratio)
-            rand_tl_x, rand_tl_y, rand_w, rand_h = self.generate_rand_bboxes(scale_factor)
+            #num_of_rand_bbox = self.max_total_distill_bboxes - len(bboxes)
+            #rand_tl_x, rand_tl_y, rand_w, rand_h = self.generate_rand_bboxes(scale_factor, num_of_rand_bbox)
+            rand_tl_x, rand_tl_y, rand_w, rand_h = self.generate_rand_bboxes(scale_factor, self.num_of_rand_bboxes)
             # make the w and h valid
             rand_w[rand_w < 36 * np.max(scale_factor)] = 36 * np.max(scale_factor)
             rand_h[rand_h < 36 * np.max(scale_factor)] = 36 * np.max(scale_factor)
@@ -2801,11 +2805,23 @@ class GenerateCroppedPatches:
             real_tl_y = rand_tl_y * h
             now_rand_bbox = torch.cat([real_tl_x, real_tl_y, real_tl_x + rand_w, real_tl_y + rand_h], dim=-1)
             all_bboxes = torch.cat([torch.from_numpy(bboxes), now_rand_bbox], dim=0)
+            
+            # pad the size of now_rand_bbox
+            if len(now_rand_bbox) < 100:
+                padded_len = 100 - len(now_rand_bbox)
+                padded_bboxes = torch.zeros([padded_len] + list(now_rand_bbox.shape[1:]))
+                now_rand_bbox = torch.cat([now_rand_bbox, padded_bboxes], dim=0)
             results['rand_bboxes'] = now_rand_bbox
         else:
             all_bboxes = torch.from_numpy(bboxes)
         temp_img_metas = {'img_shape': img_shape, 'img_info':results['img_info']}
         result = self.crop_img_to_patches(img, all_bboxes, temp_img_metas)
+        
+        # pad the result
+        if len(result) < 120:
+            padded_len = 120 - len(result)
+            padded_results = torch.zeros([padded_len] + list(result.shape[1:]))
+            result = torch.cat([result, padded_results], dim=0)
         
         # it need to save the random_bboxes to the results
         results['cropped_patches'] = result
@@ -2816,5 +2832,5 @@ class GenerateCroppedPatches:
         repr_str = self.__class__.__name__
         repr_str += f'(self.use_gt_bboxes={self.use_gt_bboxes}, '
         repr_str += f'self.use_rand_bboxes={self.use_rand_bboxes}, '
-        repr_str += f'self.num_of_rand_bboxes={self.num_of_rand_bboxes}, '
+        repr_str += f'self.max_total_distill_bboxes={self.max_total_distill_bboxes}, '
         return repr_str

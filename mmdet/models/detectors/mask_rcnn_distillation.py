@@ -21,6 +21,7 @@ class MaskRCNNDistill(BaseDetector):
                  neck=None,
                  rpn_head=None,
                  roi_head=None,
+                 rand_bboxes_num=20,
                  train_cfg=None,
                  test_cfg=None,
                  pretrained=None,
@@ -50,7 +51,7 @@ class MaskRCNNDistill(BaseDetector):
             roi_head.update(test_cfg=test_cfg.rcnn)
             roi_head.pretrained = pretrained
             self.roi_head = build_head(roi_head)
-
+        self.rand_bboxes_num = rand_bboxes_num
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
 
@@ -143,7 +144,12 @@ class MaskRCNNDistill(BaseDetector):
             dict[str, Tensor]: a dictionary of loss components
         """
         x = self.extract_feat(img)
-        distilled_feat = self.extract_distilled_feat(cropped_patches)
+        
+        # remove the padded 0 bboxes
+        real_cropped_patches = [patches[:self.rand_bboxes_num + len(gt_bbox)] 
+                                for patches, gt_bbox in zip(cropped_patches, gt_bboxes)]
+        rand_bboxes = [r_bboxes_per_img[:self.rand_bboxes_num] for r_bboxes_per_img in rand_bboxes]
+        distilled_feat = self.extract_distilled_feat(real_cropped_patches)
 
         losses = dict()
 
