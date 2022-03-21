@@ -28,6 +28,6 @@ ln -sf /project/nevatia_174/zhuoming/detection ./data
 PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
-    configs/mask_rcnn_distill/mask_rcnn_distill_r50_fpn_1x_coco_2gpu_base48.py --launcher pytorch \
-    --work-dir=/project/nevatia_174/zhuoming/detection/test/mask_rcnn_distill_r50_fpn_1x_coco_2gpu_base48 
-    #--resume-from=/project/nevatia_174/zhuoming/detection/test/mask_rcnn_distill_r50_fpn_1x_coco_2gpu_base48/latest.pth
+    configs/mask_rcnn_distill/mask_rcnn_distill_base48_tuned_r50_fpn_1x_coco_2gpu_base48.py --launcher pytorch \
+    --work-dir=/project/nevatia_174/zhuoming/detection/test/mask_rcnn_distill_base48_tuned_r50_fpn_1x_coco_2gpu_base48 
+    #--resume-from=/project/nevatia_174/zhuoming/detection/test/mask_rcnn_distill_base48_tuned_r50_fpn_1x_coco_2gpu_base48/latest.pth
