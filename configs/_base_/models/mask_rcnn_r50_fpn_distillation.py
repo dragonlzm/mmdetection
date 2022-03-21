@@ -24,7 +24,7 @@ model = dict(
         norm_cfg=dict(type='BN', requires_grad=True),
         norm_eval=True,
         style='pytorch',
-        init_cfg=dict(type='Pretrained', checkpoint='data/pretrain/resnet50-0676ba61.pth')
+        init_cfg=dict(type='Pretrained', checkpoint='data/pretrain/resnet50-0676ba61.pth')),
         #init_cfg=dict(type='Pretrained', checkpoint='torchvision://resnet50')),
     neck=dict(
         type='FPN',
