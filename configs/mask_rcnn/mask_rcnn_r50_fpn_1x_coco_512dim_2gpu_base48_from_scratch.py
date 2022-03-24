@@ -1,8 +1,8 @@
-_base_ = './mask_rcnn_distill_r50_fpn_1x_coco_2gpu_base48.py'
+_base_ = './mask_rcnn_r50_fpn_1x_coco_512dim_2gpu_base48.py'
 
 # model settings
 model = dict(
-    backbone_to=dict(
+    backbone=dict(
         init_cfg=None))
 
 # stage 1 setting
