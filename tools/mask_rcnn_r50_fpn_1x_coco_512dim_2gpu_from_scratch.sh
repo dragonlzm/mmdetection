@@ -23,5 +23,5 @@ PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH 
 python -m torch.distributed.launch --nproc_per_node=2 \
     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
     configs/mask_rcnn/mask_rcnn_r50_fpn_1x_coco_512dim_2gpu_base48_from_scratch.py --launcher pytorch \
-    --work-dir=/project/nevatia_174/zhuoming/detection/test/mask_rcnn_r50_fpn_1x_coco_512dim_2gpu_base48_from_scratch
-    #--resume-from=/project/nevatia_174/zhuoming/detection/test/mask_rcnn_r50_fpn_1x_coco_512dim_2gpu_base48_from_scratch/latest.pth
+    --work-dir=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_1x_coco_512dim_2gpu_base48_from_scratch
+    #--resume-from=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_1x_coco_512dim_2gpu_base48_from_scratch/latest.pth
