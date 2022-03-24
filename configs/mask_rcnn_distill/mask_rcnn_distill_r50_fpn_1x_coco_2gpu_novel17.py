@@ -17,6 +17,6 @@ model = dict(
                        fg_vec_cfg=dict(fixed_param=True, 
                                        load_path='/data2/lwll/zhuoming/detection/embeddings/base_finetuned_17cates.pt')),
                                        #load_path='/project/nevatia_174/zhuoming/detection/embeddings/base_finetuned_17cates.pt')),
-        mask_head=dict(num_classes=48)))
+        mask_head=dict(num_classes=17)))
 
 #evaluation = dict(interval=1, metric=['bbox', 'segm'])

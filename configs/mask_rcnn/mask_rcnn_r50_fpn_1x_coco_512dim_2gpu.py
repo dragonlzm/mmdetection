@@ -1,4 +1,4 @@
-_base_ = './mask_rcnn_r50_fpn_1x_coco.py'
+_base_ = './mask_rcnn_r50_fpn_1x_coco_class_agnostic.py'
 
 optimizer = dict(lr=0.01)
 
