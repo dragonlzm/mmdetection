@@ -436,4 +436,4 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         cls_score = torch.cat([fg_score, bg_score], dim=-1)
         
         bbox_pred = self.fc_reg(x_reg) if self.with_reg else None
-        return cls_score, bbox_pred
+        return cls_score, bbox_pred, x_cls

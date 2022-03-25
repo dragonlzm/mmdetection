@@ -38,6 +38,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             self.share_roi_extractor = True
             self.mask_roi_extractor = self.bbox_roi_extractor
         self.mask_head = build_head(mask_head)
+        print('code updated for the distillation')
 
     def forward_dummy(self, x, proposals):
         """Dummy forward function."""
@@ -132,13 +133,13 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             gt_and_rand_bbox_feat = self.bbox_roi_extractor(
                 x[:self.bbox_roi_extractor.num_inputs], gt_rand_rois)
             # conduct the global averger pooling on the gt_and_rand_bbox_feat
-            gt_and_rand_bbox_feat = self.avg_pool(gt_and_rand_bbox_feat)
+            #gt_and_rand_bbox_feat = self.avg_pool(gt_and_rand_bbox_feat)
             # convert to shape from [221, 512, 1, 1] to [221, 512]
-            gt_and_rand_bbox_feat = gt_and_rand_bbox_feat.view(-1, self.bbox_roi_extractor.out_channels)
+            #gt_and_rand_bbox_feat = gt_and_rand_bbox_feat.view(-1, self.bbox_roi_extractor.out_channels)
             # concatenate the distilled_feat
             distilled_feat = torch.cat(distilled_feat, dim=0)
             # calculate the distill loss
-            distill_loss_value = self.distillation_loss(gt_and_rand_bbox_feat, distilled_feat)        
+            #distill_loss_value = self.distillation_loss(gt_and_rand_bbox_feat, distilled_feat)        
         
         # TODO: a more flexible way to decide which feature maps to use
         bbox_feats = self.bbox_roi_extractor(
@@ -147,8 +148,14 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         # we use the fpn do not need to consider the share head
         if self.with_shared_head:
             bbox_feats = self.shared_head(bbox_feats)
+            gt_and_rand_bbox_feat = self.shared_head(gt_and_rand_bbox_feat)
         
-        cls_score, bbox_pred = self.bbox_head(bbox_feats)
+        cls_score, bbox_pred, _ = self.bbox_head(bbox_feats)
+        
+        # obtain the feat for the distillation
+        if distilled_feat != None and gt_rand_rois != None:
+            _, _, pred_feats = self.bbox_head(gt_and_rand_bbox_feat)
+            distill_loss_value = self.distillation_loss(pred_feats, distilled_feat)  
 
         if distilled_feat != None and gt_rand_rois != None:
             bbox_results = dict(
