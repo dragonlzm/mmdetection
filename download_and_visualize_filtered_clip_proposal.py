@@ -8,6 +8,10 @@ import shutil
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from PIL import Image
+from copy import deepcopy
+import torch
+
+from mmdet.core.bbox.iou_calculators.iou2d_calculator import BboxOverlaps2D
 
 #file_path = "C:\\step_0_labeled_datasets(seed=42).json"
 #file_path = "C:\\instances_val2017.json"
@@ -22,6 +26,7 @@ from PIL import Image
 #proposal_file_path = "C:\\Users\\XPS\\Desktop\\results.clip_proposal_09_nms05.json"
 #proposal_file_path = "C:\\Users\\Zhuoming Liu\\Desktop\\results_32_64_1024.patch_acc.json"
 #proposal_file_path = "C:\\Users\\Zhuoming Liu\\Desktop\\results_16_32_512_nms_on_all_07.patch_acc.json"
+#proposal_file_path = "/home/zhuoming/results_16_16_1024_nms07.patch_acc.json"
 #proposal_file_path = "C:\\Users\\Zhuoming Liu\\Desktop\\results_32_64_1024_nms07.patch_acc.json"
 #proposal_file_path = "C:\\Users\\Zhuoming Liu\\Desktop\\results_16_16_1024_nms07.patch_acc.json"
 proposal_file_path = "/home/zhuoming/results_32_64_1024_nms_on_all_07_nms_over_scales.patch_acc.json"
@@ -30,7 +35,6 @@ proposal_file_path = "/home/zhuoming/results_32_64_1024_nms_on_all_07_nms_over_s
 proposal_result = json.load(open(proposal_file_path))
 
 #gt_annotation_path = "C:\\Users\\XPS\\Desktop\\annotations\\instances_val2017.json"
-#gt_annotation_path = "C:\\Users\\Zhuoming Liu\\Desktop\\annotations\\instances_train2017.json"
 gt_annotation_path = "/data2/lwll/zhuoming/detection/coco/annotations/instances_train2017.json"
 gt_anno_result = json.load(open(gt_annotation_path))
 
@@ -42,12 +46,14 @@ for ele in proposal_result:
     img_id = ele['image_id']
     bbox = ele['score']
     #if img_id not in from_img_id_to_pred:
-    from_img_id_to_pred[img_id] = bbox[:100]
+    from_img_id_to_pred[img_id] = bbox
     #from_img_id_to_pred[img_id].append(bbox)
 
 for ele in gt_anno_result['annotations']:
     img_id = ele['image_id']
     bbox = ele['bbox']
+    cate_id = ele['category_id']
+    bbox.append(cate_id)
     if img_id not in from_img_id_to_gt:
         from_img_id_to_gt[img_id] = []
     from_img_id_to_gt[img_id].append(bbox)
@@ -59,12 +65,9 @@ for ele in gt_anno_result['annotations']:
 #all_img_annotation = {info['id']:[] for info in first_100_imgs}
 all_img_info = {info['id']:info for info in gt_anno_result['images']}
 
-
-
 #for anno_info in gt_anno_result['annotations']:
 #    if anno_info['image_id'] in all_img_annotation:
 #        all_img_annotation[anno_info['image_id']].append(anno_info)
-
 
 #save_root = 'C:\\liuzhuoming\\桌面\\images\\random\\'
 #save_root = 'C:\\liuzhuoming\\桌面\\images\\influence\\'
@@ -79,11 +82,18 @@ all_img_info = {info['id']:info for info in gt_anno_result['images']}
 #save_root = 'C:\\Users\\Zhuoming Liu\\Desktop\\results_32_64_1024_nms07\\'
 #save_root = 'C:\\Users\\Zhuoming Liu\\Desktop\\results_16_16_1024_nms07.patch_acc\\'
 #save_root = 'C:\\Users\\Zhuoming Liu\\Desktop\\results_16_16_1024_nms07_novel\\'
+#save_root = '/home/zhuoming/results_16_16_1024_nms07_novel/'
+#save_root = '/home/zhuoming/results_16_16_1024_nms07_novel_/'
 #save_root = 'C:\\Users\\Zhuoming Liu\\Desktop\\results_32_64_1024_nms07_novel\\'
 
-save_root = '/home/zhuoming/results_32_64_1024_nms_on_all_07_nms_over_scales/'
+#save_root = '/home/zhuoming/filtered_bboxes/'
+save_root = '/home/zhuoming/results_32_64_1024_nms_on_all_07_nms_over_scales_filtered_bboxes/'
 
 target_list = [526043, 124756, 186317, 256607, 546742, 87871, 397543, 555574, 30068, 89549, 260910, 299325]
+novel_cate_id = [5, 6, 17, 18, 21, 22, 28, 32, 36, 41, 47, 49, 61, 63, 76, 81, 87]
+#target_list = [87871]
+
+iou_calculator = BboxOverlaps2D()
 
 #print(all_img_annotation)
 for i, img_id in enumerate(from_img_id_to_pred):
@@ -106,20 +116,65 @@ for i, img_id in enumerate(from_img_id_to_pred):
 
     # Display the image
     ax.imshow(im)
+    
+    xyxy_proposal = torch.tensor(from_img_id_to_pred[img_id])
 
-    #if img_id in from_img_id_to_gt:
-    #    for box in from_img_id_to_gt[img_id]:
-    #        #box = annotation['bbox']
-    #        rect = patches.Rectangle((box[0], box[1]),box[2],box[3],linewidth=1,edgecolor='g',facecolor='none')
-    #        ax.add_patch(rect)
+    if img_id in from_img_id_to_gt:
+        all_iou_idx = None
+        for bbox in from_img_id_to_gt[img_id]:
+            cate_id = bbox[-1]
+            if cate_id in novel_cate_id:
+                rect = patches.Rectangle((bbox[0], bbox[1]),bbox[2],bbox[3],linewidth=1,edgecolor='b',facecolor='none')
+                ax.add_patch(rect)
+                continue
+            #bbox = annotation['bbox']
+            rect = patches.Rectangle((bbox[0], bbox[1]),bbox[2],bbox[3],linewidth=1,edgecolor='g',facecolor='none')
+            ax.add_patch(rect)
+            
+            xyxy_gt = torch.tensor([[bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3]]])
+            #print('xyxy_gt', xyxy_gt)
+            
+            # find the proposal 
+            real_iou = iou_calculator(xyxy_gt, xyxy_proposal)
+            #overlap_proposal_gt = iou_calculator(xyxy_proposal, xyxy_gt, mode='iof')
+            
+            # all the bbox that has iou lower than 0.5 will become True
+            real_iou_ind = (real_iou < 0.3).view(-1)
+            #overlap_proposal_gt_ind = (overlap_proposal_gt < 0.3).view(-1)
+            #iou_ind = real_iou_ind & overlap_proposal_gt_ind
+            iou_ind = real_iou_ind
+            
+            if all_iou_idx == None:
+                all_iou_idx = iou_ind
+            else:
+                all_iou_idx = all_iou_idx & iou_ind
+            #print('iou', iou)
+            #max_id = torch.max(iou, dim=-1)[1].item()
+            #print('max_id', max_id)
+            #target_proposal = from_img_id_to_pred[img_id][max_id]
+            #target_proposal = xyxy_proposal[max_id]
+            #print('target_proposal', target_proposal)
+            #print('from_img_id_to_pred[img_id][max_id]', from_img_id_to_pred[img_id][max_id])
+            
+        #all_iou_idx = all_iou_idx.view(-1)
+        remained_bbox = xyxy_proposal[all_iou_idx]
+        print(remained_bbox.shape)
+            
+        for target_proposal in remained_bbox[:100]:
+            # draw the proposal
+            rect = patches.Rectangle((target_proposal[0], target_proposal[1]),
+                                     target_proposal[2]-target_proposal[0],
+                                     target_proposal[3]-target_proposal[1], linewidth=1,edgecolor='r',facecolor='none')
+            ax.add_patch(rect)
 
-    for box in from_img_id_to_pred[img_id]:
-        #box = annotation['bbox']
-        rect = patches.Rectangle((box[0], box[1]),box[2]-box[0],box[3]-box[1],linewidth=1,edgecolor='r',facecolor='none')
-        ax.add_patch(rect)
+    #for bbox in from_img_id_to_pred[img_id]:
+        #bbox = annotation['bbox']
+    #    rect = patches.Rectangle((bbox[0], bbox[1]),bbox[2]-bbox[0],bbox[3]-bbox[1],linewidth=1,edgecolor='r',facecolor='none')
+    #    ax.add_patch(rect)
 
     #Add the patch to the Axes
     #plt.show()
+    #print_path = save_root+'printed\\'
     print_path = save_root+'printed/'
     if not os.path.exists(print_path):
         os.makedirs(print_path)

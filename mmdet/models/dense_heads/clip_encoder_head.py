@@ -317,7 +317,7 @@ class ClipEncoderHead(AnchorFreeHead):
         
         #path = '/data2/lwll/zhuoming/code/new_rpn/mmdetection/embedding.pt'
         #print(text_embeddings.shape, 'saving to path', path)
-        #torch.save(text_embeddings, path)
+        #torch.save(text_embeddings.cpu(), path)
 
         # normalized features
         text_embeddings = text_embeddings / text_embeddings.norm(dim=-1, keepdim=True)

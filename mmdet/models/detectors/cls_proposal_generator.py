@@ -93,6 +93,7 @@ class ClsProposalGenerator(BaseDetector):
         # nms on all anchor
         self.nms_on_all_anchors = self.test_cfg.get('nms_on_all_anchors', False) if self.test_cfg is not None else False
         self.nms_threshold = self.test_cfg.get('nms_threshold', 0.5) if self.test_cfg is not None else 0.5
+        self.nms_on_diff_scale = self.test_cfg.get('nms_on_diff_scale', False) if self.test_cfg is not None else False
 
         print('parameters:', 'anchor_generator["scales"]', anchor_generator['scales'], "anchor_generator['ratios']", anchor_generator['ratios'],
             "anchor_generator['strides']", anchor_generator['strides'], "self.paded_proposal_num", self.paded_proposal_num, "self.min_entropy", self.min_entropy,
@@ -367,7 +368,31 @@ class ClsProposalGenerator(BaseDetector):
 
                     # regard all anchor as one category
                     ids = torch.zeros(max_score_per_anchor.shape)
-                    dets, keep = batched_nms(result_proposal_per_img.cuda(), max_score_per_anchor.cuda(), ids.cuda(), nms)
+                    
+                    if self.nms_on_diff_scale:
+                        size_of_proposal = (result_proposal_per_img[:, 2] - result_proposal_per_img[:, 0]) * (result_proposal_per_img[:, 3] - result_proposal_per_img[:, 1])
+                        small_size_proposal = result_proposal_per_img[size_of_proposal < 36*36]
+                        small_size_proposal_score = max_score_per_anchor[size_of_proposal < 36*36]
+                        small_size_ids = ids[size_of_proposal < 36*36]
+                        samll_dets, _ = batched_nms(small_size_proposal.cuda(), small_size_proposal_score.cuda(), small_size_ids.cuda(), nms)
+                        
+                        median_size_proposal = result_proposal_per_img[(size_of_proposal > 36*36) & (size_of_proposal < 96*96)]
+                        median_size_proposal_score = max_score_per_anchor[(size_of_proposal > 36*36) & (size_of_proposal < 96*96)]
+                        median_size_ids = ids[(size_of_proposal > 36*36) & (size_of_proposal < 96*96)]
+                        median_dets, _ = batched_nms(median_size_proposal.cuda(), median_size_proposal_score.cuda(), median_size_ids.cuda(), nms)
+                        
+                        large_size_proposal = result_proposal_per_img[size_of_proposal > 96*96]
+                        large_size_proposal_score = max_score_per_anchor[size_of_proposal > 96*96]
+                        large_size_ids = ids[size_of_proposal > 96*96]
+                        large_dets, _ = batched_nms(large_size_proposal.cuda(), large_size_proposal_score.cuda(), large_size_ids.cuda(), nms)
+                     
+                        dets = torch.cat([samll_dets, median_dets, large_dets], dim=0)
+                        dets_score = dets[:, -1]
+                        need_idx = torch.sort(dets_score, descending=True)[1]
+                        dets = dets[need_idx]
+                        
+                    else:
+                        dets, keep = batched_nms(result_proposal_per_img.cuda(), max_score_per_anchor.cuda(), ids.cuda(), nms)
                     
                     # resize the proposal
                     dets[:, :4] /= dets.new_tensor(img_info['scale_factor'])
