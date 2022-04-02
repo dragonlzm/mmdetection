@@ -179,7 +179,7 @@ class ClsFinetuner(BaseDetector):
         #cropped_patches = torch.cat(result, dim=0).cuda()
         return all_results
 
-    def extract_feat(self, img, gt_bboxes, cropped_patches, img_metas=None):
+    def extract_feat(self, img, gt_bboxes, cropped_patches=None, img_metas=None):
         """Extract features.
 
         Args:
@@ -252,7 +252,7 @@ class ClsFinetuner(BaseDetector):
         #        and self.train_cfg.rpn.get('debug', False)):
         #    self.rpn_head.debug_imgs = tensor2imgs(img)
 
-        x = self.extract_feat(img, gt_bboxes, img_metas)
+        x = self.extract_feat(img, gt_bboxes, img_metas=img_metas)
         # x: list[tensor] each tensor shape [gt_num_of_image, 512]
         losses = self.rpn_head.forward_train(x, img_metas, gt_bboxes, gt_labels,
                                              gt_bboxes_ignore)
@@ -284,9 +284,9 @@ class ClsFinetuner(BaseDetector):
                 bbox = torch.tensor([[tl_x, tl_y, br_x, br_y]])
                 all_bbox.append(bbox)
             all_bbox = torch.cat(all_bbox, dim=0)
-            x = self.extract_feat(img, [all_bbox], cropped_patches, img_metas)
+            x = self.extract_feat(img, [all_bbox], cropped_patches, img_metas=img_metas)
         else:
-            x = self.extract_feat(img, gt_bboxes, cropped_patches, img_metas)
+            x = self.extract_feat(img, gt_bboxes, cropped_patches, img_metas=img_metas)
         # get origin input shape to onnx dynamic input shape
         if torch.onnx.is_in_onnx_export():
             img_shape = torch._shape_as_tensor(img)[2:]
