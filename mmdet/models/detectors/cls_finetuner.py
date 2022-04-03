@@ -13,6 +13,8 @@ from PIL import Image
 import numpy as np
 import math
 import random
+import os
+import json
 from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normalize
 try:
     from torchvision.transforms import InterpolationMode
@@ -71,26 +73,58 @@ class ClsFinetuner(BaseDetector):
 
         # deal with test with random bbox
         self.test_with_rand_bboxes = self.test_cfg.get('test_with_rand_bboxes', False) if self.test_cfg is not None else False
-        self.random_bbox_ratio = np.array([[0.03812099, 0.1246973 , 0.1567792 , 0.471805],
-                                            [0.07846305, 0.22583963, 0.26636887, 0.53013974],
-                                            [0.03403394, 0.19394968, 0.5586628 , 0.60602045],
-                                            [0.2912608 , 0.3863904 , 0.56289893, 0.6689288 ],
-                                            [0.3689884 , 0.5417925 , 0.6688337 , 0.9174508 ],
-                                            [0.09272877, 0.1583625 , 0.2519423 , 0.69672775],
-                                            [0.11482508, 0.14463812, 0.23085949, 0.2314202 ],
-                                            [0.1052089 , 0.20848957, 0.3131087 , 0.5212259 ],
-                                            [0.04902116, 0.12331651, 0.34464923, 0.83339787],
-                                            [0.09481055, 0.29099643, 0.52733064, 0.6294881 ],
-                                            [0.01094328, 0.17070575, 0.18592599, 0.3123052 ],
-                                            [0.0101631 , 0.05262033, 0.21019223, 0.50707436],
-                                            [0.05525111, 0.27284765, 0.37640604, 0.5716847 ],
-                                            [0.12920067, 0.34694892, 0.975627  , 1.        ],
-                                            [0.02174921, 0.09076384, 0.55178654, 0.69162697],
-                                            [0.01173266, 0.05343585, 0.18350743, 0.82870215],
-                                            [0.08867376, 0.11362713, 0.54698116, 0.6118346 ],
-                                            [0.00457672, 0.03498916, 0.15158056, 0.30793586],
-                                            [0.18690076, 0.44750714, 0.5645605 , 0.6233114 ],
-                                            [0.1466113 , 0.24437143, 0.41279247, 0.7994327 ]])
+        #self.random_bbox_ratio = np.array([[0.03812099, 0.1246973 , 0.1567792 , 0.471805],
+        #                                    [0.07846305, 0.22583963, 0.26636887, 0.53013974],
+        #                                    [0.03403394, 0.19394968, 0.5586628 , 0.60602045],
+        #                                    [0.2912608 , 0.3863904 , 0.56289893, 0.6689288 ],
+        #                                    [0.3689884 , 0.5417925 , 0.6688337 , 0.9174508 ],
+        #                                    [0.09272877, 0.1583625 , 0.2519423 , 0.69672775],
+        #                                    [0.11482508, 0.14463812, 0.23085949, 0.2314202 ],
+        #                                    [0.1052089 , 0.20848957, 0.3131087 , 0.5212259 ],
+        #                                    [0.04902116, 0.12331651, 0.34464923, 0.83339787],
+        #                                    [0.09481055, 0.29099643, 0.52733064, 0.6294881 ],
+        #                                    [0.01094328, 0.17070575, 0.18592599, 0.3123052 ],
+        #                                    [0.0101631 , 0.05262033, 0.21019223, 0.50707436],
+        #                                    [0.05525111, 0.27284765, 0.37640604, 0.5716847 ],
+        #                                    [0.12920067, 0.34694892, 0.975627  , 1.        ],
+        #                                    [0.02174921, 0.09076384, 0.55178654, 0.69162697],
+        #                                    [0.01173266, 0.05343585, 0.18350743, 0.82870215],
+        #                                    [0.08867376, 0.11362713, 0.54698116, 0.6118346 ],
+        #                                    [0.00457672, 0.03498916, 0.15158056, 0.30793586],
+        #                                    [0.18690076, 0.44750714, 0.5645605 , 0.6233114 ],
+        #                                    [0.1466113 , 0.24437143, 0.41279247, 0.7994327 ]])
+        self.num_of_rand_bboxes = self.test_cfg.get('num_of_rand_bboxes', 100) if self.test_cfg is not None else 100
+        self.generate_bbox_feat = self.test_cfg.get('generate_bbox_feat', False) if self.test_cfg is not None else False
+        if self.generate_bbox_feat:
+            torch.manual_seed(42)
+            random.seed(42)
+            np.random.seed(42)
+        self.feat_save_path = self.test_cfg.get('feat_save_path', None) if self.test_cfg is not None else None
+
+    def generate_rand_bboxes(self, img_metas, num_of_rand_bbox):
+        h, w, _ = img_metas[0]['img_shape']
+        scale_factor = img_metas[0]['scale_factor']
+        # generate the top left position base on a evenly distribution
+        rand_tl_x = torch.rand(num_of_rand_bbox, 1)
+        rand_tl_y = torch.rand(num_of_rand_bbox, 1)
+        
+        # generate the w and the h base on the average and the std of w and h
+        #w_mean: 103.89474514564517 h_mean: 107.41877275724094
+        #w_std: 127.61796789111433 h_std: 114.85251970283936
+        ratio_list = [0.5, 1, 2]
+        rand_w = ((torch.randn(num_of_rand_bbox, 1) * 127.61796789111433) + 103.89474514564517) * np.max(scale_factor)
+        rand_h = rand_w * ratio_list[random.randint(0, 2)]
+        
+        # make the w and h valid
+        rand_w[rand_w < 36 * np.max(scale_factor)] = 36 * np.max(scale_factor)
+        rand_h[rand_h < 36 * np.max(scale_factor)] = 36 * np.max(scale_factor)
+        # handle the random bboxes
+        real_tl_x = rand_tl_x * w
+        real_tl_y = rand_tl_y * h
+        
+        now_rand_bbox = torch.cat([real_tl_x, real_tl_y, real_tl_x + rand_w, real_tl_y + rand_h], dim=-1)
+        
+        return now_rand_bbox
 
     def crop_img_to_patches(self, imgs, gt_bboxes, img_metas):
         # handle the test config
@@ -170,6 +204,10 @@ class ClsFinetuner(BaseDetector):
                 # do the preprocessing
                 new_patch = self.preprocess(PIL_image)
                 #image_result.append(np.expand_dims(new_patch, axis=0))
+                #if bbox[0] == 126.62 and bbox[1] == 438.82:
+                #    x = self.backbone(new_patch.unsqueeze(dim=0).cuda())
+                #    print(x)
+                
                 result.append(new_patch.unsqueeze(dim=0))
             result = torch.cat(result, dim=0)
             all_results.append(result)
@@ -273,18 +311,64 @@ class ClsFinetuner(BaseDetector):
         img = img.unsqueeze(dim=0)
         img_metas = [img_metas]
         
-        if self.test_with_rand_bboxes:
-            all_bbox = []
-            h, w, _ = img_metas[0]['img_shape']
-            for ratio in self.random_bbox_ratio:
-                tl_x = ratio[0] * w
-                tl_y = ratio[1] * h
-                br_x = ratio[2] * w
-                br_y = ratio[3] * h
-                bbox = torch.tensor([[tl_x, tl_y, br_x, br_y]])
-                all_bbox.append(bbox)
-            all_bbox = torch.cat(all_bbox, dim=0)
-            x = self.extract_feat(img, [all_bbox], cropped_patches, img_metas=img_metas)
+        if self.generate_bbox_feat:
+            # generate the random feat
+            now_rand_bbox = self.generate_rand_bboxes(img_metas, self.num_of_rand_bboxes)
+            x = self.extract_feat(img, [now_rand_bbox], cropped_patches, img_metas=img_metas)
+            # save the rand_bbox and the feat, img_metas
+            random_save_root = os.path.join(self.feat_save_path, 'random')
+            if not os.path.exists(random_save_root):
+                os.makedirs(random_save_root)
+            file_name = img_metas[0]['ori_filename'].split('.')[0] + '.json'
+            random_file_path = os.path.join(random_save_root, file_name)
+            #print('testing random', random_file_path)
+            
+            file = open(random_file_path, 'w')
+            # handle the image metas
+            my_img_meta = img_metas[0]
+            my_img_meta['scale_factor'] = my_img_meta['scale_factor'].tolist()
+            my_img_meta['img_norm_cfg']['mean'] = my_img_meta['img_norm_cfg']['mean'].tolist()
+            my_img_meta['img_norm_cfg']['std'] = my_img_meta['img_norm_cfg']['std'].tolist()
+            
+            p#rint('random', x[0].shape, now_rand_bbox.shape)
+            result_json = {'feat':x[0].cpu().tolist(), 'bbox':now_rand_bbox.cpu().tolist(), 'img_metas':my_img_meta}
+            #print('testing random json', result_json)
+            file.write(json.dumps(result_json))
+            file.close()
+            
+            # generate the gt feat
+            x = self.extract_feat(img, gt_bboxes, cropped_patches, img_metas=img_metas)
+            # save the rand_bbox and the feat, img_metas
+            gt_save_root = os.path.join(self.feat_save_path, 'gt')
+            if not os.path.exists(gt_save_root):
+                os.makedirs(gt_save_root)
+            file_name = img_metas[0]['ori_filename'].split('.')[0] + '.json'
+            gt_file_path = os.path.join(gt_save_root, file_name)
+            #print('testing gt', gt_file_path)
+            
+            file = open(gt_file_path, 'w')
+            #print(type(gt_bboxes), type(gt_labels))
+            #print('gt', x[0].shape, gt_bboxes[0].shape, gt_labels[0].shape)
+            result_json = {'feat':x[0].cpu().tolist(), 'bbox':gt_bboxes[0].cpu().tolist(), 'gt_labels':gt_labels[0].cpu().tolist(), 'img_metas':my_img_meta}
+            #print('testing gt json', result_json)
+            file.write(json.dumps(result_json))
+            file.close()
+            
+        elif self.test_with_rand_bboxes:
+            #all_bbox = []
+            #h, w, _ = img_metas[0]['img_shape']
+            #for ratio in self.random_bbox_ratio:
+            #    tl_x = ratio[0] * w
+            #    tl_y = ratio[1] * h
+            #    br_x = ratio[2] * w
+            #    br_y = ratio[3] * h
+            #    bbox = torch.tensor([[tl_x, tl_y, br_x, br_y]])
+            #    all_bbox.append(bbox)
+            #all_bbox = torch.cat(all_bbox, dim=0)
+            #x = self.extract_feat(img, [all_bbox], cropped_patches, img_metas=img_metas)
+            
+            now_rand_bbox = self.generate_rand_bboxes(img_metas, self.num_of_rand_bboxes)
+            x = self.extract_feat(img, [now_rand_bbox], cropped_patches, img_metas=img_metas)
         else:
             x = self.extract_feat(img, gt_bboxes, cropped_patches, img_metas=img_metas)
         # get origin input shape to onnx dynamic input shape
