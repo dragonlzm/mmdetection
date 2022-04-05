@@ -36,4 +36,4 @@ python -m torch.distributed.launch --nproc_per_node=2 \
 #    /project/nevatia_174/zhuoming/detection/exp_res/cls_finetuner_clip_base48_all_train/latest.pth \
 #    --launcher pytorch --eval=gt_acc \
 #    --options jsonfile_prefix=/project/nevatia_174/zhuoming/detection/exp_res/cls_finetuner_clip_base48_all_train/test_results \
-#    --cfg-options data.test.ann_file=data/coco/annotations/instances_train2017.json data.test.img_prefix=data/coco/train2017/ model.test_cfg.generate_bbox_feat=True model.test_cfg.feat_save_path=/project/nevatia_174/zhuoming/detection/coco/feat/raw
+#    --cfg-options data.test.ann_file=data/coco/annotations/instances_train2017.json data.test.img_prefix=data/coco/train2017/ model.test_cfg.generate_bbox_feat=True model.test_cfg.feat_save_path=/project/nevatia_174/zhuoming/detection/coco/feat/base48_finetuned

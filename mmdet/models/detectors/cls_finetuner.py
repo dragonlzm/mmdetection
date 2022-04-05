@@ -330,7 +330,7 @@ class ClsFinetuner(BaseDetector):
             my_img_meta['img_norm_cfg']['mean'] = my_img_meta['img_norm_cfg']['mean'].tolist()
             my_img_meta['img_norm_cfg']['std'] = my_img_meta['img_norm_cfg']['std'].tolist()
             
-            p#rint('random', x[0].shape, now_rand_bbox.shape)
+            #print('random', x[0].shape, now_rand_bbox.shape)
             result_json = {'feat':x[0].cpu().tolist(), 'bbox':now_rand_bbox.cpu().tolist(), 'img_metas':my_img_meta}
             #print('testing random json', result_json)
             file.write(json.dumps(result_json))

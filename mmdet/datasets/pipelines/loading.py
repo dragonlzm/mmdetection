@@ -1,9 +1,15 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os.path as osp
+from typing import final
+from unittest import result
+
+from isort import file
+from pyparsing import rest_of_line
 
 import mmcv
 import numpy as np
 import pycocotools.mask as maskUtils
+import json
 
 from mmdet.core import BitmapMasks, PolygonMasks
 from ..builder import PIPELINES
@@ -573,3 +579,91 @@ class FilterAnnotations:
                 if key in results:
                     results[key] = results[key][keep]
             return results
+
+
+@PIPELINES.register_module()
+class LoadCLIPFeat:
+    """Load pred-trained feat.
+    """
+
+    def __init__(self,
+                 file_path_prefix=None,
+                 num_of_rand_bbox=20):
+        self.file_path_prefix = file_path_prefix
+        # the path should like this
+        # /data/zhuoming/detection/coco/feat
+        self.gt_feat_prefix = osp.join(self.file_path_prefix, 'gt')
+        self.random_feat_prefix = osp.join(self.file_path_prefix, 'random')
+        self.num_of_rand_bbox = num_of_rand_bbox
+
+    def __call__(self, results):
+        '''load the pre-extracted CLIP feat'''
+        file_name = '.'.join(results['img_info']['filename'].split('.')[:-1])
+
+        # load the gt feat
+        gt_file_name = osp.join(self.gt_feat_prefix, file_name)
+        gt_file_content = json.load(open(gt_file_name))
+        
+        #'feat', 'bbox', 'gt_labels', 'img_metas'
+        gt_feat = gt_file_content['feat']
+        gt_bbox = gt_file_content['bbox']
+        gt_labels = gt_file_content['gt_labels']
+        img_metas = gt_file_content['img_metas']
+        
+        ## filter the feat for the specifc category
+        # compare the scale factor the pre-extract and the now pipeline
+        pre_extract_scale_factor = np.array(img_metas['scale_factor'])
+        now_scale_factor = results['scale_factor']
+        pre_extract_gt_bbox = np.array(gt_bbox)
+        
+        if pre_extract_scale_factor != now_scale_factor:
+            original_pre_extract_gt_bbox = pre_extract_gt_bbox / pre_extract_scale_factor
+            now_gt_bbox = results['gt_bboxes']
+            original_now_gt_bbox = now_gt_bbox / now_scale_factor
+        else:
+            original_pre_extract_gt_bbox = pre_extract_gt_bbox
+            original_now_gt_bbox = now_gt_bbox
+        
+        match_idx = []
+        for now_bbox in original_now_gt_bbox:
+            for i, extract_bbox in enumerate(original_pre_extract_gt_bbox):
+                if extract_bbox == now_bbox:
+                    match_idx.append(i)
+                    
+        # filter and reorder the feat
+        match_idx = np.array(match_idx)
+        remaining_feat = gt_feat[match_idx]
+        results['gt_feats'] = remaining_feat
+        
+        # load the random feat
+        rand_file_name = osp.join(self.random_feat_prefix, file_name)
+        rand_file_content = json.load(open(rand_file_name))
+        
+        # obtain the random bbox
+        rand_feat = rand_file_content['feat']
+        rand_bbox = rand_file_content['bbox']
+        rand_img_metas = rand_file_content['img_metas']
+        rand_bbox = np.array(rand_bbox)
+        
+        # compare the scale factor and reshape the random bbox
+        if pre_extract_scale_factor != now_scale_factor:
+            final_rand_bbox = rand_bbox / pre_extract_scale_factor
+            final_rand_bbox = final_rand_bbox * now_scale_factor
+        else:
+            final_rand_bbox = rand_bbox
+        
+        # filter the random bbox we need
+        random_choice = np.random.choice(rand_feat.shape[0], self.num_of_rand_bbox, replace=False)
+        final_rand_bbox = final_rand_bbox[random_choice]
+        final_rand_feat = rand_feat[random_choice]
+        results['rand_bboxes'] = final_rand_bbox
+        results['rand_feats'] = final_rand_feat
+        
+        return results
+
+    def __repr__(self):
+        repr_str = (f'{self.__class__.__name__}('
+                    f'to_float32={self.to_float32}, '
+                    f"color_type='{self.color_type}', "
+                    f'file_client_args={self.file_client_args})')
+        return repr_str
