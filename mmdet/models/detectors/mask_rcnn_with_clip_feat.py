@@ -138,9 +138,14 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
         #                        for patches, gt_bbox in zip(cropped_patches, gt_bboxes)]
         #rand_bboxes = [r_bboxes_per_img[:self.rand_bboxes_num] for r_bboxes_per_img in rand_bboxes]
         #distilled_feat = self.extract_distilled_feat(real_cropped_patches)
+        gt_feats = [patches[:len(gt_bbox)] 
+                                for patches, gt_bbox in zip(gt_feats, gt_bboxes)]
         
         # concat the feat of gt and random
-        distilled_feat = torch.cat([gt_feats, rand_feats])
+        #print(type(gt_feats), type(rand_feats))
+        distilled_feat = [torch.cat([gt_feat_per_img, rand_feat_per_img], dim=0)
+                          for gt_feat_per_img, rand_feat_per_img in zip(gt_feats, rand_feats)]
+        
 
         losses = dict()
 

@@ -5,6 +5,7 @@ from unittest import result
 
 from isort import file
 from pyparsing import rest_of_line
+import torch
 
 import mmcv
 import numpy as np
@@ -598,41 +599,63 @@ class LoadCLIPFeat:
 
     def __call__(self, results):
         '''load the pre-extracted CLIP feat'''
-        file_name = '.'.join(results['img_info']['filename'].split('.')[:-1])
+        file_name = '.'.join(results['img_info']['filename'].split('.')[:-1]) + '.json'
 
         # load the gt feat
         gt_file_name = osp.join(self.gt_feat_prefix, file_name)
         gt_file_content = json.load(open(gt_file_name))
         
         #'feat', 'bbox', 'gt_labels', 'img_metas'
-        gt_feat = gt_file_content['feat']
-        gt_bbox = gt_file_content['bbox']
+        gt_feat = np.array(gt_file_content['feat']).astype(np.float32)
+        gt_bbox = np.array(gt_file_content['bbox']).astype(np.float32)
         gt_labels = gt_file_content['gt_labels']
         img_metas = gt_file_content['img_metas']
         
         ## filter the feat for the specifc category
         # compare the scale factor the pre-extract and the now pipeline
-        pre_extract_scale_factor = np.array(img_metas['scale_factor'])
+        pre_extract_scale_factor = np.array(img_metas['scale_factor']).astype(np.float32)
         now_scale_factor = results['scale_factor']
-        pre_extract_gt_bbox = np.array(gt_bbox)
+        now_gt_bbox = results['gt_bboxes']
+        pre_extract_gt_bbox = gt_bbox
         
-        if pre_extract_scale_factor != now_scale_factor:
-            original_pre_extract_gt_bbox = pre_extract_gt_bbox / pre_extract_scale_factor
-            now_gt_bbox = results['gt_bboxes']
-            original_now_gt_bbox = now_gt_bbox / now_scale_factor
-        else:
+        # in here we round the scale factor in 6 decimals
+        if (np.round(pre_extract_scale_factor, 6) == np.round(now_scale_factor, 6)).all():
+            #print('in the matching')
             original_pre_extract_gt_bbox = pre_extract_gt_bbox
             original_now_gt_bbox = now_gt_bbox
-        
+        else:
+            original_pre_extract_gt_bbox = pre_extract_gt_bbox / pre_extract_scale_factor
+            original_now_gt_bbox = now_gt_bbox / now_scale_factor
+
         match_idx = []
         for now_bbox in original_now_gt_bbox:
+            now_match_id = None
+            match_distance = 10000000
             for i, extract_bbox in enumerate(original_pre_extract_gt_bbox):
-                if extract_bbox == now_bbox:
-                    match_idx.append(i)
+                #print(extract_bbox, now_bbox)
+                #print(np.round(extract_bbox, 2), np.round(now_bbox, 2))
+                #print('extract_bbox, now_bbox', (np.round(extract_bbox, 2) == np.round(now_bbox, 2)))
+                #if (np.round(extract_bbox, 0) == np.round(now_bbox, 0)).all():
+                now_dist = (np.abs(extract_bbox - now_bbox)).sum()
+                if now_dist < match_distance:
+                    match_distance = now_dist
+                    now_match_id = i
+            match_idx.append(now_match_id)
+            #print(now_bbox, original_pre_extract_gt_bbox[now_match_id])
+            #if gt_bbox_matched == False:
+            #    print('gt bbox is not matched',now_bbox)
                     
         # filter and reorder the feat
-        match_idx = np.array(match_idx)
-        remaining_feat = gt_feat[match_idx]
+        match_idx = np.array(match_idx).astype(np.int32)
+        #print('match_idx', match_idx, type(match_idx))
+        remaining_feat = torch.from_numpy(gt_feat[match_idx])
+
+        # pad the result
+        if len(remaining_feat) < 100:
+            padded_len = 100 - len(remaining_feat)
+            padded_results = torch.zeros([padded_len] + list(remaining_feat.shape[1:]))
+            remaining_feat = torch.cat([remaining_feat, padded_results], dim=0)        
+        
         results['gt_feats'] = remaining_feat
         
         # load the random feat
@@ -640,24 +663,24 @@ class LoadCLIPFeat:
         rand_file_content = json.load(open(rand_file_name))
         
         # obtain the random bbox
-        rand_feat = rand_file_content['feat']
-        rand_bbox = rand_file_content['bbox']
+        rand_feat = np.array(rand_file_content['feat']).astype(np.float32)
+        rand_bbox = np.array(rand_file_content['bbox']).astype(np.float32)
         rand_img_metas = rand_file_content['img_metas']
-        rand_bbox = np.array(rand_bbox)
         
         # compare the scale factor and reshape the random bbox
-        if pre_extract_scale_factor != now_scale_factor:
+        if (np.round(pre_extract_scale_factor, 6) == np.round(now_scale_factor, 6)).all():
+            final_rand_bbox = rand_bbox
+        else:
             final_rand_bbox = rand_bbox / pre_extract_scale_factor
             final_rand_bbox = final_rand_bbox * now_scale_factor
-        else:
-            final_rand_bbox = rand_bbox
+
         
         # filter the random bbox we need
         random_choice = np.random.choice(rand_feat.shape[0], self.num_of_rand_bbox, replace=False)
         final_rand_bbox = final_rand_bbox[random_choice]
         final_rand_feat = rand_feat[random_choice]
-        results['rand_bboxes'] = final_rand_bbox
-        results['rand_feats'] = final_rand_feat
+        results['rand_bboxes'] = torch.from_numpy(final_rand_bbox)
+        results['rand_feats'] = torch.from_numpy(final_rand_feat)
         
         return results
 
