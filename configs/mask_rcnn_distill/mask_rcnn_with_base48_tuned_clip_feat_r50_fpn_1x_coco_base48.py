@@ -1,12 +1,24 @@
 _base_ = './mask_rcnn_with_clip_feat_r50_fpn_1x_coco_base48.py'
 
-# model settings
-model = dict(
-    backbone_from=dict(
-        #init_cfg=dict(type='Pretrained', checkpoint="https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt")),
-        #init_cfg=dict(type='Pretrained', checkpoint="/data2/lwll/zhuoming/code/new_rpn/mmdetection/data/pretrained/modified_state_dict.pth"),
-        #init_cfg=dict(type='Pretrained', checkpoint="/data2/lwll/zhuoming/code/new_rpn/mmdetection/data/pretrained/clip_vitb32_full.pth", prefix='visual.'),
-        #init_cfg=dict(type='Pretrained', checkpoint="/project/nevatia_174/zhuoming/detection/pretrain/clip_vitb32_full.pth", prefix='visual.'),
-        #init_cfg=dict(type='Pretrained', checkpoint="/data2/lwll/zhuoming/detection/test/cls_finetuner_clip_base_all_train/epoch_12.pth", prefix='backbone.'),
-        init_cfg=dict(type='Pretrained', checkpoint="/project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/epoch_12.pth", prefix='backbone.'),
-        ))
+img_norm_cfg = dict(
+    mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
+train_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(type='LoadAnnotations', with_bbox=True, with_mask=True),
+    dict(type='Resize', img_scale=(1333, 800), keep_ratio=True),
+    dict(type='RandomFlip', flip_ratio=0.0),
+    #dict(type='LoadCLIPFeat', file_path_prefix='/data/zhuoming/detection/coco/feat/raw',
+    #     num_of_rand_bbox=20),
+    dict(type='LoadCLIPFeat', file_path_prefix='/project/nevatia_174/zhuoming/detection/coco/feat/base48_finetuned',
+         num_of_rand_bbox=20),
+    
+    dict(type='Normalize', **img_norm_cfg),
+    dict(type='Pad', size_divisor=32),
+    dict(type='DefaultFormatBundle'),
+    dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels', 'gt_masks', 'gt_feats',
+                               'rand_bboxes', 'rand_feats']),
+]
+
+data = dict(
+    train=dict(
+        pipeline=train_pipeline))
