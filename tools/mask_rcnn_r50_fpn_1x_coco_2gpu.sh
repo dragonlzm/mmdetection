@@ -26,11 +26,11 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
     #--resume-from=/project/nevatia_174/zhuoming/detection/test/mask_rcnn_r50_fpn_1x_coco_2gpu/latest.pth
 
 # for 1x training
-PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
-python -m torch.distributed.launch --nproc_per_node=2 \
-    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
-    configs/mask_rcnn/mask_rcnn_r50_fpn_1x_coco_2gpu_base48.py --launcher pytorch \
-    --work-dir=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_1x_coco_2gpu_base48
+#PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+#python -m torch.distributed.launch --nproc_per_node=2 \
+#    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#    configs/mask_rcnn/mask_rcnn_r50_fpn_1x_coco_2gpu_base48.py --launcher pytorch \
+#    --work-dir=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_1x_coco_2gpu_base48
 #    --resume-from=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_1x_coco_2gpu_base48/latest.pth
 
 # for 2x training first stage
@@ -40,3 +40,12 @@ python -m torch.distributed.launch --nproc_per_node=2 \
 #    configs/mask_rcnn/mask_rcnn_r50_fpn_2x_coco_2gpu_base48.py --launcher pytorch \
 #    --work-dir=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_2x_coco_2gpu_base48 \
 #    --resume-from=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_1x_coco_2gpu_base48/epoch_8.pth
+
+
+# for clip feature
+PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+python -m torch.distributed.launch --nproc_per_node=2 \
+    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+    configs/mask_rcnn/mask_rcnn_r50_fpn_1x_coco_2gpu_clip_pretrain.py --launcher pytorch \
+    --work-dir=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_1x_coco_2gpu_clip_pretrain
+#    --resume-from=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_1x_coco_2gpu_base48/latest.pth

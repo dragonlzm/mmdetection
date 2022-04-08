@@ -703,10 +703,11 @@ class Normalize:
             default is true.
     """
 
-    def __init__(self, mean, std, to_rgb=True):
+    def __init__(self, mean, std, to_rgb=True, divide_255=False):
         self.mean = np.array(mean, dtype=np.float32)
         self.std = np.array(std, dtype=np.float32)
         self.to_rgb = to_rgb
+        self.divide_255 = divide_255
 
     def __call__(self, results):
         """Call function to normalize images.
@@ -719,6 +720,10 @@ class Normalize:
                 result dict.
         """
         for key in results.get('img_fields', ['img']):
+            if self.divide_255 == True:
+                #print('before', results[key])
+                results[key] = results[key] / 255
+                #print('after', results[key])
             results[key] = mmcv.imnormalize(results[key], self.mean, self.std,
                                             self.to_rgb)
         results['img_norm_cfg'] = dict(
