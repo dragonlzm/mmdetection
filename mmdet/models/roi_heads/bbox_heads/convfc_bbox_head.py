@@ -315,10 +315,12 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
             
             
             if self.learned_bg:
-                self.fc_cls = build_linear_layer(
-                    self.cls_predictor_cfg,
-                    in_features=self.cls_last_dim,
-                    out_features=1)
+                #self.fc_cls = build_linear_layer(
+                #    self.cls_predictor_cfg,
+                #    in_features=self.cls_last_dim,
+                #    out_features=1)
+                self.fc_cls = nn.Parameter(torch.normal(mean=0.0, std=0.01, size=(1, self.cls_last_dim) , requires_grad=True))
+                
                 self.fg_vec = torch.load(self.fg_vec_cfg.load_path)
                 #print(self.fg_vec.requires_grad)
                 self.fg_vec = self.fg_vec.cuda()
@@ -425,12 +427,13 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         #cls_score = self.fc_cls(x_cls) if self.with_cls else None
         # deal with the classification score
         # normalized features
-        #x_cls = x_cls / x_cls.norm(dim=-1, keepdim=True)
+        x_cls = x_cls / x_cls.norm(dim=-1, keepdim=True)
+        temp_bg_cls = self.fc_cls / self.fc_cls.norm(dim=-1, keepdim=True)
         
         # cosine similarity as logits
         #logit_scale = self.logit_scale.exp()
         fg_score = x_cls @ self.fg_vec.t()
-        bg_score = self.fc_cls(x_cls)
+        bg_score = x_cls @ temp_bg_cls.t()
         
         #cls_score = self.bg_vec(x_cls)
         cls_score = torch.cat([fg_score, bg_score], dim=-1)

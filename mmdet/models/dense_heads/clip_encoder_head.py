@@ -473,9 +473,9 @@ class ClipEncoderHead(AnchorFreeHead):
         predict_results = []
         for pred, gt_label, gt_bbox, img_meta in zip(outs, gt_labels, gt_bboxes, img_metas):
             # turning the logit to the prob score
-            pred = softmax(pred)
+            pred_after_softmax = softmax(pred)
             #pred_idx = torch.argmax(pred, dim=1)
-            temp = torch.max(pred, dim=1)
+            temp = torch.max(pred_after_softmax, dim=1)
             pred_idx = temp[1]
             max_val = temp[0]
             #print('pred_idx', pred_idx, 'test[0]', test[0], 'test[1]', test[1])
@@ -497,17 +497,24 @@ class ClipEncoderHead(AnchorFreeHead):
             #size_result.cuda()
             #print('size_result:', size_result.shape, size_result)
             # calculate the entropy
-            prepared_gt_pred = pred
+            prepared_gt_pred = pred_after_softmax
             prepared_gt_pred[prepared_gt_pred == 0] = 1e-5
             log_result = - torch.log(prepared_gt_pred)
-            entro = (log_result * pred).sum(dim=-1)
+            entro = (log_result * pred_after_softmax).sum(dim=-1)
             #print("entro.shape", entro.shape, "gt_label.shape", gt_label.shape)
+            
+            # get the GT cos score
+            idx = gt_label.reshape(-1 ,1)
+            gt_cos_score = pred.gather(1, idx)
+            gt_cos_score = gt_cos_score.reshape(1, -1)
+            #print('pred', pred, 'idx', idx, 'gt_cos_score', gt_cos_score)
+            #print('gt_cos_score', gt_cos_score.shape, 'pred_idx.unsqueeze(dim=0)', pred_idx.unsqueeze(dim=0).shape)
 
             # concat the gt and the pred result
             if self.test_with_rand_bboxes:
                 pred_and_gt = torch.cat([pred_idx.unsqueeze(dim=0).cuda(), torch.full(pred_idx.shape, -1).unsqueeze(dim=0).cuda(), torch.full(pred_idx.shape, -1).unsqueeze(dim=0).cuda(), entro.unsqueeze(dim=0).cuda(), max_val.unsqueeze(dim=0)], dim=0)
             else:
-                pred_and_gt = torch.cat([pred_idx.unsqueeze(dim=0).cuda(), gt_label.unsqueeze(dim=0).cuda(), size_result.unsqueeze(dim=0).cuda(), entro.unsqueeze(dim=0).cuda(), max_val.unsqueeze(dim=0)], dim=0)
+                pred_and_gt = torch.cat([pred_idx.unsqueeze(dim=0).cuda(), gt_label.unsqueeze(dim=0).cuda(), size_result.unsqueeze(dim=0).cuda(), entro.unsqueeze(dim=0).cuda(), max_val.unsqueeze(dim=0), gt_cos_score.cuda()], dim=0)
             predict_results.append(pred_and_gt)
 
         return predict_results

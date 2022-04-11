@@ -34,13 +34,20 @@ data = dict(
     test=dict(
         pipeline=test_pipeline))
 
-optimizer = dict(
-    _delete_=True,    
-    type='AdamW',
-    lr=0.0001,
-    weight_decay=0.0001,)
-    #paramwise_cfg=dict(
-    #    custom_keys={'backbone': dict(lr_mult=0.1, decay_mult=1.0)}))
+#optimizer = dict(
+#    _delete_=True,    
+#    type='AdamW',
+#    lr=0.0001,
+#    weight_decay=0.0001)
+
+# optimizer
+optimizer = dict(type='SGD', 
+                 lr=0.01, 
+                 momentum=0.9, 
+                 weight_decay=0.0001,
+                 paramwise_cfg=dict(
+                 custom_keys={'backbone': dict(lr_mult=0.01, decay_mult=1.0)}))
+
 
 model = dict(
     backbone=dict(

@@ -405,6 +405,8 @@ class CocoDataset(CustomDataset):
         
         all_entropy = 0
         all_max_score = []
+        
+        all_cos_score = 0
 
         for ele in results:
             pred_res = torch.from_numpy(ele[0])
@@ -412,6 +414,7 @@ class CocoDataset(CustomDataset):
             scale_info = torch.from_numpy(ele[2])
             entro_result = torch.from_numpy(ele[3])
             max_score = torch.from_numpy(ele[4])
+            cos_score = torch.from_numpy(ele[5])
 
             all_max_score.append(max_score)
             # if -1 in the gt_res it means, it using the random bbox for prediction
@@ -447,6 +450,7 @@ class CocoDataset(CustomDataset):
 
             # aggregate the entropy
             all_entropy += entro_result.sum().item()
+            all_cos_score += cos_score.sum().item()
 
         if -1 not in gt_res:
             over_all_acc = correct_num / all_gts
@@ -459,6 +463,7 @@ class CocoDataset(CustomDataset):
             over_all_acc, s_acc, m_acc, l_acc, person_acc = 0, 0, 0, 0, 0
 
         all_entropy = all_entropy / all_gts
+        all_cos_score = all_cos_score / all_gts
 
         # distri visualization
         all_max_score = torch.cat(all_max_score).cpu().numpy()
@@ -473,7 +478,7 @@ class CocoDataset(CustomDataset):
             plt.savefig(os.path.join(self.visualization_path, file_name))
 
 
-        return over_all_acc, s_acc, m_acc, l_acc, person_acc, all_entropy
+        return over_all_acc, s_acc, m_acc, l_acc, person_acc, all_entropy, all_cos_score
 
     def fast_eval_recall(self, results, proposal_nums, iou_thrs, logger=None):
         gt_bboxes = []
@@ -607,20 +612,22 @@ class CocoDataset(CustomDataset):
                 print_log(log_msg, logger=logger)
                 continue
             if metric == 'gt_acc':
-                over_all_acc, s_acc, m_acc, l_acc, person_acc, overall_entropy = self.calc_gt_acc(results)
+                over_all_acc, s_acc, m_acc, l_acc, person_acc, overall_entropy, all_cos_score = self.calc_gt_acc(results)
                 eval_results['over_all_acc'] = over_all_acc
                 eval_results['s_acc'] = s_acc
                 eval_results['m_acc'] = m_acc
                 eval_results['l_acc'] = l_acc
                 eval_results['person_acc'] = person_acc
                 eval_results['overall_entropy'] = overall_entropy
+                eval_results['all_cos_score'] = all_cos_score
 
                 log_msg = f'\n over_all_acc\t{over_all_acc:.4f}' + \
                     f'\n s_acc\t{s_acc:.4f}' + \
                     f'\n m_acc\t{m_acc:.4f}' + \
                     f'\n l_acc\t{l_acc:.4f}' + \
                     f'\n person_acc\t{person_acc:.4f}' + \
-                    f'\n overall_entropy\t{overall_entropy:.4f}'
+                    f'\n overall_entropy\t{overall_entropy:.4f}' + \
+                    f'\n all_cos_score\t{all_cos_score:.4f}'
                 print_log(log_msg, logger=logger)
                 continue
             if metric == 'proposal_fast':
