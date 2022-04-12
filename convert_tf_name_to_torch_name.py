@@ -377,6 +377,17 @@ params_name_conversion = {
  'rpn_head/rpn-l6-bn-1/moving_mean:0': 'rpn_head.extra_bn.9.running_mean',
  'rpn_head/rpn-l6-bn-1/moving_variance:0': 'rpn_head.extra_bn.9.running_var',}
 
+original_name_list = []
+new_name_list = []
+
+for ele in params_name_conversion:
+    original_name_list.append(ele)
+    new_name_list.append(params_name_conversion[ele])
+    
+print(len(original_name_list), len(new_name_list), len(list(set(original_name_list))), len(list(set(new_name_list))))
+    
+
+'''
 import torch
 from collections import OrderedDict
 
@@ -398,4 +409,4 @@ for name in params_name_conversion:
 
 result_name = '/data/zhuoming/detection/pretrained/vild_rpn.pth'
 
-torch.save(new_state_dict, result_name)
+torch.save(new_state_dict, result_name)'''

@@ -300,20 +300,6 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         self.relu = nn.ReLU(inplace=True)
         # reconstruct fc_cls and fc_reg since input channels are changed
         if self.with_cls:
-            #if self.custom_cls_channels:
-            #    cls_channels = self.loss_cls.get_cls_channels(self.num_classes)
-            #else:
-            #    cls_channels = self.num_classes + 1
-            #self.fc_cls = build_linear_layer(
-            #    self.cls_predictor_cfg,
-            #    in_features=self.cls_last_dim,
-            #    out_features=cls_channels)
-            #self.fc_cls = build_linear_layer(
-            #    self.cls_predictor_cfg,
-            #    in_features=self.cls_last_dim,
-            #    out_features=81)            
-            
-            
             if self.learned_bg:
                 #self.fc_cls = build_linear_layer(
                 #    self.cls_predictor_cfg,

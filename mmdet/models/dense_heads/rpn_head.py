@@ -96,6 +96,7 @@ class RPNHead(AnchorHead):
                 x = conv_layer(x)
                 # pass the bn
                 x = bn_layer(x)
+                x = F.relu(x, inplace=True)
         else:
             x = self.rpn_conv(x)
             x = F.relu(x, inplace=True)
