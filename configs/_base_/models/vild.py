@@ -20,9 +20,11 @@ model = dict(
         type='FPN',
         in_channels=[256, 512, 1024, 2048],
         out_channels=256,
-        start_level=1,
-        add_extra_convs='on_input',
-        norm_cfg=dict(type='BN', requires_grad=True),
+        #start_level=1,
+        add_extra_convs='on_output',
+        #no_norm_on_lateral=True,
+        #norm_cfg=dict(type='BN', requires_grad=True),
+        add_extra_bn=True,
         num_outs=5),    
     
     rpn_head=dict(

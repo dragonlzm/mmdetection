@@ -73,7 +73,8 @@ class FPN(BaseModule):
                  act_cfg=None,
                  upsample_cfg=dict(mode='nearest'),
                  init_cfg=dict(
-                     type='Xavier', layer='Conv2d', distribution='uniform')):
+                     type='Xavier', layer='Conv2d', distribution='uniform'),
+                 add_extra_bn=False):
         super(FPN, self).__init__(init_cfg)
         assert isinstance(in_channels, list)
         self.in_channels = in_channels
@@ -84,6 +85,7 @@ class FPN(BaseModule):
         self.no_norm_on_lateral = no_norm_on_lateral
         self.fp16_enabled = False
         self.upsample_cfg = upsample_cfg.copy()
+        self.add_extra_bn = add_extra_bn
 
         if end_level == -1:
             self.backbone_end_level = self.num_ins
@@ -147,6 +149,13 @@ class FPN(BaseModule):
                     act_cfg=act_cfg,
                     inplace=False)
                 self.fpn_convs.append(extra_fpn_conv)
+                
+        # add extra batch normalization 
+        if self.add_extra_bn:
+            self.extra_bn = nn.ModuleList()
+            for i in range(num_outs):
+                bn_layer = nn.BatchNorm2d(self.out_channels)
+                self.extra_bn.append(bn_layer) 
 
     @auto_fp16()
     def forward(self, inputs):
@@ -200,4 +209,12 @@ class FPN(BaseModule):
                         outs.append(self.fpn_convs[i](F.relu(outs[-1])))
                     else:
                         outs.append(self.fpn_convs[i](outs[-1]))
+                        
+        if self.add_extra_bn:
+            final_outs = []
+            for out_res, bn_layer in zip(outs, self.extra_bn):
+                res = bn_layer(out_res)
+                final_outs.append(res)
+            outs = final_outs
+                
         return tuple(outs)

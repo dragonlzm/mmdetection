@@ -26,15 +26,19 @@ class RPNHead(AnchorHead):
                  in_channels,
                  init_cfg=dict(type='Normal', layer='Conv2d', std=0.01),
                  num_convs=1,
+                 add_extra_bn=False,
+                 input_lvl=5,
                  **kwargs):
         self.num_convs = num_convs
+        self.add_extra_bn = add_extra_bn
+        self.input_lvl = input_lvl
         super(RPNHead, self).__init__(
             1, in_channels, init_cfg=init_cfg, **kwargs)
 
     def _init_layers(self):
         """Initialize layers of the head."""
-        if self.num_convs > 1:
-            rpn_convs = []
+        if self.add_extra_bn:
+            self.rpn_conv = nn.ModuleList()
             for i in range(self.num_convs):
                 if i == 0:
                     in_channels = self.in_channels
@@ -43,25 +47,58 @@ class RPNHead(AnchorHead):
                 # use ``inplace=False`` to avoid error: one of the variables
                 # needed for gradient computation has been modified by an
                 # inplace operation.
-                rpn_convs.append(
+                self.rpn_conv.append(
                     ConvModule(
                         in_channels,
                         self.feat_channels,
                         3,
                         padding=1,
                         inplace=False))
-            self.rpn_conv = nn.Sequential(*rpn_convs)
-        else:
-            self.rpn_conv = nn.Conv2d(
-                self.in_channels, self.feat_channels, 3, padding=1)
+            self.extra_bn = nn.ModuleList()
+            for i in range(self.num_convs):
+                for j in range(self.input_lvl):
+                    bn_layer = nn.BatchNorm2d(self.feat_channels)
+                    self.extra_bn.append(bn_layer)
+            
+        else:        
+            if self.num_convs > 1:
+                rpn_convs = []
+                for i in range(self.num_convs):
+                    if i == 0:
+                        in_channels = self.in_channels
+                    else:
+                        in_channels = self.feat_channels
+                    # use ``inplace=False`` to avoid error: one of the variables
+                    # needed for gradient computation has been modified by an
+                    # inplace operation.
+                    rpn_convs.append(
+                        ConvModule(
+                            in_channels,
+                            self.feat_channels,
+                            3,
+                            padding=1,
+                            inplace=False))
+                self.rpn_conv = nn.Sequential(*rpn_convs)
+            else:
+                self.rpn_conv = nn.Conv2d(
+                    self.in_channels, self.feat_channels, 3, padding=1)
         self.rpn_cls = nn.Conv2d(self.feat_channels,
                                  self.num_anchors * self.cls_out_channels, 1)
         self.rpn_reg = nn.Conv2d(self.feat_channels, self.num_anchors * 4, 1)
 
-    def forward_single(self, x):
+    def forward_single(self, x, layer_idx=None):
         """Forward feature map of a single scale level."""
-        x = self.rpn_conv(x)
-        x = F.relu(x, inplace=True)
+        if self.add_extra_bn:
+            for i in range(self.num_convs):
+                conv_layer = self.rpn_conv[i]
+                bn_layer = self.extra_bn[i*self.input_lvl + layer_idx]
+                # pass the layer of the conv
+                x = conv_layer(x)
+                # pass the bn
+                x = bn_layer(x)
+        else:
+            x = self.rpn_conv(x)
+            x = F.relu(x, inplace=True)
         rpn_cls_score = self.rpn_cls(x)
         rpn_bbox_pred = self.rpn_reg(x)
         return rpn_cls_score, rpn_bbox_pred

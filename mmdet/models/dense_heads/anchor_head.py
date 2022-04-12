@@ -137,7 +137,11 @@ class AnchorHead(BaseDenseHead, BBoxTestMixin):
                     scale levels, each is a 4D-tensor, the channels number \
                     is num_anchors * 4.
         """
-        return multi_apply(self.forward_single, feats)
+        # 5 [torch.Size([2, 256, 272, 200]), torch.Size([2, 256, 136, 100]), torch.Size([2, 256, 68, 50]), torch.Size([2, 256, 34, 25]), torch.Size([2, 256, 17, 13])]
+        if hasattr(self, 'add_extra_bn') and self.add_extra_bn:
+            return multi_apply(self.forward_single, feats, [i for i in range(len(feats))])
+        else:
+            return multi_apply(self.forward_single, feats)
 
     def get_anchors(self, featmap_sizes, img_metas, device='cuda'):
         """Get anchors according to feature map sizes.
