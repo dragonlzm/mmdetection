@@ -159,7 +159,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             _, _, pred_feats = self.bbox_head(gt_and_rand_bbox_feat)
             # normalize the distilled feat
             cat_distilled_feat = torch.cat(distilled_feat, dim=0)
-            #distilled_feat = distilled_feat / distilled_feat.norm(dim=-1, keepdim=True)
+            cat_distilled_feat = cat_distilled_feat / cat_distilled_feat.norm(dim=-1, keepdim=True)
             distill_loss_value = self.distillation_loss(pred_feats, cat_distilled_feat)
             
             '''

@@ -433,7 +433,7 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         # map the vector from 1024 to clip dim
         x_cls = self.map_to_clip(x_cls)
         # normalize the image feat
-        #x_cls = x_cls / x_cls.norm(dim=-1, keepdim=True)
+        x_cls = x_cls / x_cls.norm(dim=-1, keepdim=True)
         
         # cosine similarity as logits
         #logit_scale = self.logit_scale.exp()
