@@ -28,6 +28,9 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         self.avg_pool = nn.AvgPool2d(self.bbox_head.roi_feat_size)
         self.distillation_loss_config = dict(type='L1Loss', loss_weight=1.0)
         self.distillation_loss = build_loss(self.distillation_loss_config)
+        
+        self.match_count = 0
+        self.total = 0
 
     def init_mask_head(self, mask_roi_extractor, mask_head):
         """Initialize ``mask_head``"""
@@ -123,7 +126,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
 
         return losses
 
-    def _bbox_forward(self, x, rois, distilled_feat=None, gt_rand_rois=None):
+    def _bbox_forward(self, x, rois, distilled_feat=None, gt_rand_rois=None, gt_labels=None):
         """Box head forward function used in both training and testing."""  
         # is the number of feat map layer
         if distilled_feat != None and gt_rand_rois != None:
@@ -136,7 +139,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             # convert to shape from [221, 512, 1, 1] to [221, 512]
             #gt_and_rand_bbox_feat = gt_and_rand_bbox_feat.view(-1, self.bbox_roi_extractor.out_channels)
             # concatenate the distilled_feat
-            distilled_feat = torch.cat(distilled_feat, dim=0)
+            
             # calculate the distill loss
             #distill_loss_value = self.distillation_loss(gt_and_rand_bbox_feat, distilled_feat)        
         
@@ -155,8 +158,31 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         if distilled_feat != None and gt_rand_rois != None:
             _, _, pred_feats = self.bbox_head(gt_and_rand_bbox_feat)
             # normalize the distilled feat
+            cat_distilled_feat = torch.cat(distilled_feat, dim=0)
             #distilled_feat = distilled_feat / distilled_feat.norm(dim=-1, keepdim=True)
-            distill_loss_value = self.distillation_loss(pred_feats, distilled_feat)  
+            distill_loss_value = self.distillation_loss(pred_feats, cat_distilled_feat)
+            
+            '''
+            # test the feat is matched or not
+            gt_feat = [all_feats[:len(gt_lab)] for all_feats, gt_lab in zip(distilled_feat, gt_labels)]
+            #print([ele.shape for ele in gt_feat])
+            gt_feat = torch.cat(gt_feat, dim=0)
+            gt_feat = gt_feat / gt_feat.norm(dim=-1, keepdim=True)
+            # calculate the cos simiarity
+            fg_score = self.bbox_head.fc_cls_fg(gt_feat)
+            print('self.bbox_head.load_value.t()', self.bbox_head.load_value.t(), 'self.bbox_head.fc_cls_fg', self.bbox_head.fc_cls_fg)
+            #fg_score = gt_feat @ self.bbox_head.load_value.t()
+            #bg_score = self.fc_cls_bg(x_cls)
+            # find the max cos value class
+            max_id = torch.max(fg_score, dim=-1)[1]
+            
+            # calculate the acc
+            cat_gt_label = torch.cat(gt_labels, dim=0)
+            
+            print('max_id', max_id, 'cat_gt_label', cat_gt_label)
+            self.match_count += torch.sum((max_id == cat_gt_label)).item()
+            self.total += max_id.shape[0]
+            print('accumulated acc:', self.match_count / self.total)'''
 
         if distilled_feat != None and gt_rand_rois != None:
             bbox_results = dict(
@@ -175,7 +201,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         # prepare the roi for the gt and the random bboxes
         gt_rand_rois = bbox2roi([torch.cat([gt_bbox, random_bbox], dim=0) for gt_bbox, random_bbox in zip(gt_bboxes, rand_bboxes)])
         
-        bbox_results = self._bbox_forward(x, rois, distilled_feat, gt_rand_rois)
+        bbox_results = self._bbox_forward(x, rois, distilled_feat, gt_rand_rois, gt_labels)
 
         bbox_targets = self.bbox_head.get_targets(sampling_results, gt_bboxes,
                                                   gt_labels, self.train_cfg)

@@ -312,21 +312,16 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                                             in_features=self.clip_dim,
                                             out_features=1,
                                             bias=False)
-            
-            self.fc_cls = build_linear_layer(self.cls_predictor_cfg,
+            self.fc_cls = None
+            self.fc_cls_fg = build_linear_layer(self.cls_predictor_cfg,
                                             in_features=self.clip_dim,
                                             out_features=self.num_classes,
                                             bias=False)
             
             load_value = torch.load(self.fg_vec_cfg.load_path)
-            #load_value = load_value / load_value.norm(dim=-1, keepdim=True)
-            # load the module and set the require_grad
-            with torch.no_grad():
-                self.fc_cls.weight.copy_(load_value)
-            self.fc_cls.require_grad = False
-            
-            # normalize the fg word embedding
-            #self.fg_vec = self.fg_vec / self.fg_vec.norm(dim=-1, keepdim=True)
+            load_value = load_value / load_value.norm(dim=-1, keepdim=True)
+            #load_value = load_value.t()
+            self.load_value = load_value
                 
         if self.with_reg:
             out_dim_reg = (4 if self.reg_class_agnostic else 4 *
@@ -347,6 +342,16 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                         dict(name='reg_fcs')
                     ])
             ]
+
+    def init_weights(self):
+        """Init module weights."""
+        # Training Centripetal Model needs to reset parameters for Conv2d
+        super(ConvFCEmbeddingBBoxHead, self).init_weights()
+        # load the module and set the require_grad
+        with torch.no_grad():
+            self.fc_cls_fg.weight.copy_(self.load_value)
+        self.fc_cls_fg.require_grad = False
+
 
     def _add_conv_fc_branch(self,
                             num_branch_convs,
@@ -432,7 +437,7 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         
         # cosine similarity as logits
         #logit_scale = self.logit_scale.exp()
-        fg_score = self.fc_cls(x_cls)
+        fg_score = self.fc_cls_fg(x_cls)
         bg_score = self.fc_cls_bg(x_cls)
         
         #cls_score = self.bg_vec(x_cls)
