@@ -22,3 +22,9 @@ train_pipeline = [
 data = dict(
     train=dict(
         pipeline=train_pipeline))
+
+# model settings
+model = dict(
+    roi_head=dict(
+        bbox_head=dict(
+            fg_vec_cfg=dict(load_path='/project/nevatia_174/zhuoming/detection/embeddings/base_finetuned_48cates.pt'))))

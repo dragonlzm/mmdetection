@@ -244,8 +244,8 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                  num_reg_fcs=0,
                  conv_out_channels=256,
                  fc_out_channels=1024,
-                 learned_bg=True,
                  fg_vec_cfg=None,
+                 clip_dim=512,
                  conv_cfg=None,
                  norm_cfg=None,
                  init_cfg=None,
@@ -271,8 +271,8 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         self.fc_out_channels = fc_out_channels
         self.conv_cfg = conv_cfg
         self.norm_cfg = norm_cfg
-        self.learned_bg = learned_bg
         self.fg_vec_cfg = fg_vec_cfg
+        self.clip_dim = clip_dim
 
         # add shared convs and fcs
         self.shared_convs, self.shared_fcs, last_layer_dim = \
@@ -300,18 +300,33 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         self.relu = nn.ReLU(inplace=True)
         # reconstruct fc_cls and fc_reg since input channels are changed
         if self.with_cls:
-            if self.learned_bg:
-                #self.fc_cls = build_linear_layer(
-                #    self.cls_predictor_cfg,
-                #    in_features=self.cls_last_dim,
-                #    out_features=1)
-                self.fc_cls = nn.Parameter(torch.normal(mean=0.0, std=0.01, size=(1, self.cls_last_dim) , requires_grad=True))
-                
-                self.fg_vec = torch.load(self.fg_vec_cfg.load_path)
-                #print(self.fg_vec.requires_grad)
-                self.fg_vec = self.fg_vec.cuda()
-                # normalize the fg word embedding
-                self.fg_vec = self.fg_vec / self.fg_vec.norm(dim=-1, keepdim=True)
+            #self.fc_cls = build_linear_layer(
+            #    self.cls_predictor_cfg,
+            #    in_features=self.cls_last_dim,
+            #    out_features=1)
+            self.map_to_clip = build_linear_layer(self.cls_predictor_cfg,
+                                            in_features=self.fc_out_channels,
+                                            out_features=self.clip_dim)
+            
+            self.fc_cls_bg = build_linear_layer(self.cls_predictor_cfg,
+                                            in_features=self.clip_dim,
+                                            out_features=1,
+                                            bias=False)
+            
+            self.fc_cls = build_linear_layer(self.cls_predictor_cfg,
+                                            in_features=self.clip_dim,
+                                            out_features=self.num_classes,
+                                            bias=False)
+            
+            load_value = torch.load(self.fg_vec_cfg.load_path)
+            #load_value = load_value / load_value.norm(dim=-1, keepdim=True)
+            # load the module and set the require_grad
+            with torch.no_grad():
+                self.fc_cls.weight.copy_(load_value)
+            self.fc_cls.require_grad = False
+            
+            # normalize the fg word embedding
+            #self.fg_vec = self.fg_vec / self.fg_vec.norm(dim=-1, keepdim=True)
                 
         if self.with_reg:
             out_dim_reg = (4 if self.reg_class_agnostic else 4 *
@@ -409,17 +424,16 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
             x_reg = x_reg.flatten(1)
         for fc in self.reg_fcs:
             x_reg = self.relu(fc(x_reg))
-
-        #cls_score = self.fc_cls(x_cls) if self.with_cls else None
-        # deal with the classification score
-        # normalized features
-        x_cls = x_cls / x_cls.norm(dim=-1, keepdim=True)
-        temp_bg_cls = self.fc_cls / self.fc_cls.norm(dim=-1, keepdim=True)
+        
+        # map the vector from 1024 to clip dim
+        x_cls = self.map_to_clip(x_cls)
+        # normalize the image feat
+        #x_cls = x_cls / x_cls.norm(dim=-1, keepdim=True)
         
         # cosine similarity as logits
         #logit_scale = self.logit_scale.exp()
-        fg_score = x_cls @ self.fg_vec.t()
-        bg_score = x_cls @ temp_bg_cls.t()
+        fg_score = self.fc_cls(x_cls)
+        bg_score = self.fc_cls_bg(x_cls)
         
         #cls_score = self.bg_vec(x_cls)
         cls_score = torch.cat([fg_score, bg_score], dim=-1)

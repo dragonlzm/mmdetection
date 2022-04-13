@@ -15,11 +15,11 @@ model = dict(
     neck=dict(
         type='FPN',
         in_channels=[256, 512, 1024, 2048],
-        out_channels=512,
+        out_channels=256,
         num_outs=5),
     rpn_head=dict(
         type='RPNHead',
-        in_channels=512,
+        in_channels=256,
         feat_channels=256,
         anchor_generator=dict(
             type='AnchorGenerator',
@@ -38,13 +38,14 @@ model = dict(
         bbox_roi_extractor=dict(
             type='SingleRoIExtractor',
             roi_layer=dict(type='RoIAlign', output_size=7, sampling_ratio=0),
-            out_channels=512,
+            out_channels=256,
             featmap_strides=[4, 8, 16, 32]),
         bbox_head=dict(
             type='ConvFCEmbeddingBBoxHead',
+            num_shared_convs=4,
             reg_class_agnostic=True,
-            in_channels=512,
-            fc_out_channels=512,
+            in_channels=256,
+            fc_out_channels=1024,
             roi_feat_size=7,
             num_classes=80,
             bbox_coder=dict(
@@ -54,19 +55,19 @@ model = dict(
             loss_cls=dict(
                 type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
             loss_bbox=dict(type='L1Loss', loss_weight=1.0),
-            learned_bg=True,
+            #learned_bg=True,
             #fg_vec_cfg=dict(fixed_param=True, load_path='/data2/lwll/zhuoming/detection/embeddings/base_finetuned_80cates.pt')),
-            fg_vec_cfg=dict(fixed_param=True, load_path='/project/nevatia_174/zhuoming/detection/embeddings/base_finetuned_80cates.pt')),
+            fg_vec_cfg=dict(fixed_param=True, load_path='/project/nevatia_174/zhuoming/detection/embeddings/raw_80cates.pt')),
         mask_roi_extractor=dict(
             type='SingleRoIExtractor',
             roi_layer=dict(type='RoIAlign', output_size=14, sampling_ratio=0),
-            out_channels=512,
+            out_channels=256,
             featmap_strides=[4, 8, 16, 32]),
         mask_head=dict(
             type='FCNMaskHead',
             class_agnostic=True,
             num_convs=4,
-            in_channels=512,
+            in_channels=256,
             conv_out_channels=256,
             num_classes=80,
             loss_mask=dict(

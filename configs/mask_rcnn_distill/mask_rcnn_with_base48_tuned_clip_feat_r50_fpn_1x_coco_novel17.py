@@ -1,4 +1,4 @@
-_base_ = './mask_rcnn_with_clip_feat_r50_fpn_1x_coco.py'
+_base_ = './mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48.py'
 
 classes = ('airplane', 'bus', 'cat', 'dog', 'cow', 
         'elephant', 'umbrella', 'tie', 'snowboard', 
@@ -17,7 +17,7 @@ model = dict(
                        fg_vec_cfg=dict(fixed_param=True, 
                                        #load_path='/data/zhuoming/detection/embeddings/base_finetuned_17cates.pt')),
                                        #load_path='/data2/lwll/zhuoming/detection/embeddings/base_finetuned_17cates.pt')),
-                                       load_path='/project/nevatia_174/zhuoming/detection/embeddings/raw_17cates.pt')),
+                                       load_path='/project/nevatia_174/zhuoming/detection/embeddings/base_finetuned_17cates.pt')),
         mask_head=dict(num_classes=17)),
     test_cfg=dict(
         #rpn=dict(
