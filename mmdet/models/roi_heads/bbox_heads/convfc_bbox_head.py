@@ -246,6 +246,7 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                  fc_out_channels=1024,
                  fg_vec_cfg=None,
                  clip_dim=512,
+                 temperature=10,
                  conv_cfg=None,
                  norm_cfg=None,
                  init_cfg=None,
@@ -273,6 +274,7 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         self.norm_cfg = norm_cfg
         self.fg_vec_cfg = fg_vec_cfg
         self.clip_dim = clip_dim
+        self._temperature = temperature
 
         # add shared convs and fcs
         self.shared_convs, self.shared_fcs, last_layer_dim = \
@@ -442,6 +444,7 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         
         #cls_score = self.bg_vec(x_cls)
         cls_score = torch.cat([fg_score, bg_score], dim=-1)
+        cls_score *= self._temperature
         
         bbox_pred = self.fc_reg(x_reg) if self.with_reg else None
         return cls_score, bbox_pred, x_cls

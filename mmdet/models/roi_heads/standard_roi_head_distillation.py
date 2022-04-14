@@ -161,6 +161,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             cat_distilled_feat = torch.cat(distilled_feat, dim=0)
             cat_distilled_feat = cat_distilled_feat / cat_distilled_feat.norm(dim=-1, keepdim=True)
             distill_loss_value = self.distillation_loss(pred_feats, cat_distilled_feat)
+            distill_loss_value *= 0.5
             
             '''
             # test the feat is matched or not
