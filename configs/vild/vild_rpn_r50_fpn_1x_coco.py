@@ -25,7 +25,7 @@ evaluation = dict(interval=1, metric='proposal_fast')
 model = dict(
     _delete_=True,
     type='RPN',
-    init_cfg=dict(type='Pretrained', checkpoint='/data/zhuoming/detection/pretrained/vild_rpn.pth'),
+    init_cfg=dict(type='Pretrained', checkpoint='/data/zhuoming/detection/pretrain/vild_rpn.pth'),
     backbone=dict(
         type='ResNet',
         depth=50,
