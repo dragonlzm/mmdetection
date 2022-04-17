@@ -21,5 +21,5 @@ model = dict(
         bbox_head=dict(num_classes=48,
                        fg_vec_cfg=dict(fixed_param=True, 
                                        #load_path='/data2/lwll/zhuoming/detection/embeddings/base_finetuned_48cates.pt',
-                                       load_path='data/embeddings/base_finetuned_48cates.pt')),
+                                       load_path='data/embeddings/raw_48cates.pt')),
         mask_head=dict(num_classes=48)))

@@ -8,5 +8,8 @@ model = dict(
         #init_cfg=dict(type='Pretrained', checkpoint="/data2/lwll/zhuoming/code/new_rpn/mmdetection/data/pretrained/clip_vitb32_full.pth", prefix='visual.'),
         #init_cfg=dict(type='Pretrained', checkpoint="data/pretrain/clip_vitb32_full.pth", prefix='visual.'),
         #init_cfg=dict(type='Pretrained', checkpoint="/data2/lwll/zhuoming/detection/test/cls_finetuner_clip_base_all_train/epoch_12.pth", prefix='backbone.'),
-        init_cfg=dict(type='Pretrained', checkpoint="data/test/cls_finetuner_clip_base_all_train/epoch_12.pth", prefix='backbone.'),
+        init_cfg=dict(type='Pretrained', checkpoint="data/test/cls_finetuner_clip_base_all_train/epoch_12.pth", prefix='backbone.'),    
+    roi_head=dict(
+        bbox_head=dict(
+            fg_vec_cfg=dict(load_path='data/embeddings/base_finetuned_48cates.pt')))
         ))

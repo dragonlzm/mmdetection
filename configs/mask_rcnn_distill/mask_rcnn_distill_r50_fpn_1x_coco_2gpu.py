@@ -1,6 +1,6 @@
 _base_ = './mask_rcnn_distill_r50_fpn_1x_coco.py'
 
-optimizer = dict(lr=0.01)
+optimizer = dict(lr=0.005)
 
 model = dict(
     backbone_to=dict(
