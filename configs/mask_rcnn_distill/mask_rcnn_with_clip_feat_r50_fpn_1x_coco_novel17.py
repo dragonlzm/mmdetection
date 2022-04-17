@@ -17,7 +17,7 @@ model = dict(
                        fg_vec_cfg=dict(fixed_param=True, 
                                        #load_path='/data/zhuoming/detection/embeddings/base_finetuned_17cates.pt')),
                                        #load_path='/data2/lwll/zhuoming/detection/embeddings/base_finetuned_17cates.pt')),
-                                       load_path='/project/nevatia_174/zhuoming/detection/embeddings/raw_17cates.pt')),
+                                       load_path='data/embeddings/raw_17cates.pt')),
         mask_head=dict(num_classes=17)),
     test_cfg=dict(
         #rpn=dict(

@@ -1,4 +1,4 @@
-_base_ = './mask_rcnn_with_clip_feat_r50_fpn_1x_coco_base48.py'
+_base_ = './mask_rcnn_with_clip_feat_r50_fpn_1x_coco.py'
 
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
@@ -27,4 +27,4 @@ data = dict(
 model = dict(
     roi_head=dict(
         bbox_head=dict(
-            fg_vec_cfg=dict(load_path='data/embeddings/base_finetuned_48cates.pt'))))
+            fg_vec_cfg=dict(load_path='data/embeddings/base_finetuned_80cates.pt'))))

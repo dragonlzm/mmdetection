@@ -323,7 +323,7 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
             load_value = torch.load(self.fg_vec_cfg.load_path)
             load_value = load_value / load_value.norm(dim=-1, keepdim=True)
             #load_value = load_value.t()
-            self.load_value = load_value
+            self.load_value = load_value.cuda()
                 
         if self.with_reg:
             out_dim_reg = (4 if self.reg_class_agnostic else 4 *
@@ -352,7 +352,9 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         # load the module and set the require_grad
         with torch.no_grad():
             self.fc_cls_fg.weight.copy_(self.load_value)
-        self.fc_cls_fg.require_grad = False
+        for param in self.fc_cls_fg.parameters():
+            param.requires_grad = False
+        #self.fc_cls_fg.weight.require_grad = False
 
 
     def _add_conv_fc_branch(self,
@@ -397,6 +399,14 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         return branch_convs, branch_fcs, last_layer_dim
 
     def forward(self, x):
+        # load the pretrained text embedding again
+        if False in (self.fc_cls_fg.weight.data == self.load_value):
+            print('loading value again')
+            with torch.no_grad():
+                self.fc_cls_fg.weight.copy_(self.load_value)
+            for param in self.fc_cls_fg.parameters():
+                param.requires_grad = False
+        
         # shared part
         if self.num_shared_convs > 0:
             for conv in self.shared_convs:

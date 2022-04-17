@@ -46,5 +46,5 @@ model = dict(
             use_sigmoid=True, 
             loss_weight=1.0),
         #init_cfg=dict(type='Pretrained', checkpoint="/data2/lwll/zhuoming/code/new_rpn/mmdetection/data/pretrained/clip_vitb32_full.pth"),
-        init_cfg=dict(type='Pretrained', checkpoint="/project/nevatia_174/zhuoming/detection/pretrain/clip_vitb32_full.pth"),        
+        init_cfg=dict(type='Pretrained', checkpoint="data/pretrain/clip_vitb32_full.pth"),        
         ))

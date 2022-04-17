@@ -13,7 +13,7 @@ model = dict(
         #init_cfg=dict(type='Pretrained', checkpoint="https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt")),
         #init_cfg=dict(type='Pretrained', checkpoint="/data2/lwll/zhuoming/code/new_rpn/mmdetection/data/pretrained/modified_state_dict.pth"),
         #init_cfg=dict(type='Pretrained', checkpoint="/data2/lwll/zhuoming/code/new_rpn/mmdetection/data/pretrained/clip_vitb32_full.pth", prefix='visual.'),
-        init_cfg=dict(type='Pretrained', checkpoint="/project/nevatia_174/zhuoming/detection/pretrain/clip_vitb32_full.pth", prefix='visual.'),
+        init_cfg=dict(type='Pretrained', checkpoint="data/pretrain/clip_vitb32_full.pth", prefix='visual.'),
         fixed_param=True,
         open_ln=True),
     rpn_head=dict(
@@ -45,7 +45,7 @@ model = dict(
             use_sigmoid=True, 
             loss_weight=1.0),
         #init_cfg=dict(type='Pretrained', checkpoint="/data2/lwll/zhuoming/code/new_rpn/mmdetection/data/pretrained/clip_vitb32_full.pth"),
-        init_cfg=dict(type='Pretrained', checkpoint="/project/nevatia_174/zhuoming/detection/pretrain/clip_vitb32_full.pth"),        
+        init_cfg=dict(type='Pretrained', checkpoint="data/pretrain/clip_vitb32_full.pth"),        
         return_test_score=True),
     anchor_generator=dict(
             type='AnchorGenerator',

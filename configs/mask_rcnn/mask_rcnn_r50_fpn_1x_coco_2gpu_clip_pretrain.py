@@ -52,6 +52,6 @@ optimizer = dict(type='SGD',
 model = dict(
     backbone=dict(
         deep_stem=True,
-        #init_cfg=dict(type='Pretrained', checkpoint="/project/nevatia_174/zhuoming/detection/pretrain/clip_rn50_full_name_modified.pth", prefix='visual.')))
-        init_cfg=dict(type='Pretrained', checkpoint="/data/zhuoming/detection/pretrained/clip_rn50_full_name_modified.pth", prefix='visual.')))
+        init_cfg=dict(type='Pretrained', checkpoint="data/pretrain/clip_rn50_full_name_modified.pth", prefix='visual.')))
+        #init_cfg=dict(type='Pretrained', checkpoint="/data/zhuoming/detection/pretrained/clip_rn50_full_name_modified.pth", prefix='visual.')))
 

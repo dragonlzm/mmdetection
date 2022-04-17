@@ -57,7 +57,7 @@ model = dict(
             loss_bbox=dict(type='L1Loss', loss_weight=1.0),
             #learned_bg=True,
             #fg_vec_cfg=dict(fixed_param=True, load_path='/data2/lwll/zhuoming/detection/embeddings/base_finetuned_80cates.pt')),
-            fg_vec_cfg=dict(fixed_param=True, load_path='/project/nevatia_174/zhuoming/detection/embeddings/raw_80cates.pt')),
+            fg_vec_cfg=dict(fixed_param=True, load_path='data/embeddings/raw_80cates.pt')),
         mask_roi_extractor=dict(
             type='SingleRoIExtractor',
             roi_layer=dict(type='RoIAlign', output_size=14, sampling_ratio=0),
