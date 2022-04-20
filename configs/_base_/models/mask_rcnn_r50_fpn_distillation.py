@@ -85,7 +85,7 @@ model = dict(
             num_classes=80,
             loss_mask=dict(
                 type='CrossEntropyLoss', use_mask=True, loss_weight=1.0))),
-    rand_bboxes_num=20,
+    rand_bboxes_num=50,
     # model training and testing settings
     train_cfg=dict(
         rpn=dict(
