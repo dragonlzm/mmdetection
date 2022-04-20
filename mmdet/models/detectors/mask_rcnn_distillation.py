@@ -21,7 +21,7 @@ class MaskRCNNDistill(BaseDetector):
                  neck=None,
                  rpn_head=None,
                  roi_head=None,
-                 rand_bboxes_num=20,
+                 rand_bboxes_num=50,
                  train_cfg=None,
                  test_cfg=None,
                  pretrained=None,
