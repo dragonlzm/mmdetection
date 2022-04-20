@@ -351,6 +351,13 @@ class BBoxHead(BaseModule):
         else:
             scores = F.softmax(
                 cls_score, dim=-1) if cls_score is not None else None
+        # for testing
+        if hasattr(self, 'filter_base_cate') and self.filter_base_cate != None:
+            bg_idx = self.num_classes
+            max_idx = torch.max(scores, dim=1)[1]
+            novel_bg_idx = (max_idx <= bg_idx)
+            scores = scores[novel_bg_idx]
+            scores = scores[:, :bg_idx+1]
         # bbox_pred would be None in some detector when with_reg is False,
         # e.g. Grid R-CNN.
         if bbox_pred is not None:
@@ -370,6 +377,9 @@ class BBoxHead(BaseModule):
         if cfg is None:
             return bboxes, scores
         else:
+            # for testing
+            if hasattr(self, 'filter_base_cate') and self.filter_base_cate != None:
+                bboxes = bboxes[novel_bg_idx]
             det_bboxes, det_labels = multiclass_nms(bboxes, scores,
                                                     cfg.score_thr, cfg.nms,
                                                     cfg.max_per_img)

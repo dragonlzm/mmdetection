@@ -246,7 +246,8 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                  fc_out_channels=1024,
                  fg_vec_cfg=None,
                  clip_dim=512,
-                 temperature=10,
+                 temperature=50,
+                 filter_base_cate=None,
                  conv_cfg=None,
                  norm_cfg=None,
                  init_cfg=None,
@@ -275,6 +276,7 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         self.fg_vec_cfg = fg_vec_cfg
         self.clip_dim = clip_dim
         self._temperature = temperature
+        self.filter_base_cate = filter_base_cate
 
         # add shared convs and fcs
         self.shared_convs, self.shared_fcs, last_layer_dim = \
@@ -302,10 +304,6 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         self.relu = nn.ReLU(inplace=True)
         # reconstruct fc_cls and fc_reg since input channels are changed
         if self.with_cls:
-            #self.fc_cls = build_linear_layer(
-            #    self.cls_predictor_cfg,
-            #    in_features=self.cls_last_dim,
-            #    out_features=1)
             self.map_to_clip = build_linear_layer(self.cls_predictor_cfg,
                                             in_features=self.fc_out_channels,
                                             out_features=self.clip_dim)
@@ -324,6 +322,19 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
             load_value = load_value / load_value.norm(dim=-1, keepdim=True)
             #load_value = load_value.t()
             self.load_value = load_value.cuda()
+            
+            # for testing
+            if self.filter_base_cate != None:
+                #self.filter_base_cate = 'data/embeddings/base_finetuned_48cates.pt'
+                base_load_value = torch.load(self.filter_base_cate)
+                base_load_value = base_load_value / base_load_value.norm(dim=-1, keepdim=True)
+                #load_value = load_value.t()
+                self.base_load_value = base_load_value.cuda()
+                
+                self.fc_cls_base = build_linear_layer(self.cls_predictor_cfg,
+                                                in_features=self.clip_dim,
+                                                out_features=self.base_load_value.shape[0],
+                                                bias=False)
                 
         if self.with_reg:
             out_dim_reg = (4 if self.reg_class_agnostic else 4 *
@@ -406,6 +417,14 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                 self.fc_cls_fg.weight.copy_(self.load_value)
             for param in self.fc_cls_fg.parameters():
                 param.requires_grad = False
+                
+            # for testing
+            if self.filter_base_cate != None:
+                print('base_load_value is loaded')
+                with torch.no_grad():
+                    self.fc_cls_base.weight.copy_(self.base_load_value)
+                for param in self.fc_cls_base.parameters():
+                    param.requires_grad = False 
         
         # shared part
         if self.num_shared_convs > 0:
@@ -452,8 +471,12 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         fg_score = self.fc_cls_fg(x_cls)
         bg_score = self.fc_cls_bg(x_cls)
         
-        #cls_score = self.bg_vec(x_cls)
-        cls_score = torch.cat([fg_score, bg_score], dim=-1)
+        # for testing
+        if self.filter_base_cate != None:
+            base_score = self.fc_cls_base(x_cls)
+            cls_score = torch.cat([fg_score, bg_score, base_score], dim=-1)
+        else:
+            cls_score = torch.cat([fg_score, bg_score], dim=-1)
         cls_score *= self._temperature
         
         bbox_pred = self.fc_reg(x_reg) if self.with_reg else None
