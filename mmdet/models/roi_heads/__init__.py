@@ -23,6 +23,7 @@ from .sparse_roi_head import SparseRoIHead
 from .standard_roi_head import StandardRoIHead
 from .trident_roi_head import TridentRoIHead
 from .standard_roi_head_distillation import StandardRoIHeadDistill
+from .standard_roi_head_clip_cls import StandardRoIHeadCLIPCls
 
 __all__ = [
     'BaseRoIHead', 'CascadeRoIHead', 'DoubleHeadRoIHead', 'MaskScoringRoIHead',
@@ -34,5 +35,6 @@ __all__ = [
     'SingleRoIExtractor', 'PISARoIHead', 'PointRendRoIHead', 'MaskPointHead',
     'CoarseMaskHead', 'DynamicRoIHead', 'SparseRoIHead', 'TridentRoIHead',
     'SCNetRoIHead', 'SCNetMaskHead', 'SCNetSemanticHead', 'SCNetBBoxHead',
-    'FeatureRelayHead', 'GlobalContextHead', 'StandardRoIHeadDistill'
+    'FeatureRelayHead', 'GlobalContextHead', 'StandardRoIHeadDistill',
+    'StandardRoIHeadCLIPCls'
 ]

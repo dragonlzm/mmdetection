@@ -53,7 +53,8 @@ class BBoxTestMixin:
                            img_metas,
                            proposals,
                            rcnn_test_cfg,
-                           rescale=False):
+                           rescale=False,
+                           **kwargs):
         """Test only det bboxes without augmentation.
 
         Args:
@@ -86,7 +87,8 @@ class BBoxTestMixin:
             # There is no proposal in the whole batch
             return [det_bbox] * batch_size, [det_label] * batch_size
 
-        bbox_results = self._bbox_forward(x, rois)
+        kwargs['img_metas'] = img_metas
+        bbox_results = self._bbox_forward(x, rois, **kwargs)
         img_shapes = tuple(meta['img_shape'] for meta in img_metas)
         scale_factors = tuple(meta['scale_factor'] for meta in img_metas)
 

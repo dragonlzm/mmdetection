@@ -2,13 +2,17 @@
 import torch
 import torch.nn as nn
 from mmdet.core import bbox2result, bbox2roi, build_assigner, build_sampler
-from ..builder import HEADS, build_head, build_roi_extractor, build_loss
+from ..builder import HEADS, build_head, build_roi_extractor, build_loss, build_backbone
 from .base_roi_head import BaseRoIHead
 from .test_mixins import BBoxTestMixin, MaskTestMixin
+import math
+import random
+import numpy as np
+from PIL import Image
 
 
 @HEADS.register_module()
-class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
+class StandardRoIHeadCLIPCls(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
     """Simplest base roi head including one bbox head and one mask head."""
 
     def init_assigner_sampler(self):
@@ -29,8 +33,9 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         self.distillation_loss_config = dict(type='L1Loss', loss_weight=1.0)
         self.distillation_loss = build_loss(self.distillation_loss_config)
         
-        self.match_count = 0
-        self.total = 0
+    def init_extra_backbone(self, extra_backbone):
+        self.clip_backbone = build_backbone(extra_backbone)
+
 
     def init_mask_head(self, mask_roi_extractor, mask_head):
         """Initialize ``mask_head``"""
@@ -69,71 +74,148 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                       distilled_feat=None, 
                       rand_bboxes=None,
                       **kwargs):
-        """
+        pass
+
+    def crop_img_to_patches(self, imgs, gt_bboxes, img_metas):
+        # handle the test config
+        #if self.training: 
+        #    crop_size_modi_ratio = self.train_crop_size_modi_ratio
+        #    crop_loca_modi_ratio = self.train_crop_loca_modi_ratio
+        #else:
+        crop_size_modi_ratio = 1.2
+        crop_loca_modi_ratio = 0
+        
+        bs, c, _, _ = imgs.shape
+        #'img_shape':  torch.Size([2, 3, 800, 1184])
+        # what we need is [800, 1184, 3]
+        imgs = imgs.permute(0, 2, 3, 1).numpy()
+
+        all_results = []
+        for img_idx in range(bs):
+            H, W, channel = img_metas[img_idx]['img_shape']
+            all_gt_bboxes = gt_bboxes[img_idx]
+            if len(all_gt_bboxes) == 0:
+                continue
+            img = imgs[img_idx]
+            result = []
+            for box_i, bbox in enumerate(all_gt_bboxes):
+                # the original bbox location
+                tl_x, tl_y, br_x, br_y = bbox[0], bbox[1], bbox[2], bbox[3]
+                x = tl_x
+                y = tl_y
+                w = br_x - tl_x
+                h = br_y - tl_y
+                # change the bbox location by changing the top left position
+                # bbox change direction
+                x_direction_sign = random.randint(-1,1)
+                y_direction_sign = random.randint(-1,1)
+                # bbox direction change ratio(the ration should be 1/2, 1/3, 1/4, 1/5)
+                # commonly we will mantain the size of the bbox unchange while changing
+                # the localization of the bbox
+                x_change_pixel = w * crop_loca_modi_ratio * x_direction_sign
+                y_change_pixel = h * crop_loca_modi_ratio * y_direction_sign
+
+                # change the bbox size ratio
+                x_change_for_size = ((crop_size_modi_ratio - 1) / 2) * w
+                y_change_for_size = ((crop_size_modi_ratio - 1) / 2) * h
+
+                # the final format for the
+                x_start_pos = math.floor(max(x-x_change_for_size+x_change_pixel , 0))
+                y_start_pos = math.floor(max(y-y_change_for_size+y_change_pixel, 0))
+                x_end_pos = math.ceil(min(x+x_change_for_size+w, W-1))
+                y_end_pos = math.ceil(min(y+y_change_for_size+h, H-1))
+
+                #x_start_pos = math.floor(max(x-0.1*w, 0))
+                #y_start_pos = math.floor(max(y-0.1*h, 0))
+                #x_end_pos = math.ceil(min(x+1.1*w, W-1))
+                #y_end_pos = math.ceil(min(y+1.1*h, H-1))
+
+                now_patch = img[y_start_pos: y_end_pos, x_start_pos: x_end_pos, :]           
+                # crop the GT bbox and place it in the center of the zero square
+                gt_h, gt_w, c = now_patch.shape
+                if gt_h != gt_w:
+                    long_edge = max((gt_h, gt_w))
+                    empty_patch = np.zeros((long_edge, long_edge, 3))
+                    if gt_h > gt_w:
+                        x_start = (long_edge - gt_w) // 2
+                        x_end = x_start + gt_w
+                        empty_patch[:, x_start: x_end] = now_patch
+                    else:
+                        y_start = (long_edge - gt_h) // 2
+                        y_end = y_start + gt_h
+                        empty_patch[y_start: y_end] = now_patch
+                    now_patch = empty_patch
+                
+                #data = Image.fromarray(np.uint8(now_patch))
+                #data.save('/data2/lwll/zhuoming/detection/test/cls_finetuner_clip_base_100shots_train/patch_visualize/' + img_metas[img_idx]['ori_filename'] + '_' + str(box_i) + '.png')
+                #new_patch, w_scale, h_scale = mmcv.imresize(now_patch, (224, 224), return_scale=True)
+                # convert the numpy to PIL image
+                PIL_image = Image.fromarray(np.uint8(now_patch))
+                # do the preprocessing
+                new_patch = self.preprocess(PIL_image)
+                #image_result.append(np.expand_dims(new_patch, axis=0))
+                #if bbox[0] == 126.62 and bbox[1] == 438.82:
+                #    x = self.backbone(new_patch.unsqueeze(dim=0).cuda())
+                #    print(x)
+                
+                result.append(new_patch.unsqueeze(dim=0))
+            result = torch.cat(result, dim=0)
+            all_results.append(result)
+
+        #cropped_patches = np.concatenate(result, axis=0)
+        # the shape of the cropped_patches: torch.Size([gt_num_in_batch, 3, 224, 224])
+        #cropped_patches = torch.cat(result, dim=0).cuda()
+        return all_results
+
+    def extract_feat(self, img, gt_bboxes, cropped_patches=None, img_metas=None):
+        """Extract features.
+
         Args:
-            x (list[Tensor]): list of multi-level img features.
-            img_metas (list[dict]): list of image info dict where each dict
-                has: 'img_shape', 'scale_factor', 'flip', and may also contain
-                'filename', 'ori_shape', 'pad_shape', and 'img_norm_cfg'.
-                For details on the values of these keys see
-                `mmdet/datasets/pipelines/formatting.py:Collect`.
-            proposals (list[Tensors]): list of region proposals.
-            gt_bboxes (list[Tensor]): Ground truth bboxes for each image with
-                shape (num_gts, 4) in [tl_x, tl_y, br_x, br_y] format.
-            gt_labels (list[Tensor]): class indices corresponding to each box
-            gt_bboxes_ignore (None | list[Tensor]): specify which bounding
-                boxes can be ignored when computing the loss.
-            gt_masks (None | Tensor) : true segmentation masks for each box
-                used if the architecture supports a segmentation task.
+            img (torch.Tensor): Image tensor with shape (n, c, h ,w).
 
         Returns:
-            dict[str, Tensor]: a dictionary of loss components
+            list[torch.Tensor]: Multi-level features that may have
+                different resolutions.
         """
-        # assign gts and sample proposals
-        if self.with_bbox or self.with_mask:
-            num_imgs = len(img_metas)
-            if gt_bboxes_ignore is None:
-                gt_bboxes_ignore = [None for _ in range(num_imgs)]
-            sampling_results = []
-            for i in range(num_imgs):
-                assign_result = self.bbox_assigner.assign(
-                    proposal_list[i], gt_bboxes[i], gt_bboxes_ignore[i],
-                    gt_labels[i])
-                sampling_result = self.bbox_sampler.sample(
-                    assign_result,
-                    proposal_list[i],
-                    gt_bboxes[i],
-                    gt_labels[i],
-                    feats=[lvl_feat[i][None] for lvl_feat in x])
-                sampling_results.append(sampling_result)
+        # the image shape
+        # it pad the images in the same batch into the same shape
+        #torch.Size([2, 3, 800, 1088])
+        #torch.Size([2, 3, 800, 1216])
+        #torch.Size([2, 3, 800, 1216])
+        #bs = img.shape[0]
+        
+        # crop the img into the patches with normalization and reshape
+        # (a function to convert the img)
+        #cropped_patches_list:len = batch_size, list[tensor] each tensor shape [gt_num_of_image, 3, 224, 224]
+        if cropped_patches == None:
+            cropped_patches_list = self.crop_img_to_patches(img.cpu(), gt_bboxes, img_metas)
+        else:
+            print('testing cropped_patches')
+            cropped_patches_list = cropped_patches
 
-        losses = dict()
-        # bbox head forward and loss
-        if self.with_bbox:
-            bbox_results = self._bbox_forward_train(x, sampling_results,
-                                                    gt_bboxes, gt_labels,
-                                                    img_metas, distilled_feat,
-                                                    rand_bboxes)
-            losses.update(bbox_results['loss_bbox'])
-            losses.update(bbox_results['distill_loss_value'])
+        # convert dimension from [bs, 64, 3, 224, 224] to [bs*64, 3, 224, 224]
+        #converted_img_patches = converted_img_patches.view(bs, -1, self.backbone.input_resolution, self.backbone.input_resolution)
 
-        # mask head forward and loss
-        if self.with_mask:
-            mask_results = self._mask_forward_train(x, sampling_results,
-                                                    bbox_results['bbox_feats'],
-                                                    gt_masks, img_metas)
-            losses.update(mask_results['loss_mask'])
+        # the input of the vision transformer should be torch.Size([64, 3, 224, 224])
+        result_list = []
+        for patches in cropped_patches_list:
+            x = self.backbone(patches.cuda())
+            if self.with_neck:
+                x = self.neck(x)
+            result_list.append(x)
+        # convert the feature [bs*64, 512] to [bs, 64, 512]
+        #x = x.view(bs, -1, x.shape[-1])
+        return result_list
 
-        return losses
-
-    def _bbox_forward(self, x, rois, distilled_feat=None, gt_rand_rois=None, gt_labels=None):
+    
+    def _bbox_forward(self, x, rois, img=None, img_metas=None):
         """Box head forward function used in both training and testing."""  
         # is the number of feat map layer
-        if distilled_feat != None and gt_rand_rois != None:
+        #if distilled_feat != None and gt_rand_rois != None:
             # gt and random bbox feat from backbone_to
             # gt_and_rand_bbox_feat: torch.Size([1024, 256, 7, 7])
-            gt_and_rand_bbox_feat = self.bbox_roi_extractor(
-                x[:self.bbox_roi_extractor.num_inputs], gt_rand_rois)
+        #    gt_and_rand_bbox_feat = self.bbox_roi_extractor(
+        #        x[:self.bbox_roi_extractor.num_inputs], gt_rand_rois)
             # conduct the global averger pooling on the gt_and_rand_bbox_feat
             #gt_and_rand_bbox_feat = self.avg_pool(gt_and_rand_bbox_feat)
             # convert to shape from [221, 512, 1, 1] to [221, 512]
@@ -153,100 +235,33 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             gt_and_rand_bbox_feat = self.shared_head(gt_and_rand_bbox_feat)
         
         cls_score, bbox_pred, _ = self.bbox_head(bbox_feats)
+        ## bbox_pred is the prediction result on the scaled image
+        ## the input img in this function is also a scaled
         
-        # obtain the feat for the distillation
-        if distilled_feat != None and gt_rand_rois != None:
-            _, _, pred_feats = self.bbox_head(gt_and_rand_bbox_feat)
-            # normalize the distilled feat
-            cat_distilled_feat = torch.cat(distilled_feat, dim=0)
-            cat_distilled_feat = cat_distilled_feat / cat_distilled_feat.norm(dim=-1, keepdim=True)
-            distill_loss_value = self.distillation_loss(pred_feats, cat_distilled_feat)
-            distill_loss_value *= (self.bbox_head.clip_dim * 0.5)
-            
-            '''
-            # test the feat is matched or not
-            gt_feat = [all_feats[:len(gt_lab)] for all_feats, gt_lab in zip(distilled_feat, gt_labels)]
-            #print([ele.shape for ele in gt_feat])
-            gt_feat = torch.cat(gt_feat, dim=0)
-            gt_feat = gt_feat / gt_feat.norm(dim=-1, keepdim=True)
-            # calculate the cos simiarity
-            fg_score = self.bbox_head.fc_cls_fg(gt_feat)
-            print('self.bbox_head.load_value.t()', self.bbox_head.load_value.t(), 'self.bbox_head.fc_cls_fg', self.bbox_head.fc_cls_fg)
-            #fg_score = gt_feat @ self.bbox_head.load_value.t()
-            #bg_score = self.fc_cls_bg(x_cls)
-            # find the max cos value class
-            max_id = torch.max(fg_score, dim=-1)[1]
-            
-            # calculate the acc
-            cat_gt_label = torch.cat(gt_labels, dim=0)
-            
-            print('max_id', max_id, 'cat_gt_label', cat_gt_label)
-            self.match_count += torch.sum((max_id == cat_gt_label)).item()
-            self.total += max_id.shape[0]
-            print('accumulated acc:', self.match_count / self.total)'''
-
-        if distilled_feat != None and gt_rand_rois != None:
-            bbox_results = dict(
-                cls_score=cls_score, bbox_pred=bbox_pred, bbox_feats=bbox_feats, distill_loss_value=dict(distill_loss_value=distill_loss_value))
-        else:
-            bbox_results = dict(
+        # send the predict bbox to the CLIP backbone, obtained the feat
+        clip_bbox_feat = self.extract_feat(img, bbox_pred, img_metas=img_metas)
+        
+        # use the bbox head classifier to classifier the model
+        clip_cls_score = self.bbox_head.fc_cls_fg(clip_bbox_feat)
+        
+        # add one extra demension for the bg
+        additional_bg_score = torch.zeros(clip_cls_score.shape[0], 1)
+        clip_cls_score = torch.cat([clip_cls_score, additional_bg_score], dim=-1)
+        
+        # replace the classification score with the clip score
+        cls_score=clip_cls_score
+        
+        bbox_results = dict(
                 cls_score=cls_score, bbox_pred=bbox_pred, bbox_feats=bbox_feats)
         return bbox_results
 
     def _bbox_forward_train(self, x, sampling_results, gt_bboxes, gt_labels,
                             img_metas, distilled_feat, rand_bboxes):
-        """Run forward function and calculate loss for box head in training."""
-        
-        # prepare the roi for the proposal
-        rois = bbox2roi([res.bboxes for res in sampling_results])
-        # prepare the roi for the gt and the random bboxes
-        gt_rand_rois = bbox2roi([torch.cat([gt_bbox, random_bbox], dim=0) for gt_bbox, random_bbox in zip(gt_bboxes, rand_bboxes)])
-        
-        bbox_results = self._bbox_forward(x, rois, distilled_feat, gt_rand_rois, gt_labels)
-
-        bbox_targets = self.bbox_head.get_targets(sampling_results, gt_bboxes,
-                                                  gt_labels, self.train_cfg)
-        loss_bbox = self.bbox_head.loss(bbox_results['cls_score'],
-                                        bbox_results['bbox_pred'], rois,
-                                        *bbox_targets)
-
-        bbox_results.update(loss_bbox=loss_bbox)
-        return bbox_results
+        pass
 
     def _mask_forward_train(self, x, sampling_results, bbox_feats, gt_masks,
                             img_metas):
-        """Run forward function and calculate loss for mask head in
-        training."""
-        if not self.share_roi_extractor:
-            pos_rois = bbox2roi([res.pos_bboxes for res in sampling_results])
-            mask_results = self._mask_forward(x, pos_rois)
-        else:
-            pos_inds = []
-            device = bbox_feats.device
-            for res in sampling_results:
-                pos_inds.append(
-                    torch.ones(
-                        res.pos_bboxes.shape[0],
-                        device=device,
-                        dtype=torch.uint8))
-                pos_inds.append(
-                    torch.zeros(
-                        res.neg_bboxes.shape[0],
-                        device=device,
-                        dtype=torch.uint8))
-            pos_inds = torch.cat(pos_inds)
-
-            mask_results = self._mask_forward(
-                x, pos_inds=pos_inds, bbox_feats=bbox_feats)
-
-        mask_targets = self.mask_head.get_targets(sampling_results, gt_masks,
-                                                  self.train_cfg)
-        pos_labels = torch.cat([res.pos_gt_labels for res in sampling_results])
-        loss_mask = self.mask_head.loss(mask_results['mask_pred'],
-                                        mask_targets, pos_labels)
-
-        mask_results.update(loss_mask=loss_mask, mask_targets=mask_targets)
-        return mask_results
+        pass
 
     def _mask_forward(self, x, rois=None, pos_inds=None, bbox_feats=None):
         """Mask head forward function used in both training and testing."""
@@ -296,7 +311,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                     img_metas,
                     proposals=None,
                     rescale=False,
-                    **kwargs):
+                    img=None):
         """Test without augmentation.
 
         Args:
@@ -322,7 +337,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         assert self.with_bbox, 'Bbox head must be implemented.'
 
         det_bboxes, det_labels = self.simple_test_bboxes(
-            x, img_metas, proposal_list, self.test_cfg, rescale=rescale)
+            x, img_metas, proposal_list, self.test_cfg, rescale=rescale, img=img)
 
         bbox_results = [
             bbox2result(det_bboxes[i], det_labels[i],

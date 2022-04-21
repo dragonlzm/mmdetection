@@ -145,7 +145,6 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
         #print(type(gt_feats), type(rand_feats))
         distilled_feat = [torch.cat([gt_feat_per_img, rand_feat_per_img], dim=0)
                           for gt_feat_per_img, rand_feat_per_img in zip(gt_feats, rand_feats)]
-        
 
         losses = dict()
 
@@ -204,7 +203,7 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
             proposal_list = proposals
 
         return self.roi_head.simple_test(
-            x, proposal_list, img_metas, rescale=rescale)
+            x, proposal_list, img_metas, rescale=rescale, img=img)
 
     def aug_test(self, imgs, img_metas, rescale=False):
         """Test with augmentations.

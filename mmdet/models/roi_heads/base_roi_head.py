@@ -15,6 +15,7 @@ class BaseRoIHead(BaseModule, metaclass=ABCMeta):
                  mask_roi_extractor=None,
                  mask_head=None,
                  shared_head=None,
+                 extra_backbone=None,
                  train_cfg=None,
                  test_cfg=None,
                  pretrained=None,
@@ -31,6 +32,8 @@ class BaseRoIHead(BaseModule, metaclass=ABCMeta):
 
         if mask_head is not None:
             self.init_mask_head(mask_roi_extractor, mask_head)
+        if extra_backbone != None:
+            self.init_extra_backbone(extra_backbone)
 
         self.init_assigner_sampler()
 
