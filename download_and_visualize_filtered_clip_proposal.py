@@ -30,12 +30,13 @@ from mmdet.core.bbox.iou_calculators.iou2d_calculator import BboxOverlaps2D
 #proposal_file_path = "C:\\Users\\Zhuoming Liu\\Desktop\\results_32_64_1024_nms07.patch_acc.json"
 #proposal_file_path = "C:\\Users\\Zhuoming Liu\\Desktop\\results_16_16_1024_nms07.patch_acc.json"
 #proposal_file_path = "/home/zhuoming/results_32_64_1024_nms_on_all_07_nms_over_scales.patch_acc.json"
-proposal_file_path = "/data/zhuoming/detection/test/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_4/results.bbox.json"
-
+#proposal_file_path = "/data/zhuoming/detection/test/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_4/results.bbox.json"
+proposal_file_path = "/data2/lwll/zhuoming/detection/test/cls_proposal_generator_coco/results_16_16_1024.patch_acc.json"
 proposal_result = json.load(open(proposal_file_path))
 
 #gt_annotation_path = "C:\\Users\\XPS\\Desktop\\annotations\\instances_val2017.json"
-gt_annotation_path = "/data/zhuoming/detection/coco/annotations/instances_val2017.json"
+#gt_annotation_path = "/data/zhuoming/detection/coco/annotations/instances_val2017.json"
+gt_annotation_path = "/data2/lwll/zhuoming/detection/coco/annotations/instances_train2017.json"
 gt_anno_result = json.load(open(gt_annotation_path))
 
 
@@ -44,12 +45,12 @@ from_img_id_to_gt = {}
 
 for ele in proposal_result:
     img_id = ele['image_id']
-    #bbox = 
-    bbox = ele['bbox']
-    if img_id not in from_img_id_to_pred:
-        from_img_id_to_pred[img_id] = []
-    #from_img_id_to_pred[img_id] = bbox
-    from_img_id_to_pred[img_id].append(bbox)
+    bbox = ele['score']
+    from_img_id_to_pred[img_id] = bbox
+    #bbox = ele['bbox']
+    #if img_id not in from_img_id_to_pred:
+    #    from_img_id_to_pred[img_id] = []
+    #from_img_id_to_pred[img_id].append(bbox)
 
 for ele in gt_anno_result['annotations']:
     img_id = ele['image_id']
@@ -88,8 +89,8 @@ all_img_info = {info['id']:info for info in gt_anno_result['images']}
 #save_root = '/home/zhuoming/results_16_16_1024_nms07_novel_/'
 #save_root = 'C:\\Users\\Zhuoming Liu\\Desktop\\results_32_64_1024_nms07_novel\\'
 
-#save_root = '/home/zhuoming/filtered_bboxes/'
-save_root = '/home/zhuoming/vild_visialization/'
+save_root = '/home/zhuoming/filtered_bboxes/'
+#save_root = '/home/zhuoming/vild_visialization/'
 
 target_list = [397133, 37777, 252219, 87038, 403385, 331352, 386912, 491497, 348881, 289393]
 novel_cate_id = [5, 6, 17, 18, 21, 22, 28, 32, 36, 41, 47, 49, 61, 63, 76, 81, 87]
@@ -133,32 +134,32 @@ for i, img_id in enumerate(from_img_id_to_pred):
             rect = patches.Rectangle((bbox[0], bbox[1]),bbox[2],bbox[3],linewidth=1,edgecolor='g',facecolor='none')
             ax.add_patch(rect)
             
-            #xyxy_gt = torch.tensor([[bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3]]])
+            xyxy_gt = torch.tensor([[bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3]]])
 
             # find the proposal 
-            #real_iou = iou_calculator(xyxy_gt, xyxy_proposal)
+            real_iou = iou_calculator(xyxy_gt, xyxy_proposal)
             
             # all the bbox that has iou lower than 0.5 will become True
-            #real_iou_ind = (real_iou < 0.3).view(-1)
-            #iou_ind = real_iou_ind
+            real_iou_ind = (real_iou < 0.3).view(-1)
+            iou_ind = real_iou_ind
             
-            #if all_iou_idx == None:
-            #    all_iou_idx = iou_ind
-            #else:
-            #    all_iou_idx = all_iou_idx & iou_ind
+            if all_iou_idx == None:
+                all_iou_idx = iou_ind
+            else:
+                all_iou_idx = all_iou_idx & iou_ind
         
-        #remained_bbox = xyxy_proposal[all_iou_idx]
-        remained_bbox = xyxy_proposal
+        remained_bbox = xyxy_proposal[all_iou_idx]
+        #remained_bbox = xyxy_proposal
         print(remained_bbox.shape)
             
         for target_proposal in remained_bbox[:100]:
             # draw the proposal
-            #rect = patches.Rectangle((target_proposal[0], target_proposal[1]),
-            #                         target_proposal[2]-target_proposal[0],
-            #                         target_proposal[3]-target_proposal[1], linewidth=1,edgecolor='r',facecolor='none')
             rect = patches.Rectangle((target_proposal[0], target_proposal[1]),
-                                     target_proposal[2],
-                                     target_proposal[3], linewidth=1,edgecolor='r',facecolor='none')
+                                     target_proposal[2]-target_proposal[0],
+                                     target_proposal[3]-target_proposal[1], linewidth=1,edgecolor='r',facecolor='none')
+            #rect = patches.Rectangle((target_proposal[0], target_proposal[1]),
+            #                         target_proposal[2],
+            #                         target_proposal[3], linewidth=1,edgecolor='r',facecolor='none')
             ax.add_patch(rect)
 
     #for bbox in from_img_id_to_pred[img_id]:

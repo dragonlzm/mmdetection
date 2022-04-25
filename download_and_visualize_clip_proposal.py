@@ -24,7 +24,7 @@ from PIL import Image
 #proposal_file_path = "C:\\Users\\Zhuoming Liu\\Desktop\\results_16_32_512_nms_on_all_07.patch_acc.json"
 #proposal_file_path = "C:\\Users\\Zhuoming Liu\\Desktop\\results_32_64_1024_nms07.patch_acc.json"
 #proposal_file_path = "C:\\Users\\Zhuoming Liu\\Desktop\\results_16_16_1024_nms07.patch_acc.json"
-proposal_file_path = "/home/zhuoming/results_32_64_1024_nms_on_all_07_nms_over_scales.patch_acc.json"
+proposal_file_path = "/data2/lwll/zhuoming/detection/test/cls_proposal_generator_coco/results_16_16_1024.patch_acc.json"
 
 
 proposal_result = json.load(open(proposal_file_path))

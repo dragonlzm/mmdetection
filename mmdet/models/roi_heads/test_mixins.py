@@ -87,8 +87,11 @@ class BBoxTestMixin:
             # There is no proposal in the whole batch
             return [det_bbox] * batch_size, [det_label] * batch_size
 
-        kwargs['img_metas'] = img_metas
-        bbox_results = self._bbox_forward(x, rois, **kwargs)
+        if type(self).__name__ == 'StandardRoIHeadCLIPCls': 
+            kwargs['img_metas'] = img_metas
+            bbox_results = self._bbox_forward(x, rois, **kwargs)
+        else:
+            bbox_results = self._bbox_forward(x, rois)
         img_shapes = tuple(meta['img_shape'] for meta in img_metas)
         scale_factors = tuple(meta['scale_factor'] for meta in img_metas)
 

@@ -9,7 +9,24 @@ import math
 import random
 import numpy as np
 from PIL import Image
+from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normalize
+try:
+    from torchvision.transforms import InterpolationMode
+    BICUBIC = InterpolationMode.BICUBIC
+except ImportError:
+    BICUBIC = Image.BICUBIC
 
+def _convert_image_to_rgb(image):
+    return image.convert("RGB")
+
+def _transform(n_px):
+    return Compose([
+        Resize(n_px, interpolation=BICUBIC),
+        CenterCrop(n_px),
+        _convert_image_to_rgb,
+        ToTensor(),
+        Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
+    ])
 
 @HEADS.register_module()
 class StandardRoIHeadCLIPCls(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
@@ -35,6 +52,7 @@ class StandardRoIHeadCLIPCls(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         
     def init_extra_backbone(self, extra_backbone):
         self.clip_backbone = build_backbone(extra_backbone)
+        self.preprocess = _transform(self.clip_backbone.input_resolution)
 
 
     def init_mask_head(self, mask_roi_extractor, mask_head):
@@ -199,9 +217,7 @@ class StandardRoIHeadCLIPCls(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         # the input of the vision transformer should be torch.Size([64, 3, 224, 224])
         result_list = []
         for patches in cropped_patches_list:
-            x = self.backbone(patches.cuda())
-            if self.with_neck:
-                x = self.neck(x)
+            x = self.clip_backbone(patches.cuda())
             result_list.append(x)
         # convert the feature [bs*64, 512] to [bs, 64, 512]
         #x = x.view(bs, -1, x.shape[-1])
@@ -235,20 +251,32 @@ class StandardRoIHeadCLIPCls(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             gt_and_rand_bbox_feat = self.shared_head(gt_and_rand_bbox_feat)
         
         cls_score, bbox_pred, _ = self.bbox_head(bbox_feats)
-        ## bbox_pred is the prediction result on the scaled image
-        ## the input img in this function is also a scaled
+        ## bbox_pred is the prediction result on the scaled image, bbox_pred torch.Size([1000, 4])
+        ## the input img in this function is also a scaled, torch.Size([1, 3, 800, 1216])
         
         # send the predict bbox to the CLIP backbone, obtained the feat
-        clip_bbox_feat = self.extract_feat(img, bbox_pred, img_metas=img_metas)
+        num_proposals_per_img = tuple(1000 for i in range(img.shape[0]))
+        splited_rois = rois.split(num_proposals_per_img, 0)
+        splited_bbox_pred = bbox_pred.split(num_proposals_per_img, 0)
+        
+        # enumerate the inner
+        reshaped_bbox_pred = [self.bbox_head.bbox_coder.decode(
+                roi_per_img[..., 1:], bbox_per_img, max_shape=img_meta_per_img['img_shape']) for roi_per_img, bbox_per_img, img_meta_per_img in zip(splited_rois, splited_bbox_pred, img_metas)  ] 
+        #reshaped_bbox_pred = reshaped_bbox_pred.unsqueeze(dim=0)
+        
+        clip_bbox_feat = self.extract_feat(img, reshaped_bbox_pred, img_metas=img_metas)
+        #print(type(clip_bbox_feat), len(clip_bbox_feat), clip_bbox_feat[0].shape)
+        clip_bbox_feat = torch.cat(clip_bbox_feat, dim=0)
         
         # use the bbox head classifier to classifier the model
         clip_cls_score = self.bbox_head.fc_cls_fg(clip_bbox_feat)
         
         # add one extra demension for the bg
-        additional_bg_score = torch.zeros(clip_cls_score.shape[0], 1)
+        additional_bg_score = torch.zeros(clip_cls_score.shape[0], 1).cuda()
         clip_cls_score = torch.cat([clip_cls_score, additional_bg_score], dim=-1)
         
         # replace the classification score with the clip score
+        # cls_score = torch.Size([1000, 18])
         cls_score=clip_cls_score
         
         bbox_results = dict(

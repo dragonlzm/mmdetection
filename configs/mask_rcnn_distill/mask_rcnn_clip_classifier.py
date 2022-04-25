@@ -1,4 +1,4 @@
-_base_ = './mask_rcnn_distill_r50_fpn_1x_coco.py'
+_base_ = './mask_rcnn_with_clip_feat_r50_fpn_1x_coco.py'
 
 # model settings
 model = dict(

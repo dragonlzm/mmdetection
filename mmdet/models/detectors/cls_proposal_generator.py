@@ -1,7 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from cgi import test
 import warnings
-
+import json
+import os
 import mmcv
 import torch
 from mmcv.image import tensor2imgs
@@ -95,9 +96,12 @@ class ClsProposalGenerator(BaseDetector):
         self.nms_threshold = self.test_cfg.get('nms_threshold', 0.5) if self.test_cfg is not None else 0.5
         self.nms_on_diff_scale = self.test_cfg.get('nms_on_diff_scale', False) if self.test_cfg is not None else False
 
+        self.bbox_save_path_root = self.test_cfg.get('bbox_save_path_root', None) if self.test_cfg is not None else None
+
         print('parameters:', 'anchor_generator["scales"]', anchor_generator['scales'], "anchor_generator['ratios']", anchor_generator['ratios'],
             "anchor_generator['strides']", anchor_generator['strides'], "self.paded_proposal_num", self.paded_proposal_num, "self.min_entropy", self.min_entropy,
-            "self.nms_on_all_anchors", self.nms_on_all_anchors, "self.nms_threshold", self.nms_threshold)
+            "self.nms_on_all_anchors", self.nms_on_all_anchors, "self.nms_threshold", self.nms_threshold,
+            'self.bbox_save_path_root', self.bbox_save_path_root)
 
     def crop_img_to_patches(self, imgs, gt_bboxes, img_metas):
         # handle the test config
@@ -121,6 +125,8 @@ class ClsProposalGenerator(BaseDetector):
                 continue
             img = imgs[img_idx]
             result_per_img = []
+            count_i = 0
+            batch_new_patch = []
             for box_i, bbox in enumerate(all_gt_bboxes):
                 # the original bbox location
                 tl_x, tl_y, br_x, br_y = bbox[0], bbox[1], bbox[2], bbox[3]
@@ -178,10 +184,21 @@ class ClsProposalGenerator(BaseDetector):
                 new_patch = self.preprocess(PIL_image)
                 #image_result.append(np.expand_dims(new_patch, axis=0))
                 new_patch = new_patch.unsqueeze(dim=0)
+                batch_new_patch.append(new_patch)
+                count_i += 1
                 # extract feat for a patch
-                x = self.backbone(new_patch.cuda())
-                
+                if count_i % 100 == 0 and count_i != 0:
+                    batch_new_patch = torch.cat(batch_new_patch, dim=0)
+                    x = self.backbone(batch_new_patch.cuda())
+                    result_per_img.append(x)
+                    
+                    count_i = 0
+                    batch_new_patch = []
+            if count_i != 0:
+                batch_new_patch = torch.cat(batch_new_patch, dim=0)
+                x = self.backbone(batch_new_patch.cuda())
                 result_per_img.append(x)
+                    
             result_per_img = torch.cat(result_per_img, dim=0)
             all_results.append(result_per_img)
 
@@ -297,6 +314,14 @@ class ClsProposalGenerator(BaseDetector):
         """
         img = img.unsqueeze(dim=0)
         img_metas = [img_metas]
+        
+        if self.bbox_save_path_root != None:
+            if not os.path.exists(self.bbox_save_path_root):
+                os.makedirs(self.bbox_save_path_root)
+            
+            file_name = os.path.join(self.bbox_save_path_root, '.'.join(img_metas[0]['ori_filename'].split('.')[:-1]) + '.json')
+            if os.path.exists(file_name):
+                return [np.zeros((1,5))]
 
         bs = img.shape[0]
         # get the size of the paded image size in the batch (max_w, max_h)
@@ -456,8 +481,17 @@ class ClsProposalGenerator(BaseDetector):
                         dets = torch.cat([dets, padded_empty_proposals], dim=0)
 
                     proposal_for_all_imgs.append(dets)
-
-        return [proposal.cpu().numpy() for proposal in proposal_for_all_imgs]
+                    
+        result = [proposal.cpu().numpy() for proposal in proposal_for_all_imgs]
+        #print('result[0].shape', result[0].shape)
+        
+        if self.bbox_save_path_root != None:        
+            file = open(file_name, 'w')
+            result_json = {'image_id':int(img_metas[0]['ori_filename'].split('.')[0].strip('0')), 'score':result[0].tolist()}
+            file.write(json.dumps(result_json))
+            file.close()
+            
+        return result
 
     def aug_test(self, imgs, img_metas, rescale=False):
         """Test function with test time augmentation.
