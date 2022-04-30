@@ -108,7 +108,7 @@ class ClsFinetuner(BaseDetector):
         file_name = os.path.join(self.use_pregenerated_proposal, '.'.join(img_metas[0]['ori_filename'].split('.')[:-1]) + '.json')
         # read the random bbox, the loaded bbox is xyxy format
         pregenerated_bbox = json.load(open(file_name))['score']
-        pregenerated_bbox = torch.tensor(pregenerated_bbox)
+        pregenerated_bbox = torch.tensor(pregenerated_bbox).cuda()
         
         # filter the small bboxes
         w_smaller_than_36 = (pregenerated_bbox[:, 2] - pregenerated_bbox[:, 0]) < 36
@@ -116,27 +116,34 @@ class ClsFinetuner(BaseDetector):
         pregenerated_bbox[w_smaller_than_36, 2] = pregenerated_bbox[w_smaller_than_36, 0] + 36
         pregenerated_bbox[h_smaller_than_36, 3] = pregenerated_bbox[h_smaller_than_36, 1] + 36
         
+        # scale the bbox to the size of the image
+        pregenerated_bbox[:, :4] *= pregenerated_bbox.new_tensor(img_metas[0]['scale_factor'])
+        
         # filter the box with high iou with gt bbox
-        all_iou_idx = None
-        for bbox in gt_bboxes:
-            xyxy_gt = torch.tensor([[bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3]]])
+        #all_iou_idx = None
+        #for bbox in gt_bboxes[0]:
+            # the gt_bbox here is xyxy format
             # find the proposal 
-            real_iou = self.iou_calculator(xyxy_gt, pregenerated_bbox)
+        #    real_iou = self.iou_calculator(bbox.unsqueeze(dim=0), pregenerated_bbox)
             # all the bbox that has iou lower than 0.5 will become True
-            real_iou_ind = (real_iou < 0.3).view(-1)
-            iou_ind = real_iou_ind
-            
-            if all_iou_idx == None:
-                all_iou_idx = iou_ind
-            else:
-                all_iou_idx = all_iou_idx & iou_ind
+        #    real_iou_ind = (real_iou < 0.3).view(-1)
+        #    iou_ind = real_iou_ind   
+        #    if all_iou_idx == None:
+        #        all_iou_idx = iou_ind
+        #    else:
+        #        all_iou_idx = all_iou_idx & iou_ind
+        
+        real_iou = self.iou_calculator(gt_bboxes[0], pregenerated_bbox)
+        max_iou_per_proposal = torch.max(real_iou, dim=0)[0]
+        all_iou_idx = (max_iou_per_proposal < 0.3)
+        #remained_bbox_1 = pregenerated_bbox[all_iou_idx_1]
+        #print('remained_bbox_1', remained_bbox_1.shape)
+        
         remained_bbox = pregenerated_bbox[all_iou_idx]
+        #print('remained_bbox', remained_bbox.shape)
         
         # select the top 200 bboxes
         remained_bbox = remained_bbox[:200]
-        
-        # scale the bbox to the size of the image
-        remained_bbox[:, :4] *= remained_bbox.new_tensor(img_metas[0]['scale_factor'])
         
         # return the bbox in xyxy in torch tensor 
         return remained_bbox
