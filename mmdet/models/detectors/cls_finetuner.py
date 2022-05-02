@@ -359,6 +359,21 @@ class ClsFinetuner(BaseDetector):
         img_metas = [img_metas]
         
         if self.generate_bbox_feat:
+            gt_save_root = os.path.join(self.feat_save_path, 'gt')
+            if not os.path.exists(gt_save_root):
+                os.makedirs(gt_save_root)
+            file_name = img_metas[0]['ori_filename'].split('.')[0] + '.json'
+            gt_file_path = os.path.join(gt_save_root, file_name)
+            
+            random_save_root = os.path.join(self.feat_save_path, 'random')
+            if not os.path.exists(random_save_root):
+                os.makedirs(random_save_root)
+            file_name = img_metas[0]['ori_filename'].split('.')[0] + '.json'
+            random_file_path = os.path.join(random_save_root, file_name)      
+            
+            if os.path.exists(gt_file_path) and os.path.exists(random_file_path):
+                return [np.zeros((1,5))]
+            
             if self.use_pregenerated_proposal != None:
                 now_rand_bbox = self.read_pregenerated_bbox(img_metas, gt_bboxes, self.num_of_rand_bboxes)
             else:
@@ -366,12 +381,6 @@ class ClsFinetuner(BaseDetector):
                 now_rand_bbox = self.generate_rand_bboxes(img_metas, self.num_of_rand_bboxes)
             x = self.extract_feat(img, [now_rand_bbox], cropped_patches, img_metas=img_metas)
             # save the rand_bbox and the feat, img_metas
-            random_save_root = os.path.join(self.feat_save_path, 'random')
-            if not os.path.exists(random_save_root):
-                os.makedirs(random_save_root)
-            file_name = img_metas[0]['ori_filename'].split('.')[0] + '.json'
-            random_file_path = os.path.join(random_save_root, file_name)
-            #print('testing random', random_file_path)
             
             file = open(random_file_path, 'w')
             # handle the image metas
@@ -389,13 +398,6 @@ class ClsFinetuner(BaseDetector):
             # generate the gt feat
             x = self.extract_feat(img, gt_bboxes, cropped_patches, img_metas=img_metas)
             # save the rand_bbox and the feat, img_metas
-            gt_save_root = os.path.join(self.feat_save_path, 'gt')
-            if not os.path.exists(gt_save_root):
-                os.makedirs(gt_save_root)
-            file_name = img_metas[0]['ori_filename'].split('.')[0] + '.json'
-            gt_file_path = os.path.join(gt_save_root, file_name)
-            #print('testing gt', gt_file_path)
-            
             file = open(gt_file_path, 'w')
             #print(type(gt_bboxes), type(gt_labels))
             #print('gt', x[0].shape, gt_bboxes[0].shape, gt_labels[0].shape)
