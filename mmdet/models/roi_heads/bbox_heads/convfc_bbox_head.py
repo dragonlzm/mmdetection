@@ -246,7 +246,7 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                  fc_out_channels=1024,
                  fg_vec_cfg=None,
                  clip_dim=512,
-                 temperature=50,
+                 temperature=100,
                  filter_base_cate=None,
                  conv_cfg=None,
                  norm_cfg=None,
