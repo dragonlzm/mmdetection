@@ -665,6 +665,9 @@ class LoadCLIPFeat:
         # obtain the random bbox
         rand_feat = np.array(rand_file_content['feat']).astype(np.float32)
         rand_bbox = np.array(rand_file_content['bbox']).astype(np.float32)
+        # temp modification
+        rand_feat = rand_feat[:100]
+        rand_bbox = rand_bbox[:100]
         rand_img_metas = rand_file_content['img_metas']
         
         # compare the scale factor and reshape the random bbox
