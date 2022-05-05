@@ -668,6 +668,8 @@ class LoadCLIPFeat:
         # temp modification
         rand_feat = rand_feat[:100]
         rand_bbox = rand_bbox[:100]
+        if rand_bbox.shape[-1] == 5:
+            rand_bbox = rand_bbox[:, :4]
         rand_img_metas = rand_file_content['img_metas']
         
         # compare the scale factor and reshape the random bbox
