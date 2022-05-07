@@ -205,6 +205,15 @@ class StandardRoIHeadCLIPCls(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         # crop the img into the patches with normalization and reshape
         # (a function to convert the img)
         #cropped_patches_list:len = batch_size, list[tensor] each tensor shape [gt_num_of_image, 3, 224, 224]
+        
+        # denormalize the image
+        #'img_norm_cfg': {'mean': array([123.675, 116.28 , 103.53 ], dtype=float32), 'std': array([58.395, 57.12 , 57.375], dtype=float32)
+        img_mean = torch.from_numpy(img_metas[0]['img_norm_cfg']['mean']).cuda()
+        img_std = torch.from_numpy(img_metas[0]['img_norm_cfg']['std']).cuda()
+        img = img.permute([0,2,3,1])
+        img = img * img_std + img_mean
+        img = img.permute([0,3,1,2])
+        
         if cropped_patches == None:
             cropped_patches_list = self.crop_img_to_patches(img.cpu(), gt_bboxes, img_metas)
         else:

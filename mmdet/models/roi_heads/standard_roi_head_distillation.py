@@ -29,6 +29,8 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         self.distillation_loss_config = dict(type='L1Loss', loss_weight=1.0)
         self.distillation_loss = build_loss(self.distillation_loss_config)
         
+        self.distill_loss_factor = self.train_cfg.get('distill_loss_factor', 1) if self.train_cfg is not None else 1
+        
         self.match_count = 0
         self.total = 0
 
@@ -162,7 +164,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             cat_distilled_feat = cat_distilled_feat / cat_distilled_feat.norm(dim=-1, keepdim=True)
             distill_loss_value = self.distillation_loss(pred_feats, cat_distilled_feat)
             #distill_loss_value *= (self.bbox_head.clip_dim * 0.5)
-            distill_loss_value *= (self.bbox_head.clip_dim)
+            distill_loss_value *= (self.bbox_head.clip_dim * self.distill_loss_factor)
             
             '''
             # test the feat is matched or not
