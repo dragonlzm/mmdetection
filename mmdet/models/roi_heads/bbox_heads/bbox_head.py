@@ -354,8 +354,26 @@ class BBoxHead(BaseModule):
         # for testing
         if hasattr(self, 'filter_base_cate') and self.filter_base_cate != None:
             bg_idx = self.num_classes
+            
+            ## the filtering procedure
+            # BS > BGS and NS 
             max_idx = torch.max(scores, dim=1)[1]
             novel_bg_idx = (max_idx <= bg_idx)
+            
+            # BS > BGS
+            # base_max_value = torch.max(scores[:, bg_idx+1:], dim=1)[0]
+            # bg_value = scores[:, bg_idx]
+            # novel_bg_idx = (base_max_value <= bg_value)
+            
+            # BS > NS
+            # base_max_value = torch.max(scores[:, bg_idx+1:], dim=1)[0]
+            # novel_max_value = torch.max(scores[:, :bg_idx], dim=1)[0]
+            # novel_bg_idx = (base_max_value <= novel_max_value)      
+            
+            # # BS > threshold
+            # base_max_value = torch.max(scores[:, bg_idx+1:], dim=1)[0]
+            # novel_bg_idx = (base_max_value <= 0.7)                     
+            
             scores = scores[novel_bg_idx]
             scores = scores[:, :bg_idx+1]
         # bbox_pred would be None in some detector when with_reg is False,
