@@ -178,7 +178,7 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
         if self.with_unknow_rpn:
             proposal_cfg = self.train_cfg.get('rpn_proposal',
                                               self.test_cfg.unknow_rpn)
-            unknow_rpn_losses, unknow_proposal_list = self.unknow_rpn_head.forward_train(
+            temp_unknow_rpn_losses, unknow_proposal_list = self.unknow_rpn_head.forward_train(
                 x,
                 img_metas,
                 rand_bboxes,
@@ -188,7 +188,7 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
                 **kwargs)
             # change the name of the rpn loss
             unknow_rpn_losses = dict(
-                loss_uk_rpn_cls=unknow_rpn_losses['loss_rpn_cls'], loss_uk_rpn_bbox=unknow_rpn_losses['loss_rpn_cls'])
+                loss_uk_rpn_cls=temp_unknow_rpn_losses['loss_rpn_cls'], loss_uk_rpn_bbox=temp_unknow_rpn_losses['loss_rpn_bbox'])
             
             losses.update(unknow_rpn_losses)
             
