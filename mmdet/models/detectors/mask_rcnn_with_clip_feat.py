@@ -19,6 +19,7 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
                  backbone,
                  neck=None,
                  rpn_head=None,
+                 unknow_rpn_head=None,
                  roi_head=None,
                  rand_bboxes_num=20,
                  train_cfg=None,
@@ -42,6 +43,12 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
             rpn_head_.update(train_cfg=rpn_train_cfg, test_cfg=test_cfg.rpn)
             self.rpn_head = build_head(rpn_head_)
 
+        if unknow_rpn_head is not None:
+            rpn_train_cfg = train_cfg.unknow_rpn if train_cfg is not None else None
+            rpn_head_ = unknow_rpn_head.copy()
+            rpn_head_.update(train_cfg=rpn_train_cfg, test_cfg=test_cfg.unknow_rpn)
+            self.unknow_rpn_head = build_head(rpn_head_)           
+        
         if roi_head is not None:
             # update train and test cfg here for now
             # TODO: refactor assigner & sampler
@@ -58,6 +65,10 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
     def with_rpn(self):
         """bool: whether the detector has RPN"""
         return hasattr(self, 'rpn_head') and self.rpn_head is not None
+
+    def with_unknow_rpn(self):
+        """bool: whether the detector has RPN"""
+        return hasattr(self, 'unknow_rpn_head') and self.unknow_rpn_head is not None
 
     @property
     def with_roi_head(self):
@@ -163,6 +174,27 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
             losses.update(rpn_losses)
         else:
             proposal_list = proposals
+            
+        if self.with_unknow_rpn:
+            proposal_cfg = self.train_cfg.get('rpn_proposal',
+                                              self.test_cfg.unknow_rpn)
+            unknow_rpn_losses, unknow_proposal_list = self.unknow_rpn_head.forward_train(
+                x,
+                img_metas,
+                rand_bboxes,
+                gt_labels=None,
+                gt_bboxes_ignore=None,
+                proposal_cfg=proposal_cfg,
+                **kwargs)
+            # change the name of the rpn loss
+            unknow_rpn_losses = dict(
+                loss_uk_rpn_cls=unknow_rpn_losses['loss_rpn_cls'], loss_uk_rpn_bbox=unknow_rpn_losses['loss_rpn_cls'])
+            
+            losses.update(unknow_rpn_losses)
+            
+            # combine the uk_proposal with the original_proposal
+            proposal_list = [torch.cat([ori_proposal, uk_proposal], dim=0) for ori_proposal, uk_proposal in zip(proposal_list, unknow_proposal_list)]
+                     
 
         roi_losses = self.roi_head.forward_train(x, img_metas, proposal_list,
                                                  gt_bboxes, gt_labels,
