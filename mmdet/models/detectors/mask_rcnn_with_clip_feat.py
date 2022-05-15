@@ -178,10 +178,15 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
         if self.with_unknow_rpn:
             proposal_cfg = self.train_cfg.get('rpn_proposal',
                                               self.test_cfg.unknow_rpn)
+            use_clip_proposal_as_gt = self.train_cfg.unknow_rpn.get('use_clip_proposal_as_gt', True) if self.train_cfg is not None else True
+            if use_clip_proposal_as_gt:
+                target_gt = rand_bboxes
+            else:
+                target_gt = gt_bboxes
             temp_unknow_rpn_losses, unknow_proposal_list = self.unknow_rpn_head.forward_train(
                 x,
                 img_metas,
-                rand_bboxes,
+                target_gt,
                 gt_labels=None,
                 gt_bboxes_ignore=None,
                 proposal_cfg=proposal_cfg,
