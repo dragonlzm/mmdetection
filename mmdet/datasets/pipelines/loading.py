@@ -589,13 +589,15 @@ class LoadCLIPFeat:
 
     def __init__(self,
                  file_path_prefix=None,
-                 num_of_rand_bbox=20):
+                 num_of_rand_bbox=20,
+                 select_fixed_subset=None):
         self.file_path_prefix = file_path_prefix
         # the path should like this
         # /data/zhuoming/detection/coco/feat
         self.gt_feat_prefix = osp.join(self.file_path_prefix, 'gt')
         self.random_feat_prefix = osp.join(self.file_path_prefix, 'random')
         self.num_of_rand_bbox = num_of_rand_bbox
+        self.select_fixed_subset = select_fixed_subset
 
     def __call__(self, results):
         '''load the pre-extracted CLIP feat'''
@@ -665,9 +667,10 @@ class LoadCLIPFeat:
         # obtain the random bbox
         rand_feat = np.array(rand_file_content['feat']).astype(np.float32)
         rand_bbox = np.array(rand_file_content['bbox']).astype(np.float32)
-        # temp modification
-        rand_feat = rand_feat[:100]
-        rand_bbox = rand_bbox[:100]
+        # selecting the subset of the file
+        if self.select_fixed_subset != None:
+            rand_feat = rand_feat[:self.select_fixed_subset]
+            rand_bbox = rand_bbox[:self.select_fixed_subset]
         if rand_bbox.shape[-1] == 5:
             rand_bbox = rand_bbox[:, :4]
         rand_img_metas = rand_file_content['img_metas']
@@ -678,7 +681,6 @@ class LoadCLIPFeat:
         else:
             final_rand_bbox = rand_bbox / pre_extract_scale_factor
             final_rand_bbox = final_rand_bbox * now_scale_factor
-
         
         # filter the random bbox we need
         random_choice = np.random.choice(rand_feat.shape[0], self.num_of_rand_bbox, replace=False)

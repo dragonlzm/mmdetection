@@ -4,7 +4,7 @@
 #SBATCH --gres=gpu:v100:2
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=60GB
+#SBATCH --mem=80GB
 #SBATCH --time=48:00:00
 #SBATCH --account=nevatia_174
 
