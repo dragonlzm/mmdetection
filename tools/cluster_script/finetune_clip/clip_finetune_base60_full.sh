@@ -15,12 +15,12 @@ module load gcc/8.3.0
 #./program
 
 cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
-rm -rf ./data
-ln -sf /project/nevatia_174/zhuoming/detection ./data
+#rm -rf ./data
+#ln -sf /project/nevatia_174/zhuoming/detection ./data
 
 PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
     configs/cls_finetuner/cls_finetuner_clip_base60_all_train.py --launcher pytorch \
-    --work-dir=/project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base60_all_train
+    --work-dir=/project/nevatia_174/zhuoming/detection/cls_finetuner/cls_finetuner_clip_base60_all_train
     #--resume-from=/project/nevatia_174/zhuoming/detection/test/new_rpn_patches246_coco/latest.pth
