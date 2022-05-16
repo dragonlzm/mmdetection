@@ -65,7 +65,8 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
     def with_rpn(self):
         """bool: whether the detector has RPN"""
         return hasattr(self, 'rpn_head') and self.rpn_head is not None
-
+    
+    @property
     def with_unknow_rpn(self):
         """bool: whether the detector has RPN"""
         return hasattr(self, 'unknow_rpn_head') and self.unknow_rpn_head is not None

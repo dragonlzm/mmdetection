@@ -685,8 +685,8 @@ class LoadCLIPFeat:
         
         # handle the extra extra_rand_path_prefix
         if self.extra_rand_path_prefix != None:
-            all_rand_bbox = [final_rand_bbox]
-            all_rand_feat = [rand_feat]
+            all_rand_bbox = [torch.from_numpy(final_rand_bbox)]
+            all_rand_feat = [torch.from_numpy(rand_feat)]
             for rand_path_prefix in self.extra_rand_path_prefix:
                 now_random_feat_prefix = osp.join(rand_path_prefix, 'random')
                 now_rand_file_name = osp.join(now_random_feat_prefix, file_name)
@@ -709,11 +709,14 @@ class LoadCLIPFeat:
                     now_final_rand_bbox = now_rand_bbox / pre_extract_scale_factor
                     now_final_rand_bbox = now_final_rand_bbox * now_scale_factor
                     
-                all_rand_bbox.append(now_final_rand_bbox)
-                all_rand_feat.append(now_rand_feat)
+                all_rand_bbox.append(torch.from_numpy(now_final_rand_bbox))
+                all_rand_feat.append(torch.from_numpy(now_rand_feat))
             # concat all random bboxes and feats
             final_rand_bbox = torch.cat(all_rand_bbox, dim=0)
             rand_feat = torch.cat(all_rand_feat, dim=0)
+            
+            final_rand_bbox = final_rand_bbox.numpy()
+            rand_feat = rand_feat.numpy()
         # filter the random bbox we need
         random_choice = np.random.choice(rand_feat.shape[0], self.num_of_rand_bbox, replace=False)
         final_rand_bbox = final_rand_bbox[random_choice]
