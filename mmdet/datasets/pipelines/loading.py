@@ -590,7 +590,8 @@ class LoadCLIPFeat:
     def __init__(self,
                  file_path_prefix=None,
                  num_of_rand_bbox=20,
-                 select_fixed_subset=None):
+                 select_fixed_subset=None,
+                 extra_rand_path_prefix=None):
         self.file_path_prefix = file_path_prefix
         # the path should like this
         # /data/zhuoming/detection/coco/feat
@@ -598,6 +599,7 @@ class LoadCLIPFeat:
         self.random_feat_prefix = osp.join(self.file_path_prefix, 'random')
         self.num_of_rand_bbox = num_of_rand_bbox
         self.select_fixed_subset = select_fixed_subset
+        self.extra_rand_path_prefix = extra_rand_path_prefix
 
     def __call__(self, results):
         '''load the pre-extracted CLIP feat'''
@@ -673,7 +675,6 @@ class LoadCLIPFeat:
             rand_bbox = rand_bbox[:self.select_fixed_subset]
         if rand_bbox.shape[-1] == 5:
             rand_bbox = rand_bbox[:, :4]
-        rand_img_metas = rand_file_content['img_metas']
         
         # compare the scale factor and reshape the random bbox
         if (np.round(pre_extract_scale_factor, 6) == np.round(now_scale_factor, 6)).all():
@@ -682,6 +683,37 @@ class LoadCLIPFeat:
             final_rand_bbox = rand_bbox / pre_extract_scale_factor
             final_rand_bbox = final_rand_bbox * now_scale_factor
         
+        # handle the extra extra_rand_path_prefix
+        if self.extra_rand_path_prefix != None:
+            all_rand_bbox = [final_rand_bbox]
+            all_rand_feat = [rand_feat]
+            for rand_path_prefix in self.extra_rand_path_prefix:
+                now_random_feat_prefix = osp.join(rand_path_prefix, 'random')
+                now_rand_file_name = osp.join(now_random_feat_prefix, file_name)
+                now_rand_file_content = json.load(open(now_rand_file_name))
+                
+                # obtain the random bbox
+                now_rand_feat = np.array(now_rand_file_content['feat']).astype(np.float32)
+                now_rand_bbox = np.array(now_rand_file_content['bbox']).astype(np.float32)
+                # selecting the subset of the file
+                if self.select_fixed_subset != None:
+                    now_rand_feat = now_rand_feat[:self.select_fixed_subset]
+                    now_rand_bbox = now_rand_bbox[:self.select_fixed_subset]
+                if now_rand_bbox.shape[-1] == 5:
+                    now_rand_bbox = now_rand_bbox[:, :4]
+                
+                # compare the scale factor and reshape the random bbox
+                if (np.round(pre_extract_scale_factor, 6) == np.round(now_scale_factor, 6)).all():
+                    now_final_rand_bbox = now_rand_bbox
+                else:
+                    now_final_rand_bbox = now_rand_bbox / pre_extract_scale_factor
+                    now_final_rand_bbox = now_final_rand_bbox * now_scale_factor
+                    
+                all_rand_bbox.append(now_final_rand_bbox)
+                all_rand_feat.append(now_rand_feat)
+            # concat all random bboxes and feats
+            final_rand_bbox = torch.cat(all_rand_bbox, dim=0)
+            rand_feat = torch.cat(all_rand_feat, dim=0)
         # filter the random bbox we need
         random_choice = np.random.choice(rand_feat.shape[0], self.num_of_rand_bbox, replace=False)
         final_rand_bbox = final_rand_bbox[random_choice]
