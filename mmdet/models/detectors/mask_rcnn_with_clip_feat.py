@@ -163,15 +163,29 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
         # RPN forward and loss
         if self.with_rpn:
             proposal_cfg = self.train_cfg.get('rpn_proposal',
-                                              self.test_cfg.rpn)
-            rpn_losses, proposal_list = self.rpn_head.forward_train(
-                x,
-                img_metas,
-                gt_bboxes,
-                gt_labels=None,
-                gt_bboxes_ignore=gt_bboxes_ignore,
-                proposal_cfg=proposal_cfg,
-                **kwargs)
+                                            self.test_cfg.rpn)
+            if self.rpn_head.__name__ == 'TriWayRPNHead':
+                trained_bbox = torch.cat([gt_bboxes, rand_bboxes], dim=0)
+                gt_label = torch.full((gt_bboxes.shape[0],), 0)
+                uk_label = torch.full((rand_bboxes.shape[0],), 1)
+                trained_label = torch.cat([gt_label, uk_label], dim=0)
+                rpn_losses, proposal_list = self.rpn_head.forward_train(
+                    x,
+                    img_metas,
+                    trained_bbox,
+                    gt_labels=trained_label,
+                    gt_bboxes_ignore=gt_bboxes_ignore,
+                    proposal_cfg=proposal_cfg,
+                    **kwargs)
+            else:
+                rpn_losses, proposal_list = self.rpn_head.forward_train(
+                    x,
+                    img_metas,
+                    gt_bboxes,
+                    gt_labels=None,
+                    gt_bboxes_ignore=gt_bboxes_ignore,
+                    proposal_cfg=proposal_cfg,
+                    **kwargs)
             losses.update(rpn_losses)
         else:
             proposal_list = proposals

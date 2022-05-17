@@ -13,3 +13,5 @@ model = dict(
         bbox_head=dict(
             fg_vec_cfg=dict(load_path='data/embeddings/base_finetuned_48cates.pt')))
         )
+
+optimizer_config = dict(_delete_=True, grad_clip=dict(max_norm=10, norm_type=2))
