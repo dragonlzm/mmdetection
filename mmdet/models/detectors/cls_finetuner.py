@@ -143,7 +143,7 @@ class ClsFinetuner(BaseDetector):
         #print('remained_bbox', remained_bbox.shape)
         
         # select the top 200 bboxes
-        remained_bbox = remained_bbox[:200]
+        remained_bbox = remained_bbox[:num_of_rand_bboxes]
         
         # return the bbox in xyxy in torch tensor 
         return remained_bbox
