@@ -164,11 +164,12 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
         if self.with_rpn:
             proposal_cfg = self.train_cfg.get('rpn_proposal',
                                             self.test_cfg.rpn)
-            if self.rpn_head.__name__ == 'TriWayRPNHead':
-                trained_bbox = torch.cat([gt_bboxes, rand_bboxes], dim=0)
-                gt_label = torch.full((gt_bboxes.shape[0],), 0)
-                uk_label = torch.full((rand_bboxes.shape[0],), 1)
-                trained_label = torch.cat([gt_label, uk_label], dim=0)
+            if self.rpn_head.__class__.__name__ == 'TriWayRPNHead':
+                trained_bbox =[torch.cat([gt_bbox, rand_bbox], dim=0).cuda() for gt_bbox, rand_bbox in zip(gt_bboxes, rand_bboxes)]
+                rpn_gt_labels = [torch.full((gt_bbox.shape[0],), 0) for gt_bbox in gt_bboxes] 
+                rpn_uk_labels = [torch.full((rand_bbox.shape[0],), 1) for rand_bbox in rand_bboxes]
+                #print(gt_labels, uk_labels)
+                trained_label = [torch.cat([rpn_gt_label, rpn_uk_label], dim=0).cuda() for rpn_gt_label, rpn_uk_label in zip(rpn_gt_labels, rpn_uk_labels)] 
                 rpn_losses, proposal_list = self.rpn_head.forward_train(
                     x,
                     img_metas,
