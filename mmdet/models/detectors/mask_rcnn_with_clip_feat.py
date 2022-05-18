@@ -165,18 +165,18 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
             proposal_cfg = self.train_cfg.get('rpn_proposal',
                                             self.test_cfg.rpn)
             if self.rpn_head.__class__.__name__ == 'TriWayRPNHead':
-                # trained_bbox =[torch.cat([gt_bbox, rand_bbox], dim=0).cuda() for gt_bbox, rand_bbox in zip(gt_bboxes, rand_bboxes)]
-                # rpn_gt_labels = [torch.full((gt_bbox.shape[0],), 0) for gt_bbox in gt_bboxes] 
-                # rpn_uk_labels = [torch.full((rand_bbox.shape[0],), 1) for rand_bbox in rand_bboxes]
-                # trained_label = [torch.cat([rpn_gt_label, rpn_uk_label], dim=0).cuda() for rpn_gt_label, rpn_uk_label in zip(rpn_gt_labels, rpn_uk_labels)] 
+                trained_bbox = [torch.cat([gt_bbox, rand_bbox], dim=0).cuda() for gt_bbox, rand_bbox in zip(gt_bboxes, rand_bboxes)]
+                rpn_gt_labels = [torch.full((gt_bbox.shape[0],), 0) for gt_bbox in gt_bboxes] 
+                rpn_uk_labels = [torch.full((rand_bbox.shape[0],), 1) for rand_bbox in rand_bboxes]
+                trained_label = [torch.cat([rpn_gt_label, rpn_uk_label], dim=0).cuda() for rpn_gt_label, rpn_uk_label in zip(rpn_gt_labels, rpn_uk_labels)] 
                 
                 # balance the samples
-                random_choices = [torch.from_numpy(np.random.choice(rand_bbox.shape[0], gt_bbox.shape[0], replace=False)) for gt_bbox, rand_bbox in zip(gt_bboxes, rand_bboxes)]
-                trained_bbox = [torch.cat([gt_bbox, rand_bbox[random_choice]], dim=0).cuda() for gt_bbox, rand_bbox, random_choice in zip(gt_bboxes, rand_bboxes, random_choices)]
-                rpn_gt_labels = [torch.full((gt_bbox.shape[0],), 0) for gt_bbox in gt_bboxes]
-                # sample the same number of random bboxes as the number of gt bboxes
-                rpn_uk_labels = [torch.full((gt_bbox.shape[0],), 1) for gt_bbox in gt_bboxes]
-                trained_label = [torch.cat([rpn_gt_label, rpn_uk_label], dim=0).cuda() for rpn_gt_label, rpn_uk_label in zip(rpn_gt_labels, rpn_uk_labels)] 
+                # random_choices = [torch.from_numpy(np.random.choice(rand_bbox.shape[0], gt_bbox.shape[0], replace=False)) for gt_bbox, rand_bbox in zip(gt_bboxes, rand_bboxes)]
+                # trained_bbox = [torch.cat([gt_bbox, rand_bbox[random_choice]], dim=0).cuda() for gt_bbox, rand_bbox, random_choice in zip(gt_bboxes, rand_bboxes, random_choices)]
+                # rpn_gt_labels = [torch.full((gt_bbox.shape[0],), 0) for gt_bbox in gt_bboxes]
+                # # sample the same number of random bboxes as the number of gt bboxes
+                # rpn_uk_labels = [torch.full((gt_bbox.shape[0],), 1) for gt_bbox in gt_bboxes]
+                # trained_label = [torch.cat([rpn_gt_label, rpn_uk_label], dim=0).cuda() for rpn_gt_label, rpn_uk_label in zip(rpn_gt_labels, rpn_uk_labels)] 
                 rpn_losses, proposal_list = self.rpn_head.forward_train(
                     x,
                     img_metas,
@@ -185,6 +185,26 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
                     gt_bboxes_ignore=gt_bboxes_ignore,
                     proposal_cfg=proposal_cfg,
                     **kwargs)
+                
+                # trained_bbox = gt_bboxes
+                # trained_label = [torch.full((gt_bbox.shape[0],), 0).cuda() for gt_bbox in gt_bboxes]
+                # rpn_losses, proposal_list = self.rpn_head.forward_train(
+                #     x,
+                #     img_metas,
+                #     trained_bbox,
+                #     gt_labels=trained_label,
+                #     gt_bboxes_ignore=gt_bboxes_ignore,
+                #     proposal_cfg=proposal_cfg,
+                #     **kwargs)
+                # rpn_losses, proposal_list = self.rpn_head.forward_train(
+                #     x,
+                #     img_metas,
+                #     gt_bboxes,
+                #     gt_labels=None,
+                #     gt_bboxes_ignore=gt_bboxes_ignore,
+                #     proposal_cfg=proposal_cfg,
+                #     **kwargs)
+                
             else:
                 rpn_losses, proposal_list = self.rpn_head.forward_train(
                     x,
