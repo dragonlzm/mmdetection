@@ -60,6 +60,8 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
         self.rand_bboxes_num = rand_bboxes_num
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
+        
+        self.even_sample_uk = self.train_cfg.get('even_sample_uk', False) if self.train_cfg is not None else False
 
     @property
     def with_rpn(self):
@@ -165,18 +167,20 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
             proposal_cfg = self.train_cfg.get('rpn_proposal',
                                             self.test_cfg.rpn)
             if self.rpn_head.__class__.__name__ == 'TriWayRPNHead':
-                trained_bbox = [torch.cat([gt_bbox, rand_bbox], dim=0).cuda() for gt_bbox, rand_bbox in zip(gt_bboxes, rand_bboxes)]
-                rpn_gt_labels = [torch.full((gt_bbox.shape[0],), 0) for gt_bbox in gt_bboxes] 
-                rpn_uk_labels = [torch.full((rand_bbox.shape[0],), 1) for rand_bbox in rand_bboxes]
-                trained_label = [torch.cat([rpn_gt_label, rpn_uk_label], dim=0).cuda() for rpn_gt_label, rpn_uk_label in zip(rpn_gt_labels, rpn_uk_labels)] 
+                if not self.even_sample_uk:
+                    trained_bbox = [torch.cat([gt_bbox, rand_bbox], dim=0).cuda() for gt_bbox, rand_bbox in zip(gt_bboxes, rand_bboxes)]
+                    rpn_gt_labels = [torch.full((gt_bbox.shape[0],), 0) for gt_bbox in gt_bboxes] 
+                    rpn_uk_labels = [torch.full((rand_bbox.shape[0],), 1) for rand_bbox in rand_bboxes]
+                    trained_label = [torch.cat([rpn_gt_label, rpn_uk_label], dim=0).cuda() for rpn_gt_label, rpn_uk_label in zip(rpn_gt_labels, rpn_uk_labels)] 
+                else:
+                    # balance the samples
+                    random_choices = [torch.from_numpy(np.random.choice(rand_bbox.shape[0], gt_bbox.shape[0], replace=False)) for gt_bbox, rand_bbox in zip(gt_bboxes, rand_bboxes)]
+                    trained_bbox = [torch.cat([gt_bbox, rand_bbox[random_choice]], dim=0).cuda() for gt_bbox, rand_bbox, random_choice in zip(gt_bboxes, rand_bboxes, random_choices)]
+                    rpn_gt_labels = [torch.full((gt_bbox.shape[0],), 0) for gt_bbox in gt_bboxes]
+                    # sample the same number of random bboxes as the number of gt bboxes
+                    rpn_uk_labels = [torch.full((gt_bbox.shape[0],), 1) for gt_bbox in gt_bboxes]
+                    trained_label = [torch.cat([rpn_gt_label, rpn_uk_label], dim=0).cuda() for rpn_gt_label, rpn_uk_label in zip(rpn_gt_labels, rpn_uk_labels)] 
                 
-                # balance the samples
-                # random_choices = [torch.from_numpy(np.random.choice(rand_bbox.shape[0], gt_bbox.shape[0], replace=False)) for gt_bbox, rand_bbox in zip(gt_bboxes, rand_bboxes)]
-                # trained_bbox = [torch.cat([gt_bbox, rand_bbox[random_choice]], dim=0).cuda() for gt_bbox, rand_bbox, random_choice in zip(gt_bboxes, rand_bboxes, random_choices)]
-                # rpn_gt_labels = [torch.full((gt_bbox.shape[0],), 0) for gt_bbox in gt_bboxes]
-                # # sample the same number of random bboxes as the number of gt bboxes
-                # rpn_uk_labels = [torch.full((gt_bbox.shape[0],), 1) for gt_bbox in gt_bboxes]
-                # trained_label = [torch.cat([rpn_gt_label, rpn_uk_label], dim=0).cuda() for rpn_gt_label, rpn_uk_label in zip(rpn_gt_labels, rpn_uk_labels)] 
                 rpn_losses, proposal_list = self.rpn_head.forward_train(
                     x,
                     img_metas,
