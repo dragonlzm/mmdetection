@@ -2812,8 +2812,8 @@ class GenerateCroppedPatches:
             all_bboxes = torch.cat([torch.from_numpy(bboxes), now_rand_bbox], dim=0)
             
             # pad the size of now_rand_bbox
-            if len(now_rand_bbox) < 100:
-                padded_len = 100 - len(now_rand_bbox)
+            if len(now_rand_bbox) < self.num_of_rand_bboxes * 2:
+                padded_len = self.num_of_rand_bboxes * 2 - len(now_rand_bbox)
                 padded_bboxes = torch.zeros([padded_len] + list(now_rand_bbox.shape[1:]))
                 now_rand_bbox = torch.cat([now_rand_bbox, padded_bboxes], dim=0)
             results['rand_bboxes'] = now_rand_bbox
@@ -2823,8 +2823,8 @@ class GenerateCroppedPatches:
         result = self.crop_img_to_patches(img, all_bboxes, temp_img_metas)
         
         # pad the result
-        if len(result) < 120:
-            padded_len = 120 - len(result)
+        if len(result) < self.num_of_rand_bboxes + 100:
+            padded_len = self.num_of_rand_bboxes + 100 - len(result)
             padded_results = torch.zeros([padded_len] + list(result.shape[1:]))
             result = torch.cat([result, padded_results], dim=0)
         
