@@ -62,6 +62,7 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
         self.test_cfg = test_cfg
         
         self.even_sample_uk = self.train_cfg.get('even_sample_uk', False) if self.train_cfg is not None else False
+        self.test_head_name = self.test_cfg.get('test_head_name', 'both') if self.test_cfg is not None else 'both'
 
     @property
     def with_rpn(self):
@@ -189,26 +190,6 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
                     gt_bboxes_ignore=gt_bboxes_ignore,
                     proposal_cfg=proposal_cfg,
                     **kwargs)
-                
-                # trained_bbox = gt_bboxes
-                # trained_label = [torch.full((gt_bbox.shape[0],), 0).cuda() for gt_bbox in gt_bboxes]
-                # rpn_losses, proposal_list = self.rpn_head.forward_train(
-                #     x,
-                #     img_metas,
-                #     trained_bbox,
-                #     gt_labels=trained_label,
-                #     gt_bboxes_ignore=gt_bboxes_ignore,
-                #     proposal_cfg=proposal_cfg,
-                #     **kwargs)
-                # rpn_losses, proposal_list = self.rpn_head.forward_train(
-                #     x,
-                #     img_metas,
-                #     gt_bboxes,
-                #     gt_labels=None,
-                #     gt_bboxes_ignore=gt_bboxes_ignore,
-                #     proposal_cfg=proposal_cfg,
-                #     **kwargs)
-                
             else:
                 rpn_losses, proposal_list = self.rpn_head.forward_train(
                     x,
@@ -282,7 +263,17 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
         assert self.with_bbox, 'Bbox head must be implemented.'
         x = self.extract_feat(img)
         if proposals is None:
-            proposal_list = self.rpn_head.simple_test_rpn(x, img_metas)
+            if self.with_unknow_rpn:
+                if self.test_head_name == 'both':
+                    proposal_list_1 = self.unknow_rpn.simple_test_rpn(x, img_metas)
+                    proposal_list_2 = self.rpn_head.simple_test_rpn(x, img_metas)
+                    proposal_list = [torch.cat([prop_1, prop_2], dim=0) for prop_1, prop_2 in zip(proposal_list_1, proposal_list_2)]
+                elif self.test_head_name == 'extra':
+                    proposal_list = self.unknow_rpn.simple_test_rpn(x, img_metas)
+                else:
+                    proposal_list = self.rpn_head.simple_test_rpn(x, img_metas)
+            else:
+                proposal_list = self.rpn_head.simple_test_rpn(x, img_metas)
         else:
             proposal_list = proposals
 
