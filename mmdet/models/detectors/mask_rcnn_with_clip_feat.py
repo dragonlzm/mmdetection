@@ -265,11 +265,11 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
         if proposals is None:
             if self.with_unknow_rpn:
                 if self.test_head_name == 'both':
-                    proposal_list_1 = self.unknow_rpn.simple_test_rpn(x, img_metas)
+                    proposal_list_1 = self.unknow_rpn_head.simple_test_rpn(x, img_metas)
                     proposal_list_2 = self.rpn_head.simple_test_rpn(x, img_metas)
                     proposal_list = [torch.cat([prop_1, prop_2], dim=0) for prop_1, prop_2 in zip(proposal_list_1, proposal_list_2)]
                 elif self.test_head_name == 'extra':
-                    proposal_list = self.unknow_rpn.simple_test_rpn(x, img_metas)
+                    proposal_list = self.unknow_rpn_head.simple_test_rpn(x, img_metas)
                 else:
                     proposal_list = self.rpn_head.simple_test_rpn(x, img_metas)
             else:
