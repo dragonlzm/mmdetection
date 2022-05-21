@@ -10,7 +10,7 @@ from mmcv.runner import force_fp32
 
 from ..builder import HEADS
 from .anchor_head import AnchorHead
-
+from mmdet.core import anchor_inside_flags, unmap
 
 @HEADS.register_module()
 class TriWayRPNHead(AnchorHead):
@@ -249,6 +249,112 @@ class TriWayRPNHead(AnchorHead):
             return proposals.new_zeros(0, 5)
 
         return dets[:cfg.max_per_img]
+
+    def _get_targets_single(self,
+                            flat_anchors,
+                            valid_flags,
+                            gt_bboxes,
+                            gt_bboxes_ignore,
+                            gt_labels,
+                            img_meta,
+                            label_channels=1,
+                            unmap_outputs=True):
+        """Compute regression and classification targets for anchors in a
+        single image.
+
+        Args:
+            flat_anchors (Tensor): Multi-level anchors of the image, which are
+                concatenated into a single tensor of shape (num_anchors ,4)
+            valid_flags (Tensor): Multi level valid flags of the image,
+                which are concatenated into a single tensor of
+                    shape (num_anchors,).
+            gt_bboxes (Tensor): Ground truth bboxes of the image,
+                shape (num_gts, 4).
+            gt_bboxes_ignore (Tensor): Ground truth bboxes to be
+                ignored, shape (num_ignored_gts, 4).
+            img_meta (dict): Meta info of the image.
+            gt_labels (Tensor): Ground truth labels of each box,
+                shape (num_gts,).
+            label_channels (int): Channel of label.
+            unmap_outputs (bool): Whether to map outputs back to the original
+                set of anchors.
+
+        Returns:
+            tuple:
+                labels_list (list[Tensor]): Labels of each level
+                label_weights_list (list[Tensor]): Label weights of each level
+                bbox_targets_list (list[Tensor]): BBox targets of each level
+                bbox_weights_list (list[Tensor]): BBox weights of each level
+                num_total_pos (int): Number of positive samples in all images
+                num_total_neg (int): Number of negative samples in all images
+        """
+        inside_flags = anchor_inside_flags(flat_anchors, valid_flags,
+                                           img_meta['img_shape'][:2],
+                                           self.train_cfg.allowed_border)
+        if not inside_flags.any():
+            return (None, ) * 7
+        # assign gt and sample anchors
+        anchors = flat_anchors[inside_flags, :]
+
+        assign_result = self.assigner.assign(
+            anchors, gt_bboxes, gt_bboxes_ignore,
+            None if self.sampling else gt_labels)
+        sampling_result = self.sampler.sample(assign_result, anchors,
+                                              gt_bboxes)
+
+        num_valid_anchors = anchors.shape[0]
+        bbox_targets = torch.zeros_like(anchors)
+        bbox_weights = torch.zeros_like(anchors)
+        labels = anchors.new_full((num_valid_anchors, ),
+                                  self.num_classes,
+                                  dtype=torch.long)
+        label_weights = anchors.new_zeros(num_valid_anchors, dtype=torch.float)
+
+        pos_inds = sampling_result.pos_inds
+        neg_inds = sampling_result.neg_inds
+        if len(pos_inds) > 0:
+            if not self.reg_decoded_bbox:
+                pos_bbox_targets = self.bbox_coder.encode(
+                    sampling_result.pos_bboxes, sampling_result.pos_gt_bboxes)
+            else:
+                pos_bbox_targets = sampling_result.pos_gt_bboxes
+            bbox_targets[pos_inds, :] = pos_bbox_targets
+            bbox_weights[pos_inds, :] = 1.0
+            if gt_labels is None:
+                # Only rpn gives gt_labels as None
+                # Foreground is the first class since v2.5.0
+                labels[pos_inds] = 0
+            else:
+                labels[pos_inds] = gt_labels[
+                    sampling_result.pos_assigned_gt_inds]
+            if self.train_cfg.pos_weight <= 0:
+                label_weights[pos_inds] = 1.0
+            else:
+                label_weights[pos_inds] = self.train_cfg.pos_weight
+        if len(neg_inds) > 0:
+            label_weights[neg_inds] = 1.0
+            
+        # if the label is assigned as 1 which is assigned as the uk category
+        # set the bbox weight as 0
+        uk_inds = (labels == 1)
+        bbox_weights[uk_inds, :] = 0.0
+        #print('zero number:', torch.sum((labels == 1)) + torch.sum((labels == 2)))
+        #print('zero number in bbox_weights:', torch.sum((bbox_weights == 0.0)))
+
+        # map up to original set of anchors
+        if unmap_outputs:
+            num_total_anchors = flat_anchors.size(0)
+            labels = unmap(
+                labels, num_total_anchors, inside_flags,
+                fill=self.num_classes)  # fill bg label
+            label_weights = unmap(label_weights, num_total_anchors,
+                                  inside_flags)
+            bbox_targets = unmap(bbox_targets, num_total_anchors, inside_flags)
+            bbox_weights = unmap(bbox_weights, num_total_anchors, inside_flags)
+
+        return (labels, label_weights, bbox_targets, bbox_weights, pos_inds,
+                neg_inds, sampling_result)
+
 
     def onnx_export(self, x, img_metas):
         """Test without augmentation.
