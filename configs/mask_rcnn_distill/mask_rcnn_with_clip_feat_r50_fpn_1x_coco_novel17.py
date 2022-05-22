@@ -18,17 +18,6 @@ model = dict(
                                        #load_path='/data/zhuoming/detection/embeddings/base_finetuned_17cates.pt')),
                                        #load_path='/data2/lwll/zhuoming/detection/embeddings/base_finetuned_17cates.pt')),
                                        load_path='data/embeddings/raw_17cates.pt')),
-        mask_head=dict(num_classes=17)),
-    test_cfg=dict(
-        #rpn=dict(
-        #    nms_pre=1000,
-        #    max_per_img=1000,
-        #    nms=dict(type='nms', iou_threshold=0.7),
-        #    min_bbox_size=0),
-        rcnn=dict(
-            score_thr=0.0,
-            nms=dict(type='nms', iou_threshold=0.5),
-            max_per_img=300,
-            mask_thr_binary=0.5)))
+        mask_head=dict(num_classes=17)))
 
 #evaluation = dict(interval=1, metric=['bbox', 'segm'])

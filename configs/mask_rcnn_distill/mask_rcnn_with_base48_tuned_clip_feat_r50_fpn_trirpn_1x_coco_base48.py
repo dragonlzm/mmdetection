@@ -5,7 +5,4 @@ model = dict(
     rpn_head=dict(
         type='TriWayRPNHead',
         loss_cls=dict(
-            type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0)),
-    train_cfg=dict(
-        rpn_proposal=dict(
-            score_thr=0.0)))
+            type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0)))
