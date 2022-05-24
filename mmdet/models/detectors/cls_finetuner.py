@@ -359,18 +359,21 @@ class ClsFinetuner(BaseDetector):
         img_metas = [img_metas]
         
         if self.generate_bbox_feat:
+            # obtain the gt file path
             gt_save_root = os.path.join(self.feat_save_path, 'gt')
             if not os.path.exists(gt_save_root):
                 os.makedirs(gt_save_root)
             file_name = img_metas[0]['ori_filename'].split('.')[0] + '.json'
             gt_file_path = os.path.join(gt_save_root, file_name)
             
+            # obtain the random file path
             random_save_root = os.path.join(self.feat_save_path, 'random')
             if not os.path.exists(random_save_root):
                 os.makedirs(random_save_root)
             file_name = img_metas[0]['ori_filename'].split('.')[0] + '.json'
             random_file_path = os.path.join(random_save_root, file_name)      
             
+            # if the file has been created, skip this image
             if os.path.exists(gt_file_path) and os.path.exists(random_file_path):
                 return [np.zeros((1,5))]
             
@@ -407,18 +410,6 @@ class ClsFinetuner(BaseDetector):
             file.close()
             
         elif self.test_with_rand_bboxes:
-            #all_bbox = []
-            #h, w, _ = img_metas[0]['img_shape']
-            #for ratio in self.random_bbox_ratio:
-            #    tl_x = ratio[0] * w
-            #    tl_y = ratio[1] * h
-            #    br_x = ratio[2] * w
-            #    br_y = ratio[3] * h
-            #    bbox = torch.tensor([[tl_x, tl_y, br_x, br_y]])
-            #    all_bbox.append(bbox)
-            #all_bbox = torch.cat(all_bbox, dim=0)
-            #x = self.extract_feat(img, [all_bbox], cropped_patches, img_metas=img_metas)
-            
             now_rand_bbox = self.generate_rand_bboxes(img_metas, self.num_of_rand_bboxes)
             x = self.extract_feat(img, [now_rand_bbox], cropped_patches, img_metas=img_metas)
         else:
