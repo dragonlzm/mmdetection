@@ -97,11 +97,13 @@ class ClsProposalGenerator(BaseDetector):
         self.nms_on_diff_scale = self.test_cfg.get('nms_on_diff_scale', False) if self.test_cfg is not None else False
 
         self.bbox_save_path_root = self.test_cfg.get('bbox_save_path_root', None) if self.test_cfg is not None else None
+        
+        self.least_conf_bbox = self.test_cfg.get('least_conf_bbox', False) if self.test_cfg is not None else False
 
         print('parameters:', 'anchor_generator["scales"]', anchor_generator['scales'], "anchor_generator['ratios']", anchor_generator['ratios'],
             "anchor_generator['strides']", anchor_generator['strides'], "self.paded_proposal_num", self.paded_proposal_num, "self.min_entropy", self.min_entropy,
             "self.nms_on_all_anchors", self.nms_on_all_anchors, "self.nms_threshold", self.nms_threshold,
-            'self.bbox_save_path_root', self.bbox_save_path_root)
+            'self.bbox_save_path_root', self.bbox_save_path_root, 'self.least_conf_bbox', self.least_conf_bbox)
 
     def crop_img_to_patches(self, imgs, gt_bboxes, img_metas):
         # handle the test config
@@ -381,6 +383,10 @@ class ClsProposalGenerator(BaseDetector):
                         #max_score_per_grid_val = max_score_per_grid[0]
                         #max_score_per_grid_idx = max_score_per_grid[1] 
 
+                    # find the min confidence proposal
+                    if self.least_conf_bbox:
+                        max_score_per_anchor = -max_score_per_anchor
+                    
                     result_proposal_per_img = []
                     for anchor in anchor_per_img:
                         anchor[0] = 0 if anchor[0] < 0 else anchor[0]

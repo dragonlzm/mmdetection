@@ -24,14 +24,14 @@ from PIL import Image
 #proposal_file_path = "C:\\Users\\Zhuoming Liu\\Desktop\\results_16_32_512_nms_on_all_07.patch_acc.json"
 #proposal_file_path = "C:\\Users\\Zhuoming Liu\\Desktop\\results_32_64_1024_nms07.patch_acc.json"
 #proposal_file_path = "C:\\Users\\Zhuoming Liu\\Desktop\\results_16_16_1024_nms07.patch_acc.json"
-proposal_file_path = "/data2/lwll/zhuoming/detection/test/cls_proposal_generator_coco/results_16_16_1024.patch_acc.json"
-
+#proposal_file_path = "/data/zhuoming/detection/test/cls_proposal_generator_coco/test_min_conf.patch_acc.json"
+proposal_file_path = "/data/zhuoming/detection/test/cls_proposal_generator_coco/test_min_conf_64_512.patch_acc.json"
 
 proposal_result = json.load(open(proposal_file_path))
 
 #gt_annotation_path = "C:\\Users\\XPS\\Desktop\\annotations\\instances_val2017.json"
 #gt_annotation_path = "C:\\Users\\Zhuoming Liu\\Desktop\\annotations\\instances_train2017.json"
-gt_annotation_path = "/data2/lwll/zhuoming/detection/coco/annotations/instances_train2017.json"
+gt_annotation_path = "/data/zhuoming/detection/coco/annotations/instances_train2017.json"
 gt_anno_result = json.load(open(gt_annotation_path))
 
 
@@ -81,7 +81,8 @@ all_img_info = {info['id']:info for info in gt_anno_result['images']}
 #save_root = 'C:\\Users\\Zhuoming Liu\\Desktop\\results_16_16_1024_nms07_novel\\'
 #save_root = 'C:\\Users\\Zhuoming Liu\\Desktop\\results_32_64_1024_nms07_novel\\'
 
-save_root = '/home/zhuoming/results_32_64_1024_nms_on_all_07_nms_over_scales/'
+#save_root = '/home/zhuoming/test_min_conf/'
+save_root = '/home/zhuoming/test_min_conf_64_512/'
 
 target_list = [526043, 124756, 186317, 256607, 546742, 87871, 397543, 555574, 30068, 89549, 260910, 299325]
 
@@ -107,11 +108,11 @@ for i, img_id in enumerate(from_img_id_to_pred):
     # Display the image
     ax.imshow(im)
 
-    #if img_id in from_img_id_to_gt:
-    #    for box in from_img_id_to_gt[img_id]:
-    #        #box = annotation['bbox']
-    #        rect = patches.Rectangle((box[0], box[1]),box[2],box[3],linewidth=1,edgecolor='g',facecolor='none')
-    #        ax.add_patch(rect)
+    if img_id in from_img_id_to_gt:
+       for box in from_img_id_to_gt[img_id]:
+           #box = annotation['bbox']
+           rect = patches.Rectangle((box[0], box[1]),box[2],box[3],linewidth=1,edgecolor='g',facecolor='none')
+           ax.add_patch(rect)
 
     for box in from_img_id_to_pred[img_id]:
         #box = annotation['bbox']
