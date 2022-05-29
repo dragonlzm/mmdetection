@@ -103,6 +103,7 @@ class ClsFinetuner(BaseDetector):
         self.feat_save_path = self.test_cfg.get('feat_save_path', None) if self.test_cfg is not None else None
         self.use_pregenerated_proposal = self.test_cfg.get('use_pregenerated_proposal', None) if self.test_cfg is not None else None
         self.iou_calculator = BboxOverlaps2D()
+        self.filter_low_iou_bboxes = self.test_cfg.get('filter_low_iou_bboxes', True) if self.test_cfg is not None else True
 
     def read_pregenerated_bbox(self, img_metas, gt_bboxes, num_of_rand_bboxes):
         file_name = os.path.join(self.use_pregenerated_proposal, '.'.join(img_metas[0]['ori_filename'].split('.')[:-1]) + '.json')
@@ -132,15 +133,12 @@ class ClsFinetuner(BaseDetector):
         #        all_iou_idx = iou_ind
         #    else:
         #        all_iou_idx = all_iou_idx & iou_ind
-        
-        real_iou = self.iou_calculator(gt_bboxes[0], pregenerated_bbox)
-        max_iou_per_proposal = torch.max(real_iou, dim=0)[0]
-        all_iou_idx = (max_iou_per_proposal < 0.3)
-        #remained_bbox_1 = pregenerated_bbox[all_iou_idx_1]
-        #print('remained_bbox_1', remained_bbox_1.shape)
-        
-        remained_bbox = pregenerated_bbox[all_iou_idx]
-        #print('remained_bbox', remained_bbox.shape)
+        if self.filter_low_iou_bboxes:
+            real_iou = self.iou_calculator(gt_bboxes[0], pregenerated_bbox)
+            max_iou_per_proposal = torch.max(real_iou, dim=0)[0]
+            all_iou_idx = (max_iou_per_proposal < 0.3)
+            
+            remained_bbox = pregenerated_bbox[all_iou_idx]
         
         # select the top 200 bboxes
         remained_bbox = remained_bbox[:num_of_rand_bboxes]
