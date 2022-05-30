@@ -36,6 +36,9 @@ class BaseRoIHead(BaseModule, metaclass=ABCMeta):
             self.init_extra_backbone(extra_backbone)
 
         self.init_assigner_sampler()
+        self.use_bg_pro_for_distill = self.train_cfg.get('use_bg_pro_for_distill', False) if self.train_cfg is not None else False
+        # whether to use clip bg proposal as negative sample
+        self.use_bg_pro_as_ns = self.train_cfg.get('use_bg_pro_as_ns', False) if self.train_cfg is not None else False
 
     @property
     def with_bbox(self):

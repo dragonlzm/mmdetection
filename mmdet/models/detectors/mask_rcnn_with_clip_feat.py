@@ -116,6 +116,8 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
                       gt_feats=None,
                       rand_bboxes=None,
                       rand_feats=None,
+                      bg_bboxes=None,
+                      bg_feats=None,
                       proposals=None,
                       **kwargs):
         """
@@ -157,7 +159,6 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
                                 for patches, gt_bbox in zip(gt_feats, gt_bboxes)]
         
         # concat the feat of gt and random
-        #print(type(gt_feats), type(rand_feats))
         distilled_feat = [torch.cat([gt_feat_per_img, rand_feat_per_img], dim=0)
                           for gt_feat_per_img, rand_feat_per_img in zip(gt_feats, rand_feats)]
 
@@ -231,9 +232,12 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
 
         roi_losses = self.roi_head.forward_train(x, img_metas, proposal_list,
                                                  gt_bboxes, gt_labels,
-                                                 gt_bboxes_ignore, gt_masks,
-                                                 distilled_feat, 
-                                                 rand_bboxes,
+                                                 gt_bboxes_ignore=gt_bboxes_ignore, 
+                                                 gt_masks=gt_masks,
+                                                 distilled_feat=distilled_feat, 
+                                                 rand_bboxes=rand_bboxes,
+                                                 bg_bboxes=bg_bboxes,
+                                                 bg_feats=bg_feats,
                                                  **kwargs)
         losses.update(roi_losses)
 

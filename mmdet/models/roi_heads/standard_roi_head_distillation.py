@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+from hashlib import new
 import torch
 import torch.nn as nn
 from mmdet.core import bbox2result, bbox2roi, build_assigner, build_sampler
@@ -67,6 +68,8 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                       gt_masks=None,
                       distilled_feat=None, 
                       rand_bboxes=None,
+                      bg_bboxes=None,
+                      bg_feats=None,
                       **kwargs):
         """
         Args:
@@ -84,6 +87,8 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                 boxes can be ignored when computing the loss.
             gt_masks (None | Tensor) : true segmentation masks for each box
                 used if the architecture supports a segmentation task.
+            distilled_feat （list[Tensor]）: only contain the feat for the gt bboxes
+                and the random bboxes
 
         Returns:
             dict[str, Tensor]: a dictionary of loss components
@@ -112,7 +117,9 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             bbox_results = self._bbox_forward_train(x, sampling_results,
                                                     gt_bboxes, gt_labels,
                                                     img_metas, distilled_feat,
-                                                    rand_bboxes)
+                                                    rand_bboxes, 
+                                                    bg_bboxes=bg_bboxes,
+                                                    bg_feats=bg_feats)
             losses.update(bbox_results['loss_bbox'])
             losses.update(bbox_results['distill_loss_value'])
 
@@ -151,7 +158,8 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             bbox_feats = self.shared_head(bbox_feats)
             gt_and_rand_bbox_feat = self.shared_head(gt_and_rand_bbox_feat)
         
-        cls_score, bbox_pred, _ = self.bbox_head(bbox_feats)
+        # if we use bg proposal, the cls_score will has the the length of samples + bg number
+        cls_score, bbox_pred, gt_and_bg_feats = self.bbox_head(bbox_feats)
         
         # obtain the feat for the distillation
         if distilled_feat != None and gt_rand_rois != None:
@@ -193,19 +201,55 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                 cls_score=cls_score, bbox_pred=bbox_pred, bbox_feats=bbox_feats)
         return bbox_results
 
-    def _bbox_forward_train(self, x, sampling_results, gt_bboxes, gt_labels,
-                            img_metas, distilled_feat, rand_bboxes):
+    def _bbox_forward_train(self, x, sampling_results, 
+                            gt_bboxes, gt_labels,
+                            img_metas, distilled_feat, 
+                            rand_bboxes,
+                            bg_bboxes=None,
+                            bg_feats=None):
         """Run forward function and calculate loss for box head in training."""
         
         # prepare the roi for the proposal
-        rois = bbox2roi([res.bboxes for res in sampling_results])
+        if self.use_bg_pro_as_ns:
+            rois = bbox2roi([torch.cat(res.bboxes, bg_bbox) for res, bg_bbox in zip(sampling_results, bg_bboxes)])
+        else:     
+            rois = bbox2roi([res.bboxes for res in sampling_results])
         # prepare the roi for the gt and the random bboxes
         gt_rand_rois = bbox2roi([torch.cat([gt_bbox, random_bbox], dim=0) for gt_bbox, random_bbox in zip(gt_bboxes, rand_bboxes)])
         
         bbox_results = self._bbox_forward(x, rois, distilled_feat, gt_rand_rois, gt_labels)
 
-        bbox_targets = self.bbox_head.get_targets(sampling_results, gt_bboxes,
+        
+        if self.use_bg_pro_as_ns:
+            bbox_targets = self.bbox_head.get_targets(sampling_results, gt_bboxes,
+                                                  gt_labels, self.train_cfg, concat=False)
+            
+            labels, label_weights, bbox_targets, bbox_weights = bbox_targets
+            # concat the labels, label_weights, bbox_targets, bbox_weights
+            # the labels should be bg label, label_weights should be the same as
+            # other label. bbox_weights should be zero
+            bg_labels = [torch.new_full((bg_bboxes[i].shape[0], ),
+                                     self.bbox_head.num_classes,
+                                     dtype=torch.long) for i in range(len(bg_bboxes))]
+            bg_label_weights = [torch.new_full((bg_bboxes[i].shape[0], ),
+                                     self.bbox_head.num_classes,
+                                     dtype=torch.long) for i in range(len(bg_bboxes))]
+            bg_bbox_targets = [torch.new_zeros(bg_bboxes[i].shape[0], 4) for i in range(len(bg_bboxes))]
+            bg_bbox_weights = [torch.new_zeros(bg_bboxes[i].shape[0], 4) for i in range(len(bg_bboxes))]
+            # concat inside first
+            labels = [torch.cat([label, bg_label], dim=0) for label, bg_label in zip(labels, bg_labels)]
+            label_weights = [torch.cat([label_weight, bg_label_weight], dim=0) for label_weight, bg_label_weight in zip(label_weights, bg_label_weights)]
+            bbox_targets = [torch.cat([bbox_target, bg_bbox_target], dim=0) for bbox_target, bg_bbox_target in zip(bbox_targets, bg_bbox_targets)]
+            bbox_weights = [torch.cat([bbox_weight, bg_bbox_weight], dim=0) for bbox_weight, bg_bbox_weight in zip(bbox_weights, bg_bbox_weights)]
+            # concat outside
+            labels = torch.cat(labels, 0)
+            label_weights = torch.cat(label_weights, 0)
+            bbox_targets = torch.cat(bbox_targets, 0)
+            bbox_weights = torch.cat(bbox_weights, 0)
+        else:
+            bbox_targets = self.bbox_head.get_targets(sampling_results, gt_bboxes,
                                                   gt_labels, self.train_cfg)
+            
         loss_bbox = self.bbox_head.loss(bbox_results['cls_score'],
                                         bbox_results['bbox_pred'], rois,
                                         *bbox_targets)
