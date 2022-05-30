@@ -159,8 +159,12 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
                                 for patches, gt_bbox in zip(gt_feats, gt_bboxes)]
         
         # concat the feat of gt and random
-        distilled_feat = [torch.cat([gt_feat_per_img, rand_feat_per_img], dim=0)
-                          for gt_feat_per_img, rand_feat_per_img in zip(gt_feats, rand_feats)]
+        if self.roi_head.use_bg_pro_for_distill:
+            distilled_feat = [torch.cat([gt_feat_per_img, rand_feat_per_img, bg_feat_per_img], dim=0)
+                            for gt_feat_per_img, rand_feat_per_img, bg_feat_per_img in zip(gt_feats, rand_feats, bg_feats)] 
+        else:
+            distilled_feat = [torch.cat([gt_feat_per_img, rand_feat_per_img], dim=0)
+                            for gt_feat_per_img, rand_feat_per_img in zip(gt_feats, rand_feats)]
 
         losses = dict()
 

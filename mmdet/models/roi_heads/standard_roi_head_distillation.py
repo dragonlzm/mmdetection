@@ -215,9 +215,12 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         else:     
             rois = bbox2roi([res.bboxes for res in sampling_results])
         # prepare the roi for the gt and the random bboxes
-        gt_rand_rois = bbox2roi([torch.cat([gt_bbox, random_bbox], dim=0) for gt_bbox, random_bbox in zip(gt_bboxes, rand_bboxes)])
+        if self.use_bg_pro_for_distill:
+            gt_rand_rois = bbox2roi([torch.cat([gt_bbox, random_bbox, bg_bbox], dim=0) for gt_bbox, random_bbox, bg_bbox in zip(gt_bboxes, rand_bboxes, bg_bboxes)])
+        else:   
+            gt_rand_rois = bbox2roi([torch.cat([gt_bbox, random_bbox], dim=0) for gt_bbox, random_bbox in zip(gt_bboxes, rand_bboxes)])
         
-        bbox_results = self._bbox_forward(x, rois, distilled_feat, gt_rand_rois, gt_labels)
+        bbox_results = self._bbox_forward(x, rois, distilled_feat, gt_rand_rois, gt_labels, bg_feats)
 
         
         if self.use_bg_pro_as_ns:
