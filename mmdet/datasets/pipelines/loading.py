@@ -732,3 +732,64 @@ class LoadCLIPFeat:
                     f"color_type='{self.color_type}', "
                     f'file_client_args={self.file_client_args})')
         return repr_str
+
+@PIPELINES.register_module()
+class LoadCLIPBGProposal:
+    """Load pred-trained feat.
+    """
+
+    def __init__(self,
+                 file_path_prefix=None,
+                 num_of_rand_bbox=20,
+                 select_fixed_subset=None):
+        self.file_path_prefix = file_path_prefix
+        # the path should like this
+        # /project/nevatia_174/zhuoming/detection/coco/clip_bg_proposal/32_64_512/random
+        self.num_of_rand_bbox = num_of_rand_bbox
+        self.select_fixed_subset = select_fixed_subset
+        #self.random_feat_prefix = osp.join(self.file_path_prefix, 'random')
+
+    def __call__(self, results):
+        '''load the pre-extracted CLIP feat'''
+        file_name = '.'.join(results['img_info']['filename'].split('.')[:-1]) + '.json'
+        
+        # load the random feat
+        bg_file_name = osp.join(self.file_path_prefix, file_name)
+        bg_file_content = json.load(open(bg_file_name))
+        
+        # obtain the random bbox
+        bg_feat = np.array(bg_file_content['feat']).astype(np.float32)
+        bg_bbox = np.array(bg_file_content['bbox']).astype(np.float32)
+        img_metas = bg_file_content['img_metas']
+        pre_extract_scale_factor = np.array(img_metas['scale_factor']).astype(np.float32)
+        now_scale_factor = results['scale_factor']
+        
+        # selecting the subset of the file
+        if self.select_fixed_subset != None:
+            bg_feat = bg_feat[:self.select_fixed_subset]
+            bg_bbox = bg_bbox[:self.select_fixed_subset]
+        if bg_bbox.shape[-1] == 5:
+            bg_bbox = bg_bbox[:, :4]
+        
+        # compare the scale factor and reshape the random bbox
+        if (np.round(pre_extract_scale_factor, 6) == np.round(now_scale_factor, 6)).all():
+            final_bg_bbox = bg_bbox
+        else:
+            final_bg_bbox = bg_bbox / pre_extract_scale_factor
+            final_bg_bbox = final_bg_bbox * now_scale_factor
+        
+        # filter the random bbox we need
+        random_choice = np.random.choice(bg_feat.shape[0], self.num_of_rand_bbox, replace=False)
+        final_bg_bbox = final_bg_bbox[random_choice]
+        final_bg_feat = bg_feat[random_choice]
+        results['bg_bboxes'] = torch.from_numpy(final_bg_bbox)
+        results['bg_feats'] = torch.from_numpy(final_bg_feat)
+        
+        return results
+
+    def __repr__(self):
+        repr_str = (f'{self.__class__.__name__}('
+                    f'to_float32={self.to_float32}, '
+                    f"color_type='{self.color_type}', "
+                    f'file_client_args={self.file_client_args})')
+        return repr_str
