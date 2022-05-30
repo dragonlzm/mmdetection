@@ -87,7 +87,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                 boxes can be ignored when computing the loss.
             gt_masks (None | Tensor) : true segmentation masks for each box
                 used if the architecture supports a segmentation task.
-            distilled_feat （list[Tensor]）: only contain the feat for the gt bboxes
+            distilled_feat (list[Tensor]): only contain the feat for the gt bboxes
                 and the random bboxes
 
         Returns:
@@ -221,10 +221,10 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
 
         
         if self.use_bg_pro_as_ns:
-            bbox_targets = self.bbox_head.get_targets(sampling_results, gt_bboxes,
+            bbox_targets_ori = self.bbox_head.get_targets(sampling_results, gt_bboxes,
                                                   gt_labels, self.train_cfg, concat=False)
             
-            labels, label_weights, bbox_targets, bbox_weights = bbox_targets
+            labels, label_weights, bbox_targets, bbox_weights = bbox_targets_ori
             # concat the labels, label_weights, bbox_targets, bbox_weights
             # the labels should be bg label, label_weights should be the same as
             # other label. bbox_weights should be zero
@@ -232,7 +232,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                                      self.bbox_head.num_classes,
                                      dtype=torch.long) for i in range(len(bg_bboxes))]
             bg_label_weights = [torch.new_full((bg_bboxes[i].shape[0], ),
-                                     self.bbox_head.num_classes,
+                                     1.0,
                                      dtype=torch.long) for i in range(len(bg_bboxes))]
             bg_bbox_targets = [torch.new_zeros(bg_bboxes[i].shape[0], 4) for i in range(len(bg_bboxes))]
             bg_bbox_weights = [torch.new_zeros(bg_bboxes[i].shape[0], 4) for i in range(len(bg_bboxes))]
@@ -246,6 +246,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             label_weights = torch.cat(label_weights, 0)
             bbox_targets = torch.cat(bbox_targets, 0)
             bbox_weights = torch.cat(bbox_weights, 0)
+            bbox_targets = (labels, label_weights, bbox_targets, bbox_weights)
         else:
             bbox_targets = self.bbox_head.get_targets(sampling_results, gt_bboxes,
                                                   gt_labels, self.train_cfg)
