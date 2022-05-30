@@ -221,7 +221,6 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             gt_rand_rois = bbox2roi([torch.cat([gt_bbox, random_bbox], dim=0) for gt_bbox, random_bbox in zip(gt_bboxes, rand_bboxes)])
         
         bbox_results = self._bbox_forward(x, rois, distilled_feat, gt_rand_rois, gt_labels, bg_feats)
-
         
         if self.use_bg_pro_as_ns:
             bbox_targets_ori = self.bbox_head.get_targets(sampling_results, gt_bboxes,
