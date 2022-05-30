@@ -39,7 +39,7 @@ class BaseRoIHead(BaseModule, metaclass=ABCMeta):
         self.use_bg_pro_for_distill = self.train_cfg.get('use_bg_pro_for_distill', False) if self.train_cfg is not None else False
         # whether to use clip bg proposal as negative sample
         self.use_bg_pro_as_ns = self.train_cfg.get('use_bg_pro_as_ns', False) if self.train_cfg is not None else False
-
+        print('self.use_bg_pro_as_ns', self.use_bg_pro_as_ns)
     @property
     def with_bbox(self):
         """bool: whether the RoI head contains a `bbox_head`"""
