@@ -211,7 +211,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         
         # prepare the roi for the proposal
         if self.use_bg_pro_as_ns:
-            rois = bbox2roi([torch.cat(res.bboxes, bg_bbox) for res, bg_bbox in zip(sampling_results, bg_bboxes)])
+            rois = bbox2roi([torch.cat([res.bboxes, bg_bbox]).cuda() for res, bg_bbox in zip(sampling_results, bg_bboxes)])
         else:     
             rois = bbox2roi([res.bboxes for res in sampling_results])
         # prepare the roi for the gt and the random bboxes
@@ -228,19 +228,19 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             # concat the labels, label_weights, bbox_targets, bbox_weights
             # the labels should be bg label, label_weights should be the same as
             # other label. bbox_weights should be zero
-            bg_labels = [torch.new_full((bg_bboxes[i].shape[0], ),
+            bg_labels = [torch.full((bg_bboxes[i].shape[0], ),
                                      self.bbox_head.num_classes,
-                                     dtype=torch.long) for i in range(len(bg_bboxes))]
-            bg_label_weights = [torch.new_full((bg_bboxes[i].shape[0], ),
+                                     dtype=torch.long).cuda() for i in range(len(bg_bboxes))]
+            bg_label_weights = [torch.full((bg_bboxes[i].shape[0], ),
                                      1.0,
-                                     dtype=torch.long) for i in range(len(bg_bboxes))]
-            bg_bbox_targets = [torch.new_zeros(bg_bboxes[i].shape[0], 4) for i in range(len(bg_bboxes))]
-            bg_bbox_weights = [torch.new_zeros(bg_bboxes[i].shape[0], 4) for i in range(len(bg_bboxes))]
+                                     dtype=torch.long).cuda() for i in range(len(bg_bboxes))]
+            bg_bbox_targets = [torch.zeros(bg_bboxes[i].shape[0], 4).cuda() for i in range(len(bg_bboxes))]
+            bg_bbox_weights = [torch.zeros(bg_bboxes[i].shape[0], 4).cuda() for i in range(len(bg_bboxes))]
             # concat inside first
-            labels = [torch.cat([label, bg_label], dim=0) for label, bg_label in zip(labels, bg_labels)]
-            label_weights = [torch.cat([label_weight, bg_label_weight], dim=0) for label_weight, bg_label_weight in zip(label_weights, bg_label_weights)]
-            bbox_targets = [torch.cat([bbox_target, bg_bbox_target], dim=0) for bbox_target, bg_bbox_target in zip(bbox_targets, bg_bbox_targets)]
-            bbox_weights = [torch.cat([bbox_weight, bg_bbox_weight], dim=0) for bbox_weight, bg_bbox_weight in zip(bbox_weights, bg_bbox_weights)]
+            labels = [torch.cat([label, bg_label], dim=0).cuda() for label, bg_label in zip(labels, bg_labels)]
+            label_weights = [torch.cat([label_weight, bg_label_weight], dim=0).cuda() for label_weight, bg_label_weight in zip(label_weights, bg_label_weights)]
+            bbox_targets = [torch.cat([bbox_target, bg_bbox_target], dim=0).cuda() for bbox_target, bg_bbox_target in zip(bbox_targets, bg_bbox_targets)]
+            bbox_weights = [torch.cat([bbox_weight, bg_bbox_weight], dim=0).cuda() for bbox_weight, bg_bbox_weight in zip(bbox_weights, bg_bbox_weights)]
             # concat outside
             labels = torch.cat(labels, 0)
             label_weights = torch.cat(label_weights, 0)
