@@ -40,7 +40,7 @@ model = dict(
         bbox_head=dict(num_classes=65,
                        fg_vec_cfg=dict(fixed_param=True, 
                                        #load_path='/data2/lwll/zhuoming/detection/embeddings/base_finetuned_48cates.pt',
-                                       load_path='data/embeddings/base_finetuned_65cates.pt')),
+                                       load_path='data/embeddings/base_finetuned_65cates_new.pt')),
         mask_head=dict(num_classes=65)))
 
 optimizer_config = dict(_delete_=True, grad_clip=dict(max_norm=10, norm_type=2))

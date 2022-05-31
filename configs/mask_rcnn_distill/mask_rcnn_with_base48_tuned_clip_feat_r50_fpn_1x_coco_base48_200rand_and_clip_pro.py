@@ -28,4 +28,4 @@ optimizer_config = dict(_delete_=True, grad_clip=dict(max_norm=10, norm_type=2))
 model = dict(
     roi_head=dict(
         bbox_head=dict(
-            fg_vec_cfg=dict(load_path='data/embeddings/base_finetuned_48cates.pt'))))
+            fg_vec_cfg=dict(load_path='data/embeddings/base_finetuned_48cates_new.pt'))))
