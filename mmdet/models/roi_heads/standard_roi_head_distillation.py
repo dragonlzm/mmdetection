@@ -234,7 +234,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                                      self.bbox_head.num_classes,
                                      dtype=torch.long).cuda() for i in range(len(bg_bboxes))]
             bg_label_weights = [torch.full((bg_bboxes[i].shape[0], ),
-                                     1.0,
+                                     self.bg_pro_as_ns_weight,
                                      dtype=torch.long).cuda() for i in range(len(bg_bboxes))]
             bg_bbox_targets = [torch.zeros(bg_bboxes[i].shape[0], 4).cuda() for i in range(len(bg_bboxes))]
             bg_bbox_weights = [torch.zeros(bg_bboxes[i].shape[0], 4).cuda() for i in range(len(bg_bboxes))]
