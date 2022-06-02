@@ -247,6 +247,7 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                  fg_vec_cfg=None,
                  clip_dim=512,
                  temperature=100,
+                 use_bg_vector=True,
                  filter_base_cate=None,
                  conv_cfg=None,
                  norm_cfg=None,
@@ -277,6 +278,7 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         self.clip_dim = clip_dim
         self._temperature = temperature
         self.filter_base_cate = filter_base_cate
+        self.use_bg_vector = use_bg_vector
 
         # add shared convs and fcs
         self.shared_convs, self.shared_fcs, last_layer_dim = \
@@ -308,11 +310,13 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                                             in_features=self.fc_out_channels,
                                             out_features=self.clip_dim)
             
-            self.fc_cls_bg = build_linear_layer(self.cls_predictor_cfg,
-                                            in_features=self.clip_dim,
-                                            out_features=1,
-                                            bias=False)
+            if self.use_bg_vector:
+                self.fc_cls_bg = build_linear_layer(self.cls_predictor_cfg,
+                                                in_features=self.clip_dim,
+                                                out_features=1,
+                                                bias=False)
             self.fc_cls = None
+            
             self.fc_cls_fg = build_linear_layer(self.cls_predictor_cfg,
                                             in_features=self.clip_dim,
                                             out_features=self.num_classes,
@@ -469,15 +473,17 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         # cosine similarity as logits
         #logit_scale = self.logit_scale.exp()
         fg_score = self.fc_cls_fg(x_cls)
-        bg_score = self.fc_cls_bg(x_cls)
+        if self.use_bg_vector:
+            bg_score = self.fc_cls_bg(x_cls)
+            cls_score = torch.cat([fg_score, bg_score], dim=-1)
+        else:
+            cls_score = fg_score
         
         # for testing
         if self.filter_base_cate != None:
             base_score = self.fc_cls_base(x_cls)
-            cls_score = torch.cat([fg_score, bg_score, base_score], dim=-1)
-        else:
-            cls_score = torch.cat([fg_score, bg_score], dim=-1)
-        cls_score *= self._temperature
+            cls_score = torch.cat([cls_score, base_score], dim=-1)
         
+        cls_score *= self._temperature
         bbox_pred = self.fc_reg(x_reg) if self.with_reg else None
         return cls_score, bbox_pred, x_cls

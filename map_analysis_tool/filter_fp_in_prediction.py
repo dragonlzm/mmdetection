@@ -95,6 +95,7 @@ for image_id in from_image_id_to_prediction:
                 info = {'image_id': image_id, 'bbox': pred_bbox.tolist(), 'score': 1.0, 'category_id': cate_id}
             all_final_prediction.append(info)
 
+# save the final result
 print(len(all_final_prediction))
 file = open('/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_gn_10_200clipproposal/filter_fp_prediction.json', 'w')
 file.write(json.dumps(all_final_prediction))
