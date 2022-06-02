@@ -430,15 +430,18 @@ class ClsFinetuner(BaseDetector):
             file.close()
             
             # generate the gt feat
-            x = self.extract_feat(img, gt_bboxes, cropped_patches, img_metas=img_metas)
-            # save the rand_bbox and the feat, img_metas
-            file = open(gt_file_path, 'w')
-            #print(type(gt_bboxes), type(gt_labels))
-            #print('gt', x[0].shape, gt_bboxes[0].shape, gt_labels[0].shape)
-            result_json = {'feat':x[0].cpu().tolist(), 'bbox':gt_bboxes[0].cpu().tolist(), 'gt_labels':gt_labels[0].cpu().tolist(), 'img_metas':my_img_meta}
-            #print('testing gt json', result_json)
-            file.write(json.dumps(result_json))
-            file.close()
+            if len(gt_bboxes) != 0:
+                x = self.extract_feat(img, gt_bboxes, cropped_patches, img_metas=img_metas)
+                # save the rand_bbox and the feat, img_metas
+                file = open(gt_file_path, 'w')
+                #print(type(gt_bboxes), type(gt_labels))
+                #print('gt', x[0].shape, gt_bboxes[0].shape, gt_labels[0].shape)
+                result_json = {'feat':x[0].cpu().tolist(), 'bbox':gt_bboxes[0].cpu().tolist(), 'gt_labels':gt_labels[0].cpu().tolist(), 'img_metas':my_img_meta}
+                #print('testing gt json', result_json)
+                file.write(json.dumps(result_json))
+                file.close()
+            else:
+                return [torch.zero(10, 4)]
             
         elif self.test_with_rand_bboxes:
             now_rand_bbox = self.generate_rand_bboxes(img_metas, self.num_of_rand_bboxes)
