@@ -104,6 +104,50 @@ class ClsFinetuner(BaseDetector):
         self.use_pregenerated_proposal = self.test_cfg.get('use_pregenerated_proposal', None) if self.test_cfg is not None else None
         self.iou_calculator = BboxOverlaps2D()
         self.filter_low_iou_bboxes = self.test_cfg.get('filter_low_iou_bboxes', True) if self.test_cfg is not None else True
+        self.use_base_novel_clip = self.test_cfg.get('use_base_novel_clip', None) if self.test_cfg is not None else None
+
+    def read_use_base_novel_clip(self, img_metas):
+        pregenerate_prop_path = os.path.join(self.use_base_novel_clip, '.'.join(img_metas[0]['ori_filename'].split('.')[:-1]) + '.json')
+        pregenerated_bbox = json.load(open(pregenerate_prop_path))
+        
+        # preprocessing of the clip proposal
+        clip_proposal = pregenerated_bbox['clip']
+        clip_proposal = torch.tensor(clip_proposal).cuda()
+
+        # filter the small bboxes
+        w_smaller_than_36 = (clip_proposal[:, 2] - clip_proposal[:, 0]) < 36
+        h_smaller_than_36 = (clip_proposal[:, 3] - clip_proposal[:, 1]) < 36
+        clip_proposal[w_smaller_than_36, 2] = clip_proposal[w_smaller_than_36, 0] + 36
+        clip_proposal[h_smaller_than_36, 3] = clip_proposal[h_smaller_than_36, 1] + 36
+        
+        # scale the bbox to the size of the image
+        clip_proposal[:, :4] *= clip_proposal.new_tensor(img_metas[0]['scale_factor'])
+        
+        if len(pregenerated_bbox['base']) > 0:
+            real_iou = self.iou_calculator(torch.tensor(pregenerated_bbox['base']).cuda(), clip_proposal)
+            max_iou_per_proposal = torch.max(real_iou, dim=0)[0]
+            all_iou_idx = (max_iou_per_proposal < 0.3)
+            remained_bbox = clip_proposal[all_iou_idx]
+        else:
+            remained_bbox = clip_proposal
+        
+        # select the top 400 bboxes
+        remained_bbox = remained_bbox[:400]
+        remained_bbox = remained_bbox[:, :4]
+
+        # scale the gt bboxes
+        all_gt_bboxes = pregenerated_bbox['base'] + pregenerated_bbox['novel']
+        if len(all_gt_bboxes) != 0:
+            all_gt_bboxes = torch.tensor(all_gt_bboxes).cuda()
+            all_gt_bboxes[:, :4] *= all_gt_bboxes.new_tensor(img_metas[0]['scale_factor'])
+        
+        # concat all bbox
+        if len(all_gt_bboxes) != 0:
+            all_bboxes = torch.cat([all_gt_bboxes, remained_bbox], dim=0)
+        else:
+            all_bboxes = remained_bbox
+        
+        return all_bboxes
 
     def read_pregenerated_bbox(self, img_metas, gt_bboxes, num_of_rand_bboxes):
         file_name = os.path.join(self.use_pregenerated_proposal, '.'.join(img_metas[0]['ori_filename'].split('.')[:-1]) + '.json')
@@ -120,19 +164,6 @@ class ClsFinetuner(BaseDetector):
         # scale the bbox to the size of the image
         pregenerated_bbox[:, :4] *= pregenerated_bbox.new_tensor(img_metas[0]['scale_factor'])
         
-        # filter the box with high iou with gt bbox
-        #all_iou_idx = None
-        #for bbox in gt_bboxes[0]:
-            # the gt_bbox here is xyxy format
-            # find the proposal 
-        #    real_iou = self.iou_calculator(bbox.unsqueeze(dim=0), pregenerated_bbox)
-            # all the bbox that has iou lower than 0.5 will become True
-        #    real_iou_ind = (real_iou < 0.3).view(-1)
-        #    iou_ind = real_iou_ind   
-        #    if all_iou_idx == None:
-        #        all_iou_idx = iou_ind
-        #    else:
-        #        all_iou_idx = all_iou_idx & iou_ind
         if self.filter_low_iou_bboxes:
             real_iou = self.iou_calculator(gt_bboxes[0], pregenerated_bbox)
             max_iou_per_proposal = torch.max(real_iou, dim=0)[0]
@@ -377,6 +408,8 @@ class ClsFinetuner(BaseDetector):
             
             if self.use_pregenerated_proposal != None:
                 now_rand_bbox = self.read_pregenerated_bbox(img_metas, gt_bboxes, self.num_of_rand_bboxes)
+            elif self.use_base_novel_clip != None:
+                now_rand_bbox = self.read_use_base_novel_clip(img_metas)
             else:
                 # generate the random feat
                 now_rand_bbox = self.generate_rand_bboxes(img_metas, self.num_of_rand_bboxes)

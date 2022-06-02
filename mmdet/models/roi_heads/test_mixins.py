@@ -6,13 +6,14 @@ import numpy as np
 import os
 import torch
 import json
-
+from mmdet.core.bbox.iou_calculators.iou2d_calculator import BboxOverlaps2D
 from mmdet.core import (bbox2roi, bbox_mapping, merge_aug_bboxes,
                         merge_aug_masks, multiclass_nms)
 
 if sys.version_info >= (3, 7):
     from mmdet.utils.contextmanagers import completed
 
+iou_calculator = BboxOverlaps2D()
 
 class BBoxTestMixin:
 
@@ -92,8 +93,8 @@ class BBoxTestMixin:
             # scale the bbox to the size of the image
             clip_proposal[:, :4] *= clip_proposal.new_tensor(img_metas[0]['scale_factor'])
             
-            if self.filter_low_iou_bboxes and len(pregenerated_bbox['base']) > 0:
-                real_iou = self.iou_calculator(torch.tensor(pregenerated_bbox['base']).cuda(), clip_proposal)
+            if len(pregenerated_bbox['base']) > 0:
+                real_iou = iou_calculator(torch.tensor(pregenerated_bbox['base']).cuda(), clip_proposal)
                 max_iou_per_proposal = torch.max(real_iou, dim=0)[0]
                 all_iou_idx = (max_iou_per_proposal < 0.3)
                 remained_bbox = clip_proposal[all_iou_idx]
@@ -102,11 +103,12 @@ class BBoxTestMixin:
             
             # select the top 400 bboxes
             remained_bbox = remained_bbox[:400]
+            remained_bbox = remained_bbox[:, :4]
 
             # scale the gt bboxes
             all_gt_bboxes = pregenerated_bbox['base'] + pregenerated_bbox['novel']
             if len(all_gt_bboxes) != 0:
-                all_gt_bboxes = torch.tensor(all_gt_bboxes)
+                all_gt_bboxes = torch.tensor(all_gt_bboxes).cuda()
                 all_gt_bboxes[:, :4] *= all_gt_bboxes.new_tensor(img_metas[0]['scale_factor'])
             
             # concat all bbox
@@ -114,8 +116,15 @@ class BBoxTestMixin:
                 all_bboxes = torch.cat([all_gt_bboxes, remained_bbox], dim=0)
             else:
                 all_bboxes = remained_bbox
+                
+            # pad to 1000
+            
+            if len(all_bboxes) < 1000:
+                padded_len = 1000 - len(all_bboxes)
+                padded_results = torch.zeros([padded_len] + list(all_bboxes.shape[1:])).cuda()
+                all_bboxes = torch.cat([all_bboxes, padded_results], dim=0)
 
-            rois = bbox2roi(all_bboxes)
+            rois = bbox2roi([all_bboxes])
         else:
             rois = bbox2roi(proposals)
 

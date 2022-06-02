@@ -169,7 +169,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             file_name = img_metas[0]['ori_filename'].split('.')[0] + '.json'
             random_file_path = os.path.join(self.save_the_feat, file_name)  
             file = open(random_file_path, 'w')
-            result_json = {'feat':gt_and_bg_feats[0].cpu().tolist()}
+            result_json = {'feat':gt_and_bg_feats.cpu().tolist()}
             #print('testing random json', result_json)
             file.write(json.dumps(result_json))
             file.close()
