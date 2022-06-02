@@ -3,7 +3,9 @@ import sys
 import warnings
 
 import numpy as np
+import os
 import torch
+import json
 
 from mmdet.core import (bbox2roi, bbox_mapping, merge_aug_bboxes,
                         merge_aug_masks, multiclass_nms)
@@ -73,8 +75,49 @@ class BBoxTestMixin:
                 in the second list is the labels with shape (num_boxes, ).
                 The length of both lists should be equal to batch_size.
         """
+        if self.use_pregenerated_proposal is not None:
+            pregenerate_prop_path = os.path.join(self.use_pregenerated_proposal, '.'.join(img_metas[0]['ori_filename'].split('.')[:-1]) + '.json')
+            pregenerated_bbox = json.load(open(pregenerate_prop_path))
+            
+            # preprocessing of the clip proposal
+            clip_proposal = pregenerated_bbox['clip']
+            clip_proposal = torch.tensor(clip_proposal).cuda()
 
-        rois = bbox2roi(proposals)
+            # filter the small bboxes
+            w_smaller_than_36 = (clip_proposal[:, 2] - clip_proposal[:, 0]) < 36
+            h_smaller_than_36 = (clip_proposal[:, 3] - clip_proposal[:, 1]) < 36
+            clip_proposal[w_smaller_than_36, 2] = clip_proposal[w_smaller_than_36, 0] + 36
+            clip_proposal[h_smaller_than_36, 3] = clip_proposal[h_smaller_than_36, 1] + 36
+            
+            # scale the bbox to the size of the image
+            clip_proposal[:, :4] *= clip_proposal.new_tensor(img_metas[0]['scale_factor'])
+            
+            if self.filter_low_iou_bboxes and len(pregenerated_bbox['base']) > 0:
+                real_iou = self.iou_calculator(torch.tensor(pregenerated_bbox['base']).cuda(), clip_proposal)
+                max_iou_per_proposal = torch.max(real_iou, dim=0)[0]
+                all_iou_idx = (max_iou_per_proposal < 0.3)
+                remained_bbox = clip_proposal[all_iou_idx]
+            else:
+                remained_bbox = clip_proposal
+            
+            # select the top 400 bboxes
+            remained_bbox = remained_bbox[:400]
+
+            # scale the gt bboxes
+            all_gt_bboxes = pregenerated_bbox['base'] + pregenerated_bbox['novel']
+            if len(all_gt_bboxes) != 0:
+                all_gt_bboxes = torch.tensor(all_gt_bboxes)
+                all_gt_bboxes[:, :4] *= all_gt_bboxes.new_tensor(img_metas[0]['scale_factor'])
+            
+            # concat all bbox
+            if len(all_gt_bboxes) != 0:
+                all_bboxes = torch.cat([all_gt_bboxes, remained_bbox], dim=0)
+            else:
+                all_bboxes = remained_bbox
+
+            rois = bbox2roi(all_bboxes)
+        else:
+            rois = bbox2roi(proposals)
 
         if rois.shape[0] == 0:
             batch_size = len(proposals)
@@ -90,6 +133,8 @@ class BBoxTestMixin:
         if type(self).__name__ == 'StandardRoIHeadCLIPCls': 
             kwargs['img_metas'] = img_metas
             bbox_results = self._bbox_forward(x, rois, **kwargs)
+        elif self.save_the_feat:
+            bbox_results = self._bbox_forward(x, rois, img_metas=img_metas)
         else:
             bbox_results = self._bbox_forward(x, rois)
         img_shapes = tuple(meta['img_shape'] for meta in img_metas)

@@ -40,6 +40,9 @@ class BaseRoIHead(BaseModule, metaclass=ABCMeta):
         # whether to use clip bg proposal as negative sample
         self.use_bg_pro_as_ns = self.train_cfg.get('use_bg_pro_as_ns', False) if self.train_cfg is not None else False
         self.bg_pro_as_ns_weight = self.train_cfg.get('bg_pro_as_ns_weight', 1.0) if self.train_cfg is not None else 1.0
+        # save the feat for classification
+        self.save_the_feat = self.test_cfg.get('save_the_feat', None) if self.train_cfg is not None else None
+        self.use_pregenerated_proposal = self.test_cfg.get('use_pregenerated_proposal', None) if self.train_cfg is not None else None
     @property
     def with_bbox(self):
         """bool: whether the RoI head contains a `bbox_head`"""

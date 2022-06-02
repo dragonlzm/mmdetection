@@ -6,6 +6,8 @@ from mmdet.core import bbox2result, bbox2roi, build_assigner, build_sampler
 from ..builder import HEADS, build_head, build_roi_extractor, build_loss
 from .base_roi_head import BaseRoIHead
 from .test_mixins import BBoxTestMixin, MaskTestMixin
+import os
+import json
 
 
 @HEADS.register_module()
@@ -132,7 +134,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
 
         return losses
 
-    def _bbox_forward(self, x, rois, distilled_feat=None, gt_rand_rois=None, gt_labels=None):
+    def _bbox_forward(self, x, rois, distilled_feat=None, gt_rand_rois=None, gt_labels=None, img_metas=None):
         """Box head forward function used in both training and testing."""  
         # is the number of feat map layer
         if distilled_feat != None and gt_rand_rois != None:
@@ -160,6 +162,17 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         
         # if we use bg proposal, the cls_score will has the the length of samples + bg number
         cls_score, bbox_pred, gt_and_bg_feats = self.bbox_head(bbox_feats)
+        # for save the classification feat
+        if self.save_the_feat is not None:
+            if not os.path.exists(self.save_the_feat):
+                os.makedirs(self.save_the_feat)
+            file_name = img_metas[0]['ori_filename'].split('.')[0] + '.json'
+            random_file_path = os.path.join(self.save_the_feat, file_name)  
+            file = open(random_file_path, 'w')
+            result_json = {'feat':gt_and_bg_feats[0].cpu().tolist()}
+            #print('testing random json', result_json)
+            file.write(json.dumps(result_json))
+            file.close()
         
         # obtain the feat for the distillation
         if distilled_feat != None and gt_rand_rois != None:
