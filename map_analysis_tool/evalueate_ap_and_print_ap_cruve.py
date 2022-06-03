@@ -46,12 +46,14 @@ CLASSES_65 = ('person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
 
 #file_path = '/data/zhuoming/detection/uk_rpn/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_trirpn_1x_coco_base48_no_sigmoid/novel_results.bbox.json'
 #file_path = '/data/zhuoming/detection/uk_rpn/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_trirpn_1x_coco_base48_no_sigmoid/base_results.bbox.json'
-file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_gn_10_200clipproposal/base_results_65cates.bbox.json'
+#file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_gn_10_200clipproposal/base_results_65cates.bbox.json'
 #file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_gn_10_200clipproposal/novel_results_65cates.bbox.json'
 #file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_gn_10_200clipproposal/novel_gt_result.json'
 #file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_gn_10_200clipproposal/fixed_label_prediction.json'
 #file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_gn_10_200clipproposal/filter_fp_prediction.json'
 #file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_gn_10_200clipproposal/add_fn_prediction.json'
+#file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_use_bg_pro_60/novel_results_65cates.bbox.json'
+file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_200clip_pro_sigmoid/novel_results_65cates.bbox.json'
 
 ann_file = '/data/zhuoming/detection/coco/annotations/instances_val2017_novel17.json'
 #ann_file = '/data/zhuoming/detection/coco/annotations/instances_val2017_base48.json'
