@@ -15,6 +15,8 @@ data = dict(
     val=dict(classes=classes),
     test=dict(classes=classes))
 
+optimizer_config = dict(_delete_=True, grad_clip=dict(max_norm=10, norm_type=2))
+
 # model settings
 model = dict(
     roi_head=dict(

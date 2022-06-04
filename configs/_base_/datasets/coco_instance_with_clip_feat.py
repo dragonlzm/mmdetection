@@ -11,7 +11,7 @@ train_pipeline = [
     #dict(type='LoadCLIPFeat', file_path_prefix='/data/zhuoming/detection/coco/feat/raw',
     #     num_of_rand_bbox=20),
     dict(type='LoadCLIPFeat', file_path_prefix='data/coco/feat/raw',
-         num_of_rand_bbox=100),
+         num_of_rand_bbox=100, select_fixed_subset=100),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='Pad', size_divisor=32),
     dict(type='DefaultFormatBundle'),
