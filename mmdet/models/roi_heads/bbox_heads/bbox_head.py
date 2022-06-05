@@ -57,6 +57,9 @@ class BBoxHead(BaseModule):
         self.bbox_coder = build_bbox_coder(bbox_coder)
         self.loss_cls = build_loss(loss_cls)
         self.loss_bbox = build_loss(loss_bbox)
+        
+        # add for use sigmoid loss
+        self.use_sigmoid_cls = loss_cls.get('use_sigmoid', False)
 
         in_channels = self.in_channels
         if self.with_avg_pool:
@@ -398,6 +401,16 @@ class BBoxHead(BaseModule):
             # for testing
             if hasattr(self, 'filter_base_cate') and self.filter_base_cate != None:
                 bboxes = bboxes[novel_bg_idx]
+            # add the empty bg prediction for the sigmoid_cls model
+            if self.use_sigmoid_cls:
+                # Add a dummy background class to the backend when using sigmoid
+                # remind that we set FG labels to [0, num_class-1] since mmdet v2.0
+                # BG cat_id: num_class
+                # the shape of score should be torch.Size([1000, 66])
+                num_pred, num_classes = scores.shape
+                padding = scores.new_zeros(num_pred, 1)
+                scores = torch.cat([scores, padding], dim=-1)  
+                
             det_bboxes, det_labels = multiclass_nms(bboxes, scores,
                                                     cfg.score_thr, cfg.nms,
                                                     cfg.max_per_img)

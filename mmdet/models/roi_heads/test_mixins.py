@@ -118,7 +118,6 @@ class BBoxTestMixin:
                 all_bboxes = remained_bbox
                 
             # pad to 1000
-            
             if len(all_bboxes) < 1000:
                 padded_len = 1000 - len(all_bboxes)
                 padded_results = torch.zeros([padded_len] + list(all_bboxes.shape[1:])).cuda()
