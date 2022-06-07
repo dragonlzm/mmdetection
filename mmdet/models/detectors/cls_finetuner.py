@@ -105,6 +105,7 @@ class ClsFinetuner(BaseDetector):
         self.iou_calculator = BboxOverlaps2D()
         self.filter_low_iou_bboxes = self.test_cfg.get('filter_low_iou_bboxes', True) if self.test_cfg is not None else True
         self.use_base_novel_clip = self.test_cfg.get('use_base_novel_clip', None) if self.test_cfg is not None else None
+        self.return_all_feats = self.test_cfg.get('return_all_feats', False) if self.test_cfg is not None else False
 
     def read_use_base_novel_clip(self, img_metas):
         pregenerate_prop_path = os.path.join(self.use_base_novel_clip, '.'.join(img_metas[0]['ori_filename'].split('.')[:-1]) + '.json')
@@ -325,7 +326,7 @@ class ClsFinetuner(BaseDetector):
         # the input of the vision transformer should be torch.Size([64, 3, 224, 224])
         result_list = []
         for patches in cropped_patches_list:
-            x = self.backbone(patches.cuda())
+            x = self.backbone(patches.cuda(), return_all_feats=self.return_all_feats)
             if self.with_neck:
                 x = self.neck(x)
             result_list.append(x)

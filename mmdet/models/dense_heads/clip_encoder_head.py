@@ -134,7 +134,8 @@ class ClipEncoderHead(AnchorFreeHead):
         self.test_with_attribute = test_with_attribute
         self.cate_attribute = cate_attribute
         self.return_test_score = return_test_score
-        self.test_with_rand_bboxes = self.test_cfg.get('test_with_rand_bboxes', False) if self.test_cfg is not None else False
+        self.test_with_rand_bboxes = self.test_cfg.get('test_with_rand_bboxes', False) if self.test_cfg is not None else False 
+        self.selected_need_feat = self.test_cfg.get('selected_need_feat', None) if self.test_cfg is not None else None 
 
         # create the layers
         self._init_layers()
@@ -428,8 +429,12 @@ class ClipEncoderHead(AnchorFreeHead):
                 The shape of the second tensor in the tuple is ``labels``
                 with shape (n,)
         """
-        #out list[tensor] tensor with shape [gt_per_img, channel]
+        # out list[tensor] tensor with shape [gt_per_img, channel]
         softmax = nn.Softmax(dim=1)
+
+        # select the needed feat
+        if feats[0].shape[1] != 1 and self.selected_need_feat is not None:
+            feats = [feat[:, self.selected_need_feat, :] for feat in feats]
 
         # forward of this head requires img_metas
         outs = self.forward(feats, img_metas)

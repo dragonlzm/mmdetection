@@ -245,19 +245,24 @@ class myVisionTransformer(BaseModule):
             #    print(para_name, param.requires_grad, param.shape)            
             print('backbone parameters are fixed, with ln open')
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor, return_all_feats=False):
         x = self.conv1(x)  # shape = [*, width, grid, grid]
         x = x.reshape(x.shape[0], x.shape[1], -1)  # shape = [*, width, grid ** 2]
         x = x.permute(0, 2, 1)  # shape = [*, grid ** 2, width]
-        x = torch.cat([self.class_embedding.to(x.dtype) + torch.zeros(x.shape[0], 1, x.shape[-1], dtype=x.dtype, device=x.device), x], dim=1)  # shape = [*, grid ** 2 + 1, width]
+        x = torch.cat([self.class_embedding.to(x.dtype) + 
+                       torch.zeros(x.shape[0], 1, x.shape[-1], dtype=x.dtype, device=x.device), x], dim=1)  # shape = [*, grid ** 2 + 1, width]
         x = x + self.positional_embedding.to(x.dtype)
         x = self.ln_pre(x)
 
         x = x.permute(1, 0, 2)  # NLD -> LND
         x = self.transformer(x)
         x = x.permute(1, 0, 2)  # LND -> NLD
-
-        x = self.ln_post(x[:, 0, :])
+        
+        # return the first feat or return all feats
+        if not return_all_feats:
+            x = self.ln_post(x[:, 0, :])
+        else:
+            x = self.ln_post(x)
 
         if self.proj is not None:
             x = x @ self.proj
