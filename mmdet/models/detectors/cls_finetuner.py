@@ -74,26 +74,6 @@ class ClsFinetuner(BaseDetector):
 
         # deal with test with random bbox
         self.test_with_rand_bboxes = self.test_cfg.get('test_with_rand_bboxes', False) if self.test_cfg is not None else False
-        #self.random_bbox_ratio = np.array([[0.03812099, 0.1246973 , 0.1567792 , 0.471805],
-        #                                    [0.07846305, 0.22583963, 0.26636887, 0.53013974],
-        #                                    [0.03403394, 0.19394968, 0.5586628 , 0.60602045],
-        #                                    [0.2912608 , 0.3863904 , 0.56289893, 0.6689288 ],
-        #                                    [0.3689884 , 0.5417925 , 0.6688337 , 0.9174508 ],
-        #                                    [0.09272877, 0.1583625 , 0.2519423 , 0.69672775],
-        #                                    [0.11482508, 0.14463812, 0.23085949, 0.2314202 ],
-        #                                    [0.1052089 , 0.20848957, 0.3131087 , 0.5212259 ],
-        #                                    [0.04902116, 0.12331651, 0.34464923, 0.83339787],
-        #                                    [0.09481055, 0.29099643, 0.52733064, 0.6294881 ],
-        #                                    [0.01094328, 0.17070575, 0.18592599, 0.3123052 ],
-        #                                    [0.0101631 , 0.05262033, 0.21019223, 0.50707436],
-        #                                    [0.05525111, 0.27284765, 0.37640604, 0.5716847 ],
-        #                                    [0.12920067, 0.34694892, 0.975627  , 1.        ],
-        #                                    [0.02174921, 0.09076384, 0.55178654, 0.69162697],
-        #                                    [0.01173266, 0.05343585, 0.18350743, 0.82870215],
-        #                                    [0.08867376, 0.11362713, 0.54698116, 0.6118346 ],
-        #                                    [0.00457672, 0.03498916, 0.15158056, 0.30793586],
-        #                                    [0.18690076, 0.44750714, 0.5645605 , 0.6233114 ],
-        #                                    [0.1466113 , 0.24437143, 0.41279247, 0.7994327 ]])
         self.num_of_rand_bboxes = self.test_cfg.get('num_of_rand_bboxes', 100) if self.test_cfg is not None else 100
         self.generate_bbox_feat = self.test_cfg.get('generate_bbox_feat', False) if self.test_cfg is not None else False
         if self.generate_bbox_feat:
@@ -106,6 +86,11 @@ class ClsFinetuner(BaseDetector):
         self.filter_low_iou_bboxes = self.test_cfg.get('filter_low_iou_bboxes', True) if self.test_cfg is not None else True
         self.use_base_novel_clip = self.test_cfg.get('use_base_novel_clip', None) if self.test_cfg is not None else None
         self.return_all_feats = self.test_cfg.get('return_all_feats', False) if self.test_cfg is not None else False
+        
+        # for with extra padding
+        self.crop_with_extra_patches = self.test_cfg.get('crop_with_extra_patches', False) if self.test_cfg is not None else False
+        self.target_patch_loca = self.test_cfg.get('target_patch_loca', 'center') if self.test_cfg is not None else 'center'
+        self.extra_patches_num = self.test_cfg.get('extra_patches_num', 3) if self.test_cfg is not None else 3
 
     def read_use_base_novel_clip(self, img_metas):
         pregenerate_prop_path = os.path.join(self.use_base_novel_clip, '.'.join(img_metas[0]['ori_filename'].split('.')[:-1]) + '.json')
@@ -203,6 +188,81 @@ class ClsFinetuner(BaseDetector):
         
         return now_rand_bbox
 
+    def default_zero_padding(self, now_patch):
+        # crop the GT bbox and place it in the center of the zero square
+        gt_h, gt_w, c = now_patch.shape
+        if gt_h != gt_w:
+            long_edge = max((gt_h, gt_w))
+            empty_patch = np.zeros((long_edge, long_edge, 3))
+            if gt_h > gt_w:
+                x_start = (long_edge - gt_w) // 2
+                x_end = x_start + gt_w
+                empty_patch[:, x_start: x_end] = now_patch
+            else:
+                y_start = (long_edge - gt_h) // 2
+                y_end = y_start + gt_h
+                empty_patch[y_start: y_end] = now_patch
+            now_patch = empty_patch
+        else:
+            now_patch = now_patch
+        return now_patch
+
+    def cropping_with_extra_patches(self, img, bbox, H, W):
+        # the original bbox location
+        tl_x, tl_y, br_x, br_y = bbox[0], bbox[1], bbox[2], bbox[3]
+        x = tl_x
+        y = tl_y
+        w = br_x - tl_x
+        h = br_y - tl_y
+
+        # the final format for the
+        x_start_pos = math.floor(max(x - (self.extra_patches_num-1)/2*w, 0))
+        y_start_pos = math.floor(max(y - (self.extra_patches_num-1)/2*h, 0))
+        x_end_pos = math.ceil(min(x + w + (self.extra_patches_num-1)/2*w, W-1))
+        y_end_pos = math.ceil(min(y + h + (self.extra_patches_num-1)/2*h, H-1))
+        valid_cropped_region = img[y_start_pos: y_end_pos, x_start_pos: x_end_pos, :]
+        
+        # map the region back to the empty patches
+        empty_patch = np.zeros((math.ceil(self.extra_patches_num * w), math.ceil(self.extra_patches_num * h), 3))
+        x_start_pos = math.floor(max(w-x, 0))
+        y_start_pos = math.floor(max(h-y, 0))
+        x_end_pos = x_start_pos + valid_cropped_region.shape[1]
+        y_end_pos = y_start_pos + valid_cropped_region.shape[0]
+        empty_patch[y_start_pos: y_end_pos, x_start_pos: x_end_pos, :] = valid_cropped_region
+        
+        return empty_patch        
+
+    def cropping_with_purturb(self, img, bbox, crop_size_modi_ratio, crop_loca_modi_ratio, H, W):
+        # the original bbox location
+        tl_x, tl_y, br_x, br_y = bbox[0], bbox[1], bbox[2], bbox[3]
+        x = tl_x
+        y = tl_y
+        w = br_x - tl_x
+        h = br_y - tl_y
+        # change the bbox location by changing the top left position
+        # bbox change direction
+        x_direction_sign = random.randint(-1,1)
+        y_direction_sign = random.randint(-1,1)
+        # bbox direction change ratio(the ration should be 1/2, 1/3, 1/4, 1/5)
+        # commonly we will mantain the size of the bbox unchange while changing
+        # the localization of the bbox
+        x_change_pixel = w * crop_loca_modi_ratio * x_direction_sign
+        y_change_pixel = h * crop_loca_modi_ratio * y_direction_sign
+
+        # change the bbox size ratio
+        x_change_for_size = ((crop_size_modi_ratio - 1) / 2) * w
+        y_change_for_size = ((crop_size_modi_ratio - 1) / 2) * h
+
+        # the final format for the
+        x_start_pos = math.floor(max(x-x_change_for_size+x_change_pixel , 0))
+        y_start_pos = math.floor(max(y-y_change_for_size+y_change_pixel, 0))
+        x_end_pos = math.ceil(min(x+x_change_for_size+w, W-1))
+        y_end_pos = math.ceil(min(y+y_change_for_size+h, H-1))
+
+        now_patch = img[y_start_pos: y_end_pos, x_start_pos: x_end_pos, :]
+        
+        return now_patch
+      
     def crop_img_to_patches(self, imgs, gt_bboxes, img_metas):
         # handle the test config
         if self.training: 
@@ -225,56 +285,27 @@ class ClsFinetuner(BaseDetector):
                 continue
             img = imgs[img_idx]
             result = []
-            for box_i, bbox in enumerate(all_gt_bboxes):
-                # the original bbox location
-                tl_x, tl_y, br_x, br_y = bbox[0], bbox[1], bbox[2], bbox[3]
-                x = tl_x
-                y = tl_y
-                w = br_x - tl_x
-                h = br_y - tl_y
-                # change the bbox location by changing the top left position
-                # bbox change direction
-                x_direction_sign = random.randint(-1,1)
-                y_direction_sign = random.randint(-1,1)
-                # bbox direction change ratio(the ration should be 1/2, 1/3, 1/4, 1/5)
-                # commonly we will mantain the size of the bbox unchange while changing
-                # the localization of the bbox
-                x_change_pixel = w * crop_loca_modi_ratio * x_direction_sign
-                y_change_pixel = h * crop_loca_modi_ratio * y_direction_sign
-
-                # change the bbox size ratio
-                x_change_for_size = ((crop_size_modi_ratio - 1) / 2) * w
-                y_change_for_size = ((crop_size_modi_ratio - 1) / 2) * h
-
-                # the final format for the
-                x_start_pos = math.floor(max(x-x_change_for_size+x_change_pixel , 0))
-                y_start_pos = math.floor(max(y-y_change_for_size+y_change_pixel, 0))
-                x_end_pos = math.ceil(min(x+x_change_for_size+w, W-1))
-                y_end_pos = math.ceil(min(y+y_change_for_size+h, H-1))
-
-                #x_start_pos = math.floor(max(x-0.1*w, 0))
-                #y_start_pos = math.floor(max(y-0.1*h, 0))
-                #x_end_pos = math.ceil(min(x+1.1*w, W-1))
-                #y_end_pos = math.ceil(min(y+1.1*h, H-1))
-
-                now_patch = img[y_start_pos: y_end_pos, x_start_pos: x_end_pos, :]           
-                # crop the GT bbox and place it in the center of the zero square
-                gt_h, gt_w, c = now_patch.shape
-                if gt_h != gt_w:
-                    long_edge = max((gt_h, gt_w))
-                    empty_patch = np.zeros((long_edge, long_edge, 3))
-                    if gt_h > gt_w:
-                        x_start = (long_edge - gt_w) // 2
-                        x_end = x_start + gt_w
-                        empty_patch[:, x_start: x_end] = now_patch
-                    else:
-                        y_start = (long_edge - gt_h) // 2
-                        y_end = y_start + gt_h
-                        empty_patch[y_start: y_end] = now_patch
-                    now_patch = empty_patch
+            for box_i, bbox in enumerate(all_gt_bboxes):      
+                # crop the image
+                if self.crop_with_extra_patches:
+                    now_patch = self.cropping_with_extra_patches(img, bbox, H, W)
+                else:
+                    now_patch = self.cropping_with_purturb(img, bbox, crop_size_modi_ratio, crop_loca_modi_ratio, H, W)
                 
-                #data = Image.fromarray(np.uint8(now_patch))
-                #data.save('/data2/lwll/zhuoming/detection/test/cls_finetuner_clip_base_100shots_train/patch_visualize/' + img_metas[img_idx]['ori_filename'] + '_' + str(box_i) + '.png')
+                # pad the patches
+                now_patch = self.default_zero_padding(now_patch)
+                       
+                # if not os.path.exists('/home/zhuoming/patch_visualize/'):
+                #     os.makedirs('/home/zhuoming/patch_visualize/')
+                # data = Image.fromarray(np.uint8(now_patch))
+                # data.save('/home/zhuoming/patch_visualize/' + img_metas[img_idx]['ori_filename'] + '_' + str(box_i) + '.png')
+                
+                # center_start_idx = np.array(now_patch.shape) // 7 * 3
+                # center_end_idx = np.array(now_patch.shape) // 7 * 4
+                # center_patches = now_patch[center_start_idx[0]:center_end_idx[0], center_start_idx[1]:center_end_idx[1], :]
+                # data = Image.fromarray(np.uint8(center_patches))
+                # data.save('/home/zhuoming/patch_visualize/' + img_metas[img_idx]['ori_filename'] + '_' + str(box_i) + '_center' + '.png')
+                
                 #new_patch, w_scale, h_scale = mmcv.imresize(now_patch, (224, 224), return_scale=True)
                 # convert the numpy to PIL image
                 PIL_image = Image.fromarray(np.uint8(now_patch))

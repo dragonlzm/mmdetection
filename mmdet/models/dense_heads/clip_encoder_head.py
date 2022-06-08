@@ -433,8 +433,10 @@ class ClipEncoderHead(AnchorFreeHead):
         softmax = nn.Softmax(dim=1)
 
         # select the needed feat
-        if feats[0].shape[1] != 1 and self.selected_need_feat is not None:
+        if len(feats[0].shape) > 2 and self.selected_need_feat is not None:
             feats = [feat[:, self.selected_need_feat, :] for feat in feats]
+            if feats[0].shape[1] == 1:
+                feats = [feat.squeeze(dim=1) for feat in feats]
 
         # forward of this head requires img_metas
         outs = self.forward(feats, img_metas)
