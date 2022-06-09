@@ -207,6 +207,23 @@ class ClsFinetuner(BaseDetector):
             now_patch = now_patch
         return now_patch
 
+    def pad_on_specific_side(self, now_patch):
+        gt_h, gt_w, c = now_patch.shape
+        # implement zero padding at the top left side
+        if gt_h != gt_w:
+            long_edge = max((gt_h, gt_w))
+            empty_patch = np.zeros((long_edge, long_edge, 3))
+            if gt_h > gt_w:
+                x_start = long_edge - gt_w
+                empty_patch[:, x_start:] = now_patch
+            else:
+                y_start = long_edge - gt_h
+                empty_patch[y_start:] = now_patch
+            now_patch = empty_patch
+        else:
+            now_patch = now_patch
+        return now_patch
+        
     def cropping_with_extra_patches(self, img, bbox, H, W):
         # the original bbox location
         tl_x, tl_y, br_x, br_y = bbox[0], bbox[1], bbox[2], bbox[3]
@@ -215,19 +232,35 @@ class ClsFinetuner(BaseDetector):
         w = br_x - tl_x
         h = br_y - tl_y
 
-        # the final format for the
-        x_start_pos = math.floor(max(x - (self.extra_patches_num-1)/2*w, 0))
-        y_start_pos = math.floor(max(y - (self.extra_patches_num-1)/2*h, 0))
-        x_end_pos = math.ceil(min(x + w + (self.extra_patches_num-1)/2*w, W-1))
-        y_end_pos = math.ceil(min(y + h + (self.extra_patches_num-1)/2*h, H-1))
-        valid_cropped_region = img[y_start_pos: y_end_pos, x_start_pos: x_end_pos, :]
-        
-        # map the region back to the empty patches
-        empty_patch = np.zeros((math.ceil(self.extra_patches_num * w), math.ceil(self.extra_patches_num * h), 3))
-        x_start_pos = math.floor(max(w-x, 0))
-        y_start_pos = math.floor(max(h-y, 0))
-        x_end_pos = x_start_pos + valid_cropped_region.shape[1]
-        y_end_pos = y_start_pos + valid_cropped_region.shape[0]
+        empty_patch = np.zeros((self.extra_patches_num * math.ceil(h) + 1, self.extra_patches_num * math.ceil(w) + 1, 3))
+        if self.target_patch_loca == 'center':
+            # for the target patch at the center
+            x_start_pos = math.floor(max(x - (self.extra_patches_num-1)/2*w, 0))
+            y_start_pos = math.floor(max(y - (self.extra_patches_num-1)/2*h, 0))
+            x_end_pos = math.ceil(min(x + w + (self.extra_patches_num-1)/2*w, W-1))
+            y_end_pos = math.ceil(min(y + h + (self.extra_patches_num-1)/2*h, H-1))
+            valid_cropped_region = img[y_start_pos: y_end_pos, x_start_pos: x_end_pos, :]
+            
+            # map the region back to the empty patches
+            x_start_pos = math.floor(max(w-x, 0))
+            y_start_pos = math.floor(max(h-y, 0))
+            x_end_pos = x_start_pos + valid_cropped_region.shape[1]
+            y_end_pos = y_start_pos + valid_cropped_region.shape[0]
+            
+        elif self.target_patch_loca == 'br':
+            # for the target patch at br
+            x_start_pos = math.floor(max(x - (self.extra_patches_num-1)*w, 0))
+            y_start_pos = math.floor(max(y - (self.extra_patches_num-1)*h, 0))
+            x_end_pos = math.ceil(min(x + w, W-1))
+            y_end_pos = math.ceil(min(y + h, H-1))
+            valid_cropped_region = img[y_start_pos: y_end_pos, x_start_pos: x_end_pos, :]
+            
+            # map the region back to the empty patches
+            x_start_pos = math.floor(max((self.extra_patches_num-1)*w-x, 0))
+            y_start_pos = math.floor(max((self.extra_patches_num-1)*h-y, 0))
+            x_end_pos = x_start_pos + valid_cropped_region.shape[1]
+            y_end_pos = y_start_pos + valid_cropped_region.shape[0]
+            
         empty_patch[y_start_pos: y_end_pos, x_start_pos: x_end_pos, :] = valid_cropped_region
         
         return empty_patch        
@@ -293,18 +326,21 @@ class ClsFinetuner(BaseDetector):
                     now_patch = self.cropping_with_purturb(img, bbox, crop_size_modi_ratio, crop_loca_modi_ratio, H, W)
                 
                 # pad the patches
-                now_patch = self.default_zero_padding(now_patch)
+                if self.target_patch_loca == 'br':
+                    now_patch = self.pad_on_specific_side(now_patch)
+                else:
+                    now_patch = self.default_zero_padding(now_patch)
                        
-                # if not os.path.exists('/home/zhuoming/patch_visualize/'):
-                #     os.makedirs('/home/zhuoming/patch_visualize/')
-                # data = Image.fromarray(np.uint8(now_patch))
-                # data.save('/home/zhuoming/patch_visualize/' + img_metas[img_idx]['ori_filename'] + '_' + str(box_i) + '.png')
+                if not os.path.exists('/home/zhuoming/br_3patch_visualize/'):
+                    os.makedirs('/home/zhuoming/br_3patch_visualize/')
+                data = Image.fromarray(np.uint8(now_patch))
+                data.save('/home/zhuoming/br_3patch_visualize/' + img_metas[img_idx]['ori_filename'] + '_' + str(box_i) + '.png')
                 
-                # center_start_idx = np.array(now_patch.shape) // 7 * 3
-                # center_end_idx = np.array(now_patch.shape) // 7 * 4
-                # center_patches = now_patch[center_start_idx[0]:center_end_idx[0], center_start_idx[1]:center_end_idx[1], :]
-                # data = Image.fromarray(np.uint8(center_patches))
-                # data.save('/home/zhuoming/patch_visualize/' + img_metas[img_idx]['ori_filename'] + '_' + str(box_i) + '_center' + '.png')
+                center_start_idx = np.array(now_patch.shape) // 7 * 6
+                center_end_idx = np.array(now_patch.shape)
+                center_patches = now_patch[center_start_idx[0]:center_end_idx[0], center_start_idx[1]:center_end_idx[1], :]
+                data = Image.fromarray(np.uint8(center_patches))
+                data.save('/home/zhuoming/br_3patch_visualize/' + img_metas[img_idx]['ori_filename'] + '_' + str(box_i) + '_br' + '.png')
                 
                 #new_patch, w_scale, h_scale = mmcv.imresize(now_patch, (224, 224), return_scale=True)
                 # convert the numpy to PIL image

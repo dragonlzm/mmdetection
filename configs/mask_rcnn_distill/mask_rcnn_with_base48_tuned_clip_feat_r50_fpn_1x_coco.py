@@ -27,4 +27,4 @@ data = dict(
 model = dict(
     roi_head=dict(
         bbox_head=dict(
-            fg_vec_cfg=dict(load_path='data/embeddings/base_finetuned_80cates_new.pt'))))
+            fg_vec_cfg=dict(load_path='data/embeddings/base_finetuned_80cates.pt'))))
