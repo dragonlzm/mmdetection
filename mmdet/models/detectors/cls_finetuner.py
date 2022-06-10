@@ -98,28 +98,31 @@ class ClsFinetuner(BaseDetector):
         
         # preprocessing of the clip proposal
         clip_proposal = pregenerated_bbox['clip']
-        clip_proposal = torch.tensor(clip_proposal).cuda()
+        if len(clip_proposal) == 0:
+            clip_proposal = torch.tensor(clip_proposal).cuda()
 
-        # filter the small bboxes
-        w_smaller_than_36 = (clip_proposal[:, 2] - clip_proposal[:, 0]) < 36
-        h_smaller_than_36 = (clip_proposal[:, 3] - clip_proposal[:, 1]) < 36
-        clip_proposal[w_smaller_than_36, 2] = clip_proposal[w_smaller_than_36, 0] + 36
-        clip_proposal[h_smaller_than_36, 3] = clip_proposal[h_smaller_than_36, 1] + 36
-        
-        # scale the bbox to the size of the image
-        clip_proposal[:, :4] *= clip_proposal.new_tensor(img_metas[0]['scale_factor'])
-        
-        if len(pregenerated_bbox['base']) > 0:
-            real_iou = self.iou_calculator(torch.tensor(pregenerated_bbox['base']).cuda(), clip_proposal)
-            max_iou_per_proposal = torch.max(real_iou, dim=0)[0]
-            all_iou_idx = (max_iou_per_proposal < 0.3)
-            remained_bbox = clip_proposal[all_iou_idx]
+            # filter the small bboxes
+            w_smaller_than_36 = (clip_proposal[:, 2] - clip_proposal[:, 0]) < 36
+            h_smaller_than_36 = (clip_proposal[:, 3] - clip_proposal[:, 1]) < 36
+            clip_proposal[w_smaller_than_36, 2] = clip_proposal[w_smaller_than_36, 0] + 36
+            clip_proposal[h_smaller_than_36, 3] = clip_proposal[h_smaller_than_36, 1] + 36
+            
+            # scale the bbox to the size of the image
+            clip_proposal[:, :4] *= clip_proposal.new_tensor(img_metas[0]['scale_factor'])
+            
+            if len(pregenerated_bbox['base']) > 0:
+                real_iou = self.iou_calculator(torch.tensor(pregenerated_bbox['base']).cuda(), clip_proposal)
+                max_iou_per_proposal = torch.max(real_iou, dim=0)[0]
+                all_iou_idx = (max_iou_per_proposal < 0.3)
+                remained_bbox = clip_proposal[all_iou_idx]
+            else:
+                remained_bbox = clip_proposal
+            
+            # select the top 400 bboxes
+            remained_bbox = remained_bbox[:400]
+            remained_bbox = remained_bbox[:, :4]
         else:
-            remained_bbox = clip_proposal
-        
-        # select the top 400 bboxes
-        remained_bbox = remained_bbox[:400]
-        remained_bbox = remained_bbox[:, :4]
+            remained_bbox = torch.zeros(1,4)
 
         # scale the gt bboxes
         all_gt_bboxes = pregenerated_bbox['base'] + pregenerated_bbox['novel']
@@ -331,16 +334,16 @@ class ClsFinetuner(BaseDetector):
                 else:
                     now_patch = self.default_zero_padding(now_patch)
                        
-                if not os.path.exists('/home/zhuoming/br_3patch_visualize/'):
-                    os.makedirs('/home/zhuoming/br_3patch_visualize/')
-                data = Image.fromarray(np.uint8(now_patch))
-                data.save('/home/zhuoming/br_3patch_visualize/' + img_metas[img_idx]['ori_filename'] + '_' + str(box_i) + '.png')
+                # if not os.path.exists('/home/zhuoming/br_5patch_visualize/'):
+                #     os.makedirs('/home/zhuoming/br_5patch_visualize/')
+                # data = Image.fromarray(np.uint8(now_patch))
+                # data.save('/home/zhuoming/br_5patch_visualize/' + img_metas[img_idx]['ori_filename'] + '_' + str(box_i) + '.png')
                 
-                center_start_idx = np.array(now_patch.shape) // 7 * 6
-                center_end_idx = np.array(now_patch.shape)
-                center_patches = now_patch[center_start_idx[0]:center_end_idx[0], center_start_idx[1]:center_end_idx[1], :]
-                data = Image.fromarray(np.uint8(center_patches))
-                data.save('/home/zhuoming/br_3patch_visualize/' + img_metas[img_idx]['ori_filename'] + '_' + str(box_i) + '_br' + '.png')
+                # center_start_idx = np.array(now_patch.shape) // 7 * 6
+                # center_end_idx = np.array(now_patch.shape)
+                # center_patches = now_patch[center_start_idx[0]:center_end_idx[0], center_start_idx[1]:center_end_idx[1], :]
+                # data = Image.fromarray(np.uint8(center_patches))
+                # data.save('/home/zhuoming/br_5patch_visualize/' + img_metas[img_idx]['ori_filename'] + '_' + str(box_i) + '_br' + '.png')
                 
                 #new_patch, w_scale, h_scale = mmcv.imresize(now_patch, (224, 224), return_scale=True)
                 # convert the numpy to PIL image
