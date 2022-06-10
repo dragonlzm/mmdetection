@@ -106,7 +106,7 @@ class BBoxTestMixin:
                 remained_bbox = remained_bbox[:400]
                 remained_bbox = remained_bbox[:, :4]
             else:
-                remained_bbox = torch.zeros(1,4)
+                remained_bbox = torch.zeros(1,4).cuda()
 
             # scale the gt bboxes
             all_gt_bboxes = pregenerated_bbox['base'] + pregenerated_bbox['novel']
