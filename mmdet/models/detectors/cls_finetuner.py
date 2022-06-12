@@ -98,7 +98,7 @@ class ClsFinetuner(BaseDetector):
         
         # preprocessing of the clip proposal
         clip_proposal = pregenerated_bbox['clip']
-        if len(clip_proposal) == 0:
+        if len(clip_proposal) != 0:
             clip_proposal = torch.tensor(clip_proposal).cuda()
 
             # filter the small bboxes
@@ -122,7 +122,7 @@ class ClsFinetuner(BaseDetector):
             remained_bbox = remained_bbox[:400]
             remained_bbox = remained_bbox[:, :4]
         else:
-            remained_bbox = torch.zeros(1,4).cuda()
+            remained_bbox = torch.tensor([[1.0,2.0,3.0,4.0]]).cuda()
 
         # scale the gt bboxes
         all_gt_bboxes = pregenerated_bbox['base'] + pregenerated_bbox['novel']
@@ -507,12 +507,12 @@ class ClsFinetuner(BaseDetector):
                 file = open(gt_file_path, 'w')
                 #print(type(gt_bboxes), type(gt_labels))
                 #print('gt', x[0].shape, gt_bboxes[0].shape, gt_labels[0].shape)
-                result_json = {'feat':x[0].cpu().tolist(), 'bbox':gt_bboxes[0].cpu().tolist(), 'gt_labels':gt_labels[0].cpu().tolist(), 'img_metas':my_img_meta}
+                result_json = {'feat':x[0].cpu().tolist() if len(x)!=0 else [], 'bbox':gt_bboxes[0].cpu().tolist() if len(gt_bboxes)!=0 else [], 'gt_labels':gt_labels[0].cpu().tolist() if len(gt_labels)!=0 else [], 'img_metas':my_img_meta}
                 #print('testing gt json', result_json)
                 file.write(json.dumps(result_json))
                 file.close()
             else:
-                return [torch.zero(10, 4)]
+                return [torch.zeros(10, 4)]
             
         elif self.test_with_rand_bboxes:
             now_rand_bbox = self.generate_rand_bboxes(img_metas, self.num_of_rand_bboxes)
@@ -523,6 +523,8 @@ class ClsFinetuner(BaseDetector):
         if torch.onnx.is_in_onnx_export():
             img_shape = torch._shape_as_tensor(img)[2:]
             img_metas[0]['img_shape_for_onnx'] = img_shape
+        if len(x) == 0:
+            return [torch.zeros(10, 4)]
         proposal_list = self.rpn_head.simple_test_bboxes(x, gt_labels, img_metas, gt_bboxes)
         #if rescale:
         #    for proposals, meta in zip(proposal_list, img_metas):

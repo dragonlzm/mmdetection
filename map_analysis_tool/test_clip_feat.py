@@ -6,12 +6,18 @@ import torch
 
 # load the original bbox
 bbox_path_root = '/home/zhuoming/base_novel_clippro'
-bbox_files = [f for f in os.listdir(bbox_path_root) if os.path.isfile(os.path.join(bbox_path_root, f))]
+
 
 # the path for clip feat
-#clip_feat_root = '/home/zhuoming/clip_feat/random'
-#mask_rcnn_feat_root = '/home/zhuoming/mask_rcnn_feat'
-mask_rcnn_feat_root = '/home/zhuoming/mask_rcnn_feat_2x'
+#root = '/home/zhuoming/clip_feat/random'
+#feat_root = '/home/zhuoming/mask_rcnn_feat'
+#feat_root = '/home/zhuoming/mask_rcnn_feat_2x'
+
+#feat_root = '/home/zhuoming/clip_feat_all/random'
+#feat_root = '/home/zhuoming/mask_rcnn_feat_all'
+feat_root = '/home/zhuoming/mask_rcnn_feat_2x_all'
+
+all_files = [f for f in os.listdir(feat_root) if os.path.isfile(os.path.join(feat_root, f))]
 
 # load the embedding
 base_embeddings = torch.load('/data/zhuoming/detection/embeddings/base_finetuned_48cates.pt')
@@ -46,10 +52,9 @@ all_base_match_num = 0
 all_novel_num = 0
 all_novel_match_num = 0
 
-for file in bbox_files:
+for i, file in enumerate(all_files):
     bbox_file_content = json.load(open(os.path.join(bbox_path_root, file)))
-    #clip_feat = torch.tensor(json.load(open(os.path.join(clip_feat_root, file)))['feat'])
-    clip_feat = torch.tensor(json.load(open(os.path.join(mask_rcnn_feat_root, file)))['feat'])
+    clip_feat = torch.tensor(json.load(open(os.path.join(feat_root, file)))['feat'])
     # seperate the novel and the base 
     base_bbox_num = len(bbox_file_content['base'])
     novel_bbox_num = len(bbox_file_content['novel'])
@@ -81,5 +86,7 @@ for file in bbox_files:
         all_novel_cate_idx = torch.tensor([from_name_to_idx_novel[from_cate_id_to_cate_name[id]] for id in all_novel_cate_id])
         
         all_novel_match_num += ((all_novel_cate_idx == max_idx).sum())
+    if i % 100 == 0:
+        print(i)
         
 print(all_base_match_num / all_base_num, all_novel_match_num / all_novel_num)

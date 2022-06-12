@@ -125,8 +125,8 @@ class BBoxTestMixin:
                 padded_len = 1000 - len(all_bboxes)
                 padded_results = torch.zeros([padded_len] + list(all_bboxes.shape[1:])).cuda()
                 all_bboxes = torch.cat([all_bboxes, padded_results], dim=0)
-
-            rois = bbox2roi([all_bboxes])
+                proposals = [all_bboxes]
+            rois = bbox2roi(proposals)
         else:
             rois = bbox2roi(proposals)
 

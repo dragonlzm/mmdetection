@@ -5,12 +5,13 @@ import torch
 
 # load the original bbox
 bbox_path_root = '/home/zhuoming/base_novel_clippro'
-bbox_files = [f for f in os.listdir(bbox_path_root) if os.path.isfile(os.path.join(bbox_path_root, f))]
 
 # the path for mask rcnn feat
 mask_rcnn_feat_root = '/home/zhuoming/mask_rcnn_feat'
 # the path for clip feat
 clip_feat_root = '/home/zhuoming/clip_feat/random'
+
+bbox_files = [f for f in os.listdir(mask_rcnn_feat_root) if os.path.isfile(os.path.join(mask_rcnn_feat_root, f))]
 
 cos_base = 0
 all_base_num = 0
@@ -39,7 +40,7 @@ for file in bbox_files:
         clip_base_feat = clip_base_feat / clip_base_feat.norm(dim=-1, keepdim=True)
         # calculate the cos similarity
         base_cos_value = (mask_rcnn_base_feat * clip_base_feat).sum().item()
-        print('testing base', base_cos_value / base_num)
+        #print('testing base', base_cos_value / base_num)
         cos_base += base_cos_value
     
     # calculate the average cosine similarity of novel gt 
@@ -53,7 +54,7 @@ for file in bbox_files:
         clip_novel_feat = clip_novel_feat / clip_novel_feat.norm(dim=-1, keepdim=True)
         # calculate the cos similarity
         novel_cos_value = (mask_rcnn_novel_feat * clip_novel_feat).sum().item()
-        print('testing novel', novel_cos_value / novel_num)
+        #print('testing novel', novel_cos_value / novel_num)
         cos_novel += novel_cos_value
         
     # calculate the average cosine similarity of trained distillation feat
