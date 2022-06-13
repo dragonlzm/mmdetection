@@ -16,7 +16,7 @@ for anno in train_annotations_content['annotations']:
     bbox = anno['bbox']
     if image_id not in from_image_id_to_annotaions:
         from_image_id_to_annotaions[image_id] = []
-    from_image_id_to_annotaions[image_id].append(bbox)
+    from_image_id_to_annotaions[image_id].append(anno)
     if image_id not in from_image_id_to_cates:
         from_image_id_to_cates[image_id] = []
     from_image_id_to_cates[image_id].append(category_id)

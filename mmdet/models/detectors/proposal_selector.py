@@ -36,10 +36,13 @@ class ProposalSelector(BaseDetector):
         self.encoder = build_transformer_layer_sequence(encoder)
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
-        self.encoder.embed_dims
+        self.embed_dims = self.encoder.embed_dims
         self.linear_layer = Linear(self.embed_dims, 4)
         self.loss = build_loss(loss)
         self.iou_calculator = BboxOverlaps2D()
+    
+    def extract_feat(self):
+        pass
     
     def forward_dummy(self, img):
         """Dummy forward function."""

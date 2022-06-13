@@ -12,7 +12,8 @@ train_pipeline = [
     #dict(type='Normalize', **img_norm_cfg),
     #dict(type='Pad', size_divisor=32),
     dict(type='DefaultFormatBundle'),
-    dict(type='Collect', keys=['gt_bboxes', 'gt_labels', 'proposal_bboxes', 'proposal_scores']),
+    dict(type='Collect', keys=['gt_bboxes', 'gt_labels', 'proposal_bboxes', 'proposal_scores'],  
+         meta_keys=()),
 ]
 
 test_pipeline = [
@@ -24,7 +25,8 @@ test_pipeline = [
     #dict(type='Normalize', **img_norm_cfg),
     #dict(type='Pad', size_divisor=32),
     dict(type='DefaultFormatBundle'),
-    dict(type='Collect', keys=['gt_bboxes', 'gt_labels', 'proposal_bboxes', 'proposal_scores']),
+    dict(type='Collect', keys=['gt_bboxes', 'gt_labels', 'proposal_bboxes', 'proposal_scores'], 
+         meta_keys=()),
 ]
 
 classes = ('person', 'bicycle', 'car', 'motorcycle', 'train', 
