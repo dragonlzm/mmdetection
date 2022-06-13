@@ -100,6 +100,8 @@ class ProposalSelector(BaseDetector):
         all_inputs = torch.cat(all_inputs, dim=0)
         all_inputs = all_inputs.permute(1, 0, 2)
         
+        all_inputs = self.input_proj(all_inputs)
+        
         memory = self.encoder(
             query=all_inputs,
             key=None,
@@ -139,6 +141,8 @@ class ProposalSelector(BaseDetector):
                       zip(proposal_bboxes, proposal_scores)]
         all_inputs = torch.cat(all_inputs, dim=0)
         all_inputs = all_inputs.permute(1, 0, 2)
+        
+        all_inputs = self.input_proj(all_inputs)
         
         memory = self.encoder(
             query=all_inputs,
