@@ -7,7 +7,8 @@ from .formating import (Collect, DefaultFormatBundle, ImageToTensor,
                         ToDataContainer, ToTensor, Transpose, to_tensor)
 from .instaboost import InstaBoost
 from .loading import (LoadAnnotations, LoadImageFromFile, LoadImageFromWebcam,
-                      LoadMultiChannelImageFromFiles, LoadProposals, LoadCLIPFeat)
+                      LoadMultiChannelImageFromFiles, LoadProposals, LoadCLIPFeat,
+                      LoadCLIPBGProposal, LoadCLIPProposal)
 from .test_time_aug import MultiScaleFlipAug
 from .transforms import (Albu, CutOut, Expand, MinIoURandomCrop, MixUp, Mosaic,
                          Normalize, Pad, PhotoMetricDistortion, RandomAffine,
@@ -24,5 +25,6 @@ __all__ = [
     'InstaBoost', 'RandomCenterCropPad', 'AutoAugment', 'CutOut', 'Shear',
     'Rotate', 'ColorTransform', 'EqualizeTransform', 'BrightnessTransform',
     'ContrastTransform', 'Translate', 'RandomShift', 'Mosaic', 'MixUp',
-    'RandomAffine', 'GenerateCroppedPatches', 'LoadCLIPFeat'
+    'RandomAffine', 'GenerateCroppedPatches', 'LoadCLIPFeat', 'LoadCLIPBGProposal',
+    'LoadCLIPProposal'
 ]

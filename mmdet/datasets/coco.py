@@ -630,6 +630,12 @@ class CocoDataset(CustomDataset):
                     f'\n all_cos_score\t{all_cos_score:.4f}'
                 print_log(log_msg, logger=logger)
                 continue
+            if metric == 'proposal_selection':
+                loss = self.calc_gt_acc(results)
+                eval_results['loss'] = loss
+                log_msg = f'\n loss\t{loss:.4f}'
+                print_log(log_msg, logger=logger)
+                continue
             if metric == 'proposal_fast':
                 ar = self.fast_eval_recall(
                     results, proposal_nums, iou_thrs, logger='silent')

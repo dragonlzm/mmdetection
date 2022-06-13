@@ -43,6 +43,7 @@ from .cls_finetuner import ClsFinetuner
 from .cls_proposal_generator import ClsProposalGenerator
 from .mask_rcnn_distillation import MaskRCNNDistill
 from .mask_rcnn_with_clip_feat import MaskRCNNWithCLIPFeat
+from .proposal_selector import ProposalSelector
 
 __all__ = [
     'ATSS', 'BaseDetector', 'SingleStageDetector', 'TwoStageDetector', 'RPN',
@@ -54,5 +55,5 @@ __all__ = [
     'DeformableDETR', 'AutoAssign', 'YOLOF', 'CenterNet', 'YOLOX',
     'TwoStagePanopticSegmentor', 'PanopticFPN', 'NEWRPN', 'DistillBackboneModule',
     'ClsFinetuner', 'ClsProposalGenerator', 'MaskRCNNDistill', 'MaskRCNNDistill',
-    'MaskRCNNWithCLIPFeat'
+    'MaskRCNNWithCLIPFeat', 'ProposalSelector'
 ]

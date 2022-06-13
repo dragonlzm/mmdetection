@@ -793,3 +793,41 @@ class LoadCLIPBGProposal:
                     f"color_type='{self.color_type}', "
                     f'file_client_args={self.file_client_args})')
         return repr_str
+
+
+@PIPELINES.register_module()
+class LoadCLIPProposal:
+    """Load pred-trained feat.
+    """
+
+    def __init__(self,
+                 file_path_prefix=None,
+                 num_of_rand_bbox=1000):
+        self.file_path_prefix = file_path_prefix
+        # the path should like this
+        self.num_of_rand_bbox = num_of_rand_bbox
+
+    def __call__(self, results):
+        '''load the pre-extracted CLIP feat'''
+        file_name = '.'.join(results['img_info']['filename'].split('.')[:-1]) + '.json'
+
+        # load the gt feat
+        proposal_file_name = osp.join(self.file_path_prefix, file_name)
+        proposal_file_content = json.load(open(proposal_file_name))
+        
+        #the loaded bboxes are in xyxy format
+        all_bboxes = np.array(proposal_file_content['score']).astype(np.float32)
+        # divide the scores and the bboxes
+        all_scores = all_bboxes[:, -1]
+        all_bboxes = all_bboxes[:, :-1]
+        results['proposal_bboxes'] = torch.from_numpy(all_bboxes)
+        results['proposal_scores'] = torch.from_numpy(all_scores)
+        
+        return results
+
+    def __repr__(self):
+        repr_str = (f'{self.__class__.__name__}('
+                    f'to_float32={self.to_float32}, '
+                    f"color_type='{self.color_type}', "
+                    f'file_client_args={self.file_client_args})')
+        return repr_str
