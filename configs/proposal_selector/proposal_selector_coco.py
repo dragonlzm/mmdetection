@@ -5,3 +5,9 @@ _base_ = [
 
 lr_config = dict(step=[])
 runner = dict(type='EpochBasedRunner', max_epochs=6)
+
+optimizer = dict(
+    _delete_=True,    
+    type='AdamW',
+    lr=0.0001,
+    weight_decay=0.0001)

@@ -328,17 +328,10 @@ class CocoDataset(CustomDataset):
                 values are corresponding filenames.
         """
         result_files = dict()
-        if isinstance(results[0], np.ndarray) and results[0].shape[0] == 5:
+        if isinstance(results[0], np.ndarray) and (results[0].shape[0] == 5 or results[0].shape[0] == 2):
             json_results = self._gtacc2json(results)
             result_files['gt_acc'] = f'{outfile_prefix}.gt_acc.json'
             mmcv.dump(json_results, result_files['gt_acc'])
-        # remove the len(results[0]) > 100 for calculate the iou between
-        # gt and the anchor
-        #elif isinstance(results[0], np.ndarray):            
-        #elif isinstance(results[0], np.ndarray) and len(results[0]) > 100:
-        #    json_results = self._clipproposal2json(results)
-        #    result_files['clip_proposal'] = f'{outfile_prefix}.clip_proposal.json'
-        #    mmcv.dump(json_results, result_files['clip_proposal'])
         elif isinstance(results[0], np.ndarray) and len(results[0]) > 5:
             json_results = self._patchacc2json(results)
             result_files['patch_acc'] = f'{outfile_prefix}.patch_acc.json'
@@ -387,13 +380,6 @@ class CocoDataset(CustomDataset):
             total_iou += results[i].sum()
         aver_iou = total_iou / total_proposal
         return aver_iou
-    
-    #def calc_clip_proposal(self, results):
-    #    aver_proposal_num = 0
-    #    for i in range(len(self.img_ids)):
-    #        aver_proposal_num += results[i].shape[0]
-    #    aver_proposal_num /= len(self.img_ids)
-    #    return aver_proposal_num
 
     def calc_gt_acc(self, results):
         all_gts = 0
@@ -479,6 +465,13 @@ class CocoDataset(CustomDataset):
 
 
         return over_all_acc, s_acc, m_acc, l_acc, person_acc, all_entropy, all_cos_score
+
+    def calc_proposal_selection_eval(self, results):
+        loss = torch.nn.L1Loss()
+        pred_val = torch.cat([torch.from_numpy(ele[0]).unsqueeze(dim=0) for ele in results],dim=0)
+        pred_val_target = torch.cat([torch.from_numpy(ele[1]).unsqueeze(dim=0) for ele in results],dim=0)
+        loss_val = loss(pred_val, pred_val_target)
+        return loss_val.item()
 
     def fast_eval_recall(self, results, proposal_nums, iou_thrs, logger=None):
         gt_bboxes = []
@@ -573,7 +566,7 @@ class CocoDataset(CustomDataset):
         """
 
         metrics = metric if isinstance(metric, list) else [metric]
-        allowed_metrics = ['bbox', 'segm', 'proposal', 'proposal_fast', 'patch_acc', 'gt_acc', 'gt_anchor_iou']
+        allowed_metrics = ['bbox', 'segm', 'proposal', 'proposal_fast', 'patch_acc', 'gt_acc', 'gt_anchor_iou', 'proposal_selection']
         for metric in metrics:
             if metric not in allowed_metrics:
                 raise KeyError(f'metric {metric} is not supported')
@@ -631,7 +624,7 @@ class CocoDataset(CustomDataset):
                 print_log(log_msg, logger=logger)
                 continue
             if metric == 'proposal_selection':
-                loss = self.calc_gt_acc(results)
+                loss = self.calc_proposal_selection_eval(results)
                 eval_results['loss'] = loss
                 log_msg = f'\n loss\t{loss:.4f}'
                 print_log(log_msg, logger=logger)

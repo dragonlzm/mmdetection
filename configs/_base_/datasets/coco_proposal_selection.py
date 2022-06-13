@@ -52,10 +52,12 @@ data = dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/instances_train2017_except_48base_only.json',
         img_prefix=data_root + 'train2017/',
-        pipeline=test_pipeline),
+        pipeline=test_pipeline,
+        eval_filter_empty_gt=True),
     test=dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/instances_train2017_except_48base_only.json',
         img_prefix=data_root + 'train2017/',
-        pipeline=test_pipeline))
+        pipeline=test_pipeline,
+        eval_filter_empty_gt=True))
 evaluation = dict(interval=1, metric='proposal_selection')

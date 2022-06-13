@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from cgi import test
+from pickle import FALSE
 import warnings
 
 import mmcv
@@ -30,6 +31,7 @@ class ProposalSelector(BaseDetector):
                  encoder,
                  loss,
                  input_dim=5,
+                 pretrained=None,
                  train_cfg=None,
                  test_cfg=None,
                  init_cfg=None):
@@ -64,10 +66,34 @@ class ProposalSelector(BaseDetector):
         all_pred_target = []
         for proposal, gt_bbox in zip(proposal_bboxes, gt_bboxes):
             real_iou = self.iou_calculator(proposal, gt_bbox)
-            max_iou_per_proposal, _ = torch.max(real_iou, dim=0)
-        all_pred_target.append(max_iou_per_proposal)
+            max_iou_per_proposal, _ = torch.max(real_iou, dim=1)
+            all_pred_target.append(max_iou_per_proposal)
         
         return all_pred_target
+
+    def encoder_forward(self, gt_bboxes, gt_labels, proposal_bboxes, proposal_scores):
+        # concate the proposal_bboxes and proposal_bboxes
+        all_inputs = [torch.cat([proposal_bbox_per_img, proposal_score_per_img.unsqueeze(dim=-1)], dim=-1).unsqueeze(dim=0)
+                      for proposal_bbox_per_img, proposal_score_per_img in 
+                      zip(proposal_bboxes, proposal_scores)]
+        all_inputs = torch.cat(all_inputs, dim=0)
+        all_inputs = all_inputs.permute(1, 0, 2)
+        
+        all_inputs = self.input_proj(all_inputs)
+        
+        memory = self.encoder(
+            query=all_inputs,
+            key=None,
+            value=None,
+            query_pos=None,
+            query_key_padding_mask=None)
+        pred_score = self.linear_layer(memory)
+        pred_score = pred_score.view(-1)
+        
+        pred_score_target = self.find_the_gt_for_proposal(proposal_bboxes, gt_bboxes)
+        pred_score_target = torch.cat(pred_score_target, dim=0)
+        
+        return pred_score, pred_score_target
 
     def forward_train(self,
                     img,
@@ -93,25 +119,7 @@ class ProposalSelector(BaseDetector):
         Returns:
             dict[str, Tensor]: A dictionary of loss components.
         """
-        # concate the proposal_bboxes and proposal_bboxes
-        all_inputs = [torch.cat([proposal_bbox_per_img, proposal_score_per_img.unsqueeze(dim=-1)], dim=-1).unsqueeze(dim=0)
-                      for proposal_bbox_per_img, proposal_score_per_img in 
-                      zip(proposal_bboxes, proposal_scores)]
-        all_inputs = torch.cat(all_inputs, dim=0)
-        all_inputs = all_inputs.permute(1, 0, 2)
-        
-        all_inputs = self.input_proj(all_inputs)
-        
-        memory = self.encoder(
-            query=all_inputs,
-            key=None,
-            value=None,
-            query_pos=None,
-            query_key_padding_mask=None)
-        pred_score = self.linear_layer(memory)
-        
-        pred_score_target = self.find_the_gt_for_proposal(proposal_bboxes, gt_bboxes)
-        pred_score_target = torch.cat(pred_score_target, dim=0)
+        pred_score, pred_score_target = self.encoder_forward(gt_bboxes, gt_labels, proposal_bboxes, proposal_scores)
         
         loss_value = self.loss(pred_score, pred_score_target)
         loss_dict = dict()
@@ -124,7 +132,8 @@ class ProposalSelector(BaseDetector):
                     gt_bboxes=None,
                     gt_labels=None, 
                     proposal_bboxes=None,
-                    proposal_scores=None):
+                    proposal_scores=None,
+                    rescale=False):
         """Test function without test time augmentation.
 
         Args:
@@ -136,24 +145,7 @@ class ProposalSelector(BaseDetector):
         Returns:
             list[np.ndarray]: proposals
         """
-        all_inputs = [torch.cat([proposal_bbox_per_img, proposal_score_per_img.unsqueeze(dim=-1)], dim=-1).unsqueeze(dim=0)
-                      for proposal_bbox_per_img, proposal_score_per_img in 
-                      zip(proposal_bboxes, proposal_scores)]
-        all_inputs = torch.cat(all_inputs, dim=0)
-        all_inputs = all_inputs.permute(1, 0, 2)
-        
-        all_inputs = self.input_proj(all_inputs)
-        
-        memory = self.encoder(
-            query=all_inputs,
-            key=None,
-            value=None,
-            query_pos=None,
-            query_key_padding_mask=None)
-        pred_score = self.linear_layer(memory)
-        
-        pred_score_target = self.find_the_gt_for_proposal(proposal_bboxes, gt_bboxes)
-        pred_score_target = torch.cat(pred_score_target, dim=0)
+        pred_score, pred_score_target = self.encoder_forward(gt_bboxes, gt_labels, proposal_bboxes, proposal_scores)
         
         # concat all the result, send them back to dataset and do the evaluation
         result = torch.cat([pred_score.unsqueeze(dim=0), pred_score_target.unsqueeze(dim=0)], dim=0)
