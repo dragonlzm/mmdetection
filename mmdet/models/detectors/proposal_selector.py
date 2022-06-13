@@ -29,6 +29,7 @@ class ProposalSelector(BaseDetector):
     def __init__(self,
                  encoder,
                  loss,
+                 input_dim=5,
                  train_cfg=None,
                  test_cfg=None,
                  init_cfg=None):
@@ -37,7 +38,9 @@ class ProposalSelector(BaseDetector):
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
         self.embed_dims = self.encoder.embed_dims
-        self.linear_layer = Linear(self.embed_dims, 4)
+        self.input_dim = input_dim
+        self.input_proj = Linear(self.input_dim, self.embed_dims)
+        self.linear_layer = Linear(self.embed_dims, 1)
         self.loss = build_loss(loss)
         self.iou_calculator = BboxOverlaps2D()
     
@@ -67,11 +70,12 @@ class ProposalSelector(BaseDetector):
         return all_pred_target
 
     def forward_train(self,
-                      gt_bboxes,
-                      gt_labels, 
-                      proposal_bboxes,
-                      proposal_scores,
-                      img_metas=None):
+                    img,
+                    img_metas,
+                    gt_bboxes=None,
+                    gt_labels=None, 
+                    proposal_bboxes=None,
+                    proposal_scores=None):
         """
         Args:
             img (Tensor): Input images of shape (N, C, H, W).
@@ -90,10 +94,11 @@ class ProposalSelector(BaseDetector):
             dict[str, Tensor]: A dictionary of loss components.
         """
         # concate the proposal_bboxes and proposal_bboxes
-        all_inputs = [torch.cat([proposal_bbox_per_img, proposal_score_per_img], dim=-1) 
+        all_inputs = [torch.cat([proposal_bbox_per_img, proposal_score_per_img.unsqueeze(dim=-1)], dim=-1).unsqueeze(dim=0)
                       for proposal_bbox_per_img, proposal_score_per_img in 
                       zip(proposal_bboxes, proposal_scores)]
         all_inputs = torch.cat(all_inputs, dim=0)
+        all_inputs = all_inputs.permute(1, 0, 2)
         
         memory = self.encoder(
             query=all_inputs,
@@ -112,11 +117,12 @@ class ProposalSelector(BaseDetector):
         return loss_dict
 
     def simple_test(self,
-                    gt_bboxes,
-                    gt_labels, 
-                    proposal_bboxes,
-                    proposal_scores,
-                    img_metas=None):
+                    img,
+                    img_metas,
+                    gt_bboxes=None,
+                    gt_labels=None, 
+                    proposal_bboxes=None,
+                    proposal_scores=None):
         """Test function without test time augmentation.
 
         Args:
@@ -128,10 +134,11 @@ class ProposalSelector(BaseDetector):
         Returns:
             list[np.ndarray]: proposals
         """
-        all_inputs = [torch.cat([proposal_bbox_per_img, proposal_score_per_img], dim=-1) 
+        all_inputs = [torch.cat([proposal_bbox_per_img, proposal_score_per_img.unsqueeze(dim=-1)], dim=-1).unsqueeze(dim=0)
                       for proposal_bbox_per_img, proposal_score_per_img in 
                       zip(proposal_bboxes, proposal_scores)]
         all_inputs = torch.cat(all_inputs, dim=0)
+        all_inputs = all_inputs.permute(1, 0, 2)
         
         memory = self.encoder(
             query=all_inputs,
