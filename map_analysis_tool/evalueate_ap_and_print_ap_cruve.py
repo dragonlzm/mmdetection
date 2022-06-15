@@ -44,6 +44,17 @@ CLASSES_65 = ('person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
  'remote', 'keyboard', 'microwave', 'oven', 'toaster', 'sink', 
  'refrigerator', 'book', 'clock', 'vase', 'scissors', 'toothbrush')
 
+
+CLASSES_48 = ('person', 'bicycle', 'car', 'motorcycle', 'train', 
+            'truck', 'boat', 'bench', 'bird', 'horse', 'sheep', 
+            'bear', 'zebra', 'giraffe', 'backpack', 'handbag', 
+            'suitcase', 'frisbee', 'skis', 'kite', 'surfboard', 
+            'bottle', 'fork', 'spoon', 'bowl', 'banana', 'apple', 
+            'sandwich', 'orange', 'broccoli', 'carrot', 'pizza', 
+            'donut', 'chair', 'bed', 'toilet', 'tv', 'laptop', 
+            'mouse', 'remote', 'microwave', 'oven', 'toaster', 
+            'refrigerator', 'book', 'clock', 'vase', 'toothbrush')
+
 #file_path = '/data/zhuoming/detection/uk_rpn/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_trirpn_1x_coco_base48_no_sigmoid/novel_results.bbox.json'
 #file_path = '/data/zhuoming/detection/uk_rpn/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_trirpn_1x_coco_base48_no_sigmoid/base_results.bbox.json'
 #file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_gn_10_200clipproposal/base_results_65cates.bbox.json'
@@ -63,11 +74,12 @@ ann_file = '/data/zhuoming/detection/coco/annotations/instances_val2017_65cates.
 coco_object = COCO(ann_file)
 
 # preparing the hyper-parameter of the evaluation
-cat_ids = coco_object.get_cat_ids(cat_names=CLASSES_65)
+#cat_ids = coco_object.get_cat_ids(cat_names=CLASSES_65)
+cat_ids = coco_object.get_cat_ids(cat_names=CLASSES_48)
 img_ids = coco_object.get_img_ids()
 proposal_nums=(100, 300, 1000)
 #iou_thrs = np.linspace(.5, 0.95, int(np.round((0.95 - .5) / .05)) + 1, endpoint=True)
-iou_thrs = [0.5]
+iou_thrs = np.array([0.5])
 metric_items = ['mAP', 'mAP_50', 'mAP_75', 'mAP_s', 'mAP_m', 'mAP_l']
 
 
