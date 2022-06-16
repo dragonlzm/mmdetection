@@ -6,7 +6,7 @@ data_root = 'data/coco/'
 train_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='LoadAnnotations', with_bbox=True, with_label=True),
-    dict(type='LoadCLIPProposalWithFeat', file_path_prefix='data/coco/clip_proposal_feat/base48_finetuned'),
+    dict(type='LoadCLIPProposalWithFeat', file_path_prefix='data/coco/clip_proposal_feat/base48_finetuned/random'),
     #dict(type='Resize', img_scale=(1333, 800), keep_ratio=True),
     #dict(type='RandomFlip', flip_ratio=0.5),
     #dict(type='Normalize', **img_norm_cfg),
@@ -19,7 +19,7 @@ train_pipeline = [
 test_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='LoadAnnotations', with_bbox=True, with_label=True),
-    dict(type='LoadCLIPProposalWithFeat', file_path_prefix='data/coco/clip_proposal_feat/base48_finetuned'),
+    dict(type='LoadCLIPProposalWithFeat', file_path_prefix='data/coco/clip_proposal_feat/base48_finetuned/random'),
     #dict(type='Resize', img_scale=(1333, 800), keep_ratio=True),
     #dict(type='RandomFlip', flip_ratio=0.5),
     #dict(type='Normalize', **img_norm_cfg),

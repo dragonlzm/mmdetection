@@ -721,7 +721,10 @@ class LoadCLIPFeat:
         random_choice_num = min(rand_feat.shape[0], self.num_of_rand_bbox)
         if random_choice_num < self.num_of_rand_bbox:
             print(rand_file_name)
-        random_choice = np.random.choice(rand_feat.shape[0], random_choice_num, replace=False)
+        # in some images the valid clip proposal is fewer than 500, which need to replicate some of the clip proposals
+        # to reach the needed number of distillation proposal
+        # therefore we need to set the replace to True to avoid the error
+        random_choice = np.random.choice(rand_feat.shape[0], random_choice_num, replace=True)
         final_rand_bbox = final_rand_bbox[random_choice]
         final_rand_feat = rand_feat[random_choice]
         results['rand_bboxes'] = torch.from_numpy(final_rand_bbox)
@@ -861,7 +864,7 @@ class LoadCLIPProposalWithFeat:
         all_scores = all_bboxes[:, -1]
         all_bboxes = all_bboxes[:, :-1]
         # scale the bbox back to the orignal size
-        pre_extract_scale_factor = np.array(proposal_file_content['scale_factor']).astype(np.float32)
+        pre_extract_scale_factor = np.array(proposal_file_content['img_metas']['scale_factor']).astype(np.float32)
         all_bboxes = all_bboxes / pre_extract_scale_factor
         results['proposal_bboxes'] = torch.from_numpy(all_bboxes)
         results['proposal_scores'] = torch.from_numpy(all_scores)

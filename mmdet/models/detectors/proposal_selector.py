@@ -73,7 +73,7 @@ class ProposalSelector(BaseDetector):
 
     def encoder_forward(self, gt_bboxes, gt_labels, proposal_bboxes, proposal_scores, proposal_feats=None):
         # concate the proposal_bboxes and proposal_bboxes
-        if proposal_feats != None:
+        if proposal_feats == None:
             all_inputs = [torch.cat([proposal_bbox_per_img, proposal_score_per_img.unsqueeze(dim=-1)], dim=-1).unsqueeze(dim=0)
                         for proposal_bbox_per_img, proposal_score_per_img in 
                         zip(proposal_bboxes, proposal_scores)]
