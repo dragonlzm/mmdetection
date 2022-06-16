@@ -71,11 +71,16 @@ class ProposalSelector(BaseDetector):
         
         return all_pred_target
 
-    def encoder_forward(self, gt_bboxes, gt_labels, proposal_bboxes, proposal_scores):
+    def encoder_forward(self, gt_bboxes, gt_labels, proposal_bboxes, proposal_scores, proposal_feats=None):
         # concate the proposal_bboxes and proposal_bboxes
-        all_inputs = [torch.cat([proposal_bbox_per_img, proposal_score_per_img.unsqueeze(dim=-1)], dim=-1).unsqueeze(dim=0)
-                      for proposal_bbox_per_img, proposal_score_per_img in 
-                      zip(proposal_bboxes, proposal_scores)]
+        if proposal_feats != None:
+            all_inputs = [torch.cat([proposal_bbox_per_img, proposal_score_per_img.unsqueeze(dim=-1)], dim=-1).unsqueeze(dim=0)
+                        for proposal_bbox_per_img, proposal_score_per_img in 
+                        zip(proposal_bboxes, proposal_scores)]
+        else:
+            all_inputs = [torch.cat([proposal_bbox_per_img, proposal_score_per_img.unsqueeze(dim=-1), proposal_feat_per_img], dim=-1).unsqueeze(dim=0)
+                        for proposal_bbox_per_img, proposal_score_per_img, proposal_feat_per_img in 
+                        zip(proposal_bboxes, proposal_scores, proposal_feats)]
         all_inputs = torch.cat(all_inputs, dim=0)
         all_inputs = all_inputs.permute(1, 0, 2)
         
@@ -101,7 +106,8 @@ class ProposalSelector(BaseDetector):
                     gt_bboxes=None,
                     gt_labels=None, 
                     proposal_bboxes=None,
-                    proposal_scores=None):
+                    proposal_scores=None,
+                    proposal_feats=None):
         """
         Args:
             img (Tensor): Input images of shape (N, C, H, W).
@@ -119,7 +125,7 @@ class ProposalSelector(BaseDetector):
         Returns:
             dict[str, Tensor]: A dictionary of loss components.
         """
-        pred_score, pred_score_target = self.encoder_forward(gt_bboxes, gt_labels, proposal_bboxes, proposal_scores)
+        pred_score, pred_score_target = self.encoder_forward(gt_bboxes, gt_labels, proposal_bboxes, proposal_scores, proposal_feats)
         
         loss_value = self.loss(pred_score, pred_score_target)
         loss_dict = dict()
@@ -133,6 +139,7 @@ class ProposalSelector(BaseDetector):
                     gt_labels=None, 
                     proposal_bboxes=None,
                     proposal_scores=None,
+                    proposal_feats=None,
                     rescale=False):
         """Test function without test time augmentation.
 
@@ -145,7 +152,7 @@ class ProposalSelector(BaseDetector):
         Returns:
             list[np.ndarray]: proposals
         """
-        pred_score, pred_score_target = self.encoder_forward(gt_bboxes, gt_labels, proposal_bboxes, proposal_scores)
+        pred_score, pred_score_target = self.encoder_forward(gt_bboxes, gt_labels, proposal_bboxes, proposal_scores, proposal_feats)
         
         # concat all the result, send them back to dataset and do the evaluation
         result = torch.cat([pred_score.unsqueeze(dim=0), pred_score_target.unsqueeze(dim=0)], dim=0)
