@@ -27,8 +27,8 @@ cate_name_65 = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
 import torch
 #base_embedding = torch.load('/data/zhuoming/detection/embeddings/base_finetuned_48cates.pt')
 #novel_embedding = torch.load('/data/zhuoming/detection/embeddings/base_finetuned_17cates.pt')
-base_embedding = torch.load('/data/zhuoming/detection/embeddings/raw_17cates.pt')
-novel_embedding = torch.load('/data/zhuoming/detection/embeddings/raw_48cates.pt')
+base_embedding = torch.load('/data/zhuoming/detection/embeddings/raw_48cates.pt')
+novel_embedding = torch.load('/data/zhuoming/detection/embeddings/raw_17cates.pt')
 
 
 base_idx = 0
