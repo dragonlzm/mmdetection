@@ -1,0 +1,1 @@
+salloc --time=1:00:00 --partition=gpu --gres=gpu:p100:2 --account=nevatia_174 --ntasks=1 --cpus-per-task=4 --mem=30GB
