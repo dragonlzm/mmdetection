@@ -25,8 +25,11 @@ cate_name_65 = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
  'refrigerator', 'book', 'clock', 'vase', 'scissors', 'toothbrush']
 
 import torch
-base_embedding = torch.load('/data/zhuoming/detection/embeddings/base_finetuned_48cates.pt')
-novel_embedding = torch.load('/data/zhuoming/detection/embeddings/base_finetuned_17cates.pt')
+#base_embedding = torch.load('/data/zhuoming/detection/embeddings/base_finetuned_48cates.pt')
+#novel_embedding = torch.load('/data/zhuoming/detection/embeddings/base_finetuned_17cates.pt')
+base_embedding = torch.load('/data/zhuoming/detection/embeddings/raw_17cates.pt')
+novel_embedding = torch.load('/data/zhuoming/detection/embeddings/raw_48cates.pt')
+
 
 base_idx = 0
 novel_idx = 0
@@ -42,4 +45,5 @@ for name in cate_name_65:
         novel_idx += 1
         
 sorted_embedding = torch.cat(sorted_embedding, dim=0)
-torch.save(sorted_embedding, '/data/zhuoming/detection/embeddings/base_finetuned_65cates.pt')
+#torch.save(sorted_embedding, '/data/zhuoming/detection/embeddings/base_finetuned_65cates.pt')
+torch.save(sorted_embedding, '/data/zhuoming/detection/embeddings/raw_65cates.pt')
