@@ -717,14 +717,10 @@ class LoadCLIPFeat:
             
             final_rand_bbox = final_rand_bbox.numpy()
             rand_feat = rand_feat.numpy()
-        # filter the random bbox we need
-        random_choice_num = min(rand_feat.shape[0], self.num_of_rand_bbox)
-        if random_choice_num < self.num_of_rand_bbox:
-            print(rand_file_name)
         # in some images the valid clip proposal is fewer than 500, which need to replicate some of the clip proposals
         # to reach the needed number of distillation proposal
         # therefore we need to set the replace to True to avoid the error
-        random_choice = np.random.choice(rand_feat.shape[0], random_choice_num, replace=True)
+        random_choice = np.random.choice(rand_feat.shape[0], self.num_of_rand_bbox, replace=True)
         final_rand_bbox = final_rand_bbox[random_choice]
         final_rand_feat = rand_feat[random_choice]
         results['rand_bboxes'] = torch.from_numpy(final_rand_bbox)
