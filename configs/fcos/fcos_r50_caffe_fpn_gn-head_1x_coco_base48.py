@@ -1,4 +1,4 @@
-_base_ = './mask_rcnn_distill_r50_fpn_1x_coco_2gpu.py'
+_base_ = './fcos_r50_caffe_fpn_gn-head_1x_coco.py'
 
 classes = ('person', 'bicycle', 'car', 'motorcycle', 'train', 
             'truck', 'boat', 'bench', 'bird', 'horse', 'sheep', 
