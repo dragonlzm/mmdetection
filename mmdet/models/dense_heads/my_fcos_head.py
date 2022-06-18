@@ -163,7 +163,10 @@ class MyFCOSHead(AnchorFreeHead):
                 bbox_pred *= stride
         else:
             bbox_pred = bbox_pred.exp()
-        return cls_score, bbox_pred, centerness
+        if self.with_centerness:
+            return cls_score, bbox_pred, centerness
+        else:
+            return cls_score, bbox_pred, None
 
     @force_fp32(apply_to=('cls_scores', 'bbox_preds', 'centernesses'))
     def loss(self,
@@ -213,13 +216,9 @@ class MyFCOSHead(AnchorFreeHead):
             bbox_pred.permute(0, 2, 3, 1).reshape(-1, 4)
             for bbox_pred in bbox_preds
         ]
-        flatten_centerness = [
-            centerness.permute(0, 2, 3, 1).reshape(-1)
-            for centerness in centernesses
-        ]
+
         flatten_cls_scores = torch.cat(flatten_cls_scores)
         flatten_bbox_preds = torch.cat(flatten_bbox_preds)
-        flatten_centerness = torch.cat(flatten_centerness)
         flatten_labels = torch.cat(labels)
         flatten_bbox_targets = torch.cat(bbox_targets)
         # repeat points to align with bbox_preds
@@ -237,12 +236,19 @@ class MyFCOSHead(AnchorFreeHead):
             flatten_cls_scores, flatten_labels, avg_factor=num_pos)
 
         pos_bbox_preds = flatten_bbox_preds[pos_inds]
-        pos_centerness = flatten_centerness[pos_inds]
-        pos_bbox_targets = flatten_bbox_targets[pos_inds]
+        if self.with_centerness:
+            flatten_centerness = [
+                    centerness.permute(0, 2, 3, 1).reshape(-1)
+                    for centerness in centernesses
+                ]
+            flatten_centerness = torch.cat(flatten_centerness)
+            pos_centerness = flatten_centerness[pos_inds]
+        
         pos_centerness_targets = self.centerness_target(pos_bbox_targets)
         # centerness weighted iou loss
         centerness_denorm = max(
             reduce_mean(pos_centerness_targets.sum().detach()), 1e-6)
+        pos_bbox_targets = flatten_bbox_targets[pos_inds]
 
         if len(pos_inds) > 0:
             pos_points = flatten_points[pos_inds]
@@ -316,9 +322,15 @@ class MyFCOSHead(AnchorFreeHead):
 
         cls_score_list = [cls_scores[i].detach() for i in range(num_levels)]
         bbox_pred_list = [bbox_preds[i].detach() for i in range(num_levels)]
-        centerness_pred_list = [
-            centernesses[i].detach() for i in range(num_levels)
-        ]
+        if self.with_centerness:
+            centerness_pred_list = [
+                centernesses[i].detach() for i in range(num_levels)
+            ]
+        else:
+            # if without centerness the centernesses[i] will be the None
+            centerness_pred_list = [
+                centernesses[i] for i in range(num_levels)
+            ]
         if torch.onnx.is_in_onnx_export():
             assert len(
                 img_metas
@@ -389,57 +401,101 @@ class MyFCOSHead(AnchorFreeHead):
         mlvl_bboxes = []
         mlvl_scores = []
         mlvl_centerness = []
-        for cls_score, bbox_pred, centerness, points in zip(
-                cls_scores, bbox_preds, centernesses, mlvl_points):
-            assert cls_score.size()[-2:] == bbox_pred.size()[-2:]
-            scores = cls_score.permute(0, 2, 3, 1).reshape(
-                batch_size, -1, self.cls_out_channels).sigmoid()
-            centerness = centerness.permute(0, 2, 3,
-                                            1).reshape(batch_size,
-                                                       -1).sigmoid()
+        
+        if self.with_centerness:
+            for cls_score, bbox_pred, centerness, points in zip(
+                    cls_scores, bbox_preds, centernesses, mlvl_points):
+                assert cls_score.size()[-2:] == bbox_pred.size()[-2:]
+                scores = cls_score.permute(0, 2, 3, 1).reshape(
+                    batch_size, -1, self.cls_out_channels).sigmoid()
+                centerness = centerness.permute(0, 2, 3,
+                                                1).reshape(batch_size,
+                                                        -1).sigmoid()
 
-            bbox_pred = bbox_pred.permute(0, 2, 3,
-                                          1).reshape(batch_size, -1, 4)
-            points = points.expand(batch_size, -1, 2)
-            # Get top-k prediction
-            from mmdet.core.export import get_k_for_topk
-            nms_pre = get_k_for_topk(nms_pre_tensor, bbox_pred.shape[1])
-            if nms_pre > 0:
-                max_scores, _ = (scores * centerness[..., None]).max(-1)
-                _, topk_inds = max_scores.topk(nms_pre)
-                batch_inds = torch.arange(batch_size).view(
-                    -1, 1).expand_as(topk_inds).long()
-                # Avoid onnx2tensorrt issue in https://github.com/NVIDIA/TensorRT/issues/1134 # noqa: E501
-                if torch.onnx.is_in_onnx_export():
-                    transformed_inds = bbox_pred.shape[
-                        1] * batch_inds + topk_inds
-                    points = points.reshape(-1,
-                                            2)[transformed_inds, :].reshape(
-                                                batch_size, -1, 2)
-                    bbox_pred = bbox_pred.reshape(
-                        -1, 4)[transformed_inds, :].reshape(batch_size, -1, 4)
-                    scores = scores.reshape(
-                        -1, self.num_classes)[transformed_inds, :].reshape(
-                            batch_size, -1, self.num_classes)
-                    centerness = centerness.reshape(
-                        -1, 1)[transformed_inds].reshape(batch_size, -1)
-                else:
-                    points = points[batch_inds, topk_inds, :]
-                    bbox_pred = bbox_pred[batch_inds, topk_inds, :]
-                    scores = scores[batch_inds, topk_inds, :]
-                    centerness = centerness[batch_inds, topk_inds]
+                bbox_pred = bbox_pred.permute(0, 2, 3,
+                                            1).reshape(batch_size, -1, 4)
+                points = points.expand(batch_size, -1, 2)
+                # Get top-k prediction
+                from mmdet.core.export import get_k_for_topk
+                nms_pre = get_k_for_topk(nms_pre_tensor, bbox_pred.shape[1])
+                if nms_pre > 0:
+                    max_scores, _ = (scores * centerness[..., None]).max(-1)
+                    _, topk_inds = max_scores.topk(nms_pre)
+                    batch_inds = torch.arange(batch_size).view(
+                        -1, 1).expand_as(topk_inds).long()
+                    # Avoid onnx2tensorrt issue in https://github.com/NVIDIA/TensorRT/issues/1134 # noqa: E501
+                    if torch.onnx.is_in_onnx_export():
+                        transformed_inds = bbox_pred.shape[
+                            1] * batch_inds + topk_inds
+                        points = points.reshape(-1,
+                                                2)[transformed_inds, :].reshape(
+                                                    batch_size, -1, 2)
+                        bbox_pred = bbox_pred.reshape(
+                            -1, 4)[transformed_inds, :].reshape(batch_size, -1, 4)
+                        scores = scores.reshape(
+                            -1, self.num_classes)[transformed_inds, :].reshape(
+                                batch_size, -1, self.num_classes)
+                        centerness = centerness.reshape(
+                            -1, 1)[transformed_inds].reshape(batch_size, -1)
+                    else:
+                        points = points[batch_inds, topk_inds, :]
+                        bbox_pred = bbox_pred[batch_inds, topk_inds, :]
+                        scores = scores[batch_inds, topk_inds, :]
+                        centerness = centerness[batch_inds, topk_inds]
 
-            bboxes = distance2bbox(points, bbox_pred, max_shape=img_shapes)
-            mlvl_bboxes.append(bboxes)
-            mlvl_scores.append(scores)
-            mlvl_centerness.append(centerness)
+                bboxes = distance2bbox(points, bbox_pred, max_shape=img_shapes)
+                mlvl_bboxes.append(bboxes)
+                mlvl_scores.append(scores)
+                mlvl_centerness.append(centerness)
+        else:
+            for cls_score, bbox_pred, points in zip(
+                    cls_scores, bbox_preds, centernesses, mlvl_points):
+                assert cls_score.size()[-2:] == bbox_pred.size()[-2:]
+                scores = cls_score.permute(0, 2, 3, 1).reshape(
+                    batch_size, -1, self.cls_out_channels).sigmoid()
+
+                bbox_pred = bbox_pred.permute(0, 2, 3,
+                                            1).reshape(batch_size, -1, 4)
+                points = points.expand(batch_size, -1, 2)
+                # Get top-k prediction
+                from mmdet.core.export import get_k_for_topk
+                nms_pre = get_k_for_topk(nms_pre_tensor, bbox_pred.shape[1])
+                if nms_pre > 0:
+                    max_scores, _ = scores.max(-1)
+                    _, topk_inds = max_scores.topk(nms_pre)
+                    batch_inds = torch.arange(batch_size).view(
+                        -1, 1).expand_as(topk_inds).long()
+                    # Avoid onnx2tensorrt issue in https://github.com/NVIDIA/TensorRT/issues/1134 # noqa: E501
+                    if torch.onnx.is_in_onnx_export():
+                        transformed_inds = bbox_pred.shape[
+                            1] * batch_inds + topk_inds
+                        points = points.reshape(-1,
+                                                2)[transformed_inds, :].reshape(
+                                                    batch_size, -1, 2)
+                        bbox_pred = bbox_pred.reshape(
+                            -1, 4)[transformed_inds, :].reshape(batch_size, -1, 4)
+                        scores = scores.reshape(
+                            -1, self.num_classes)[transformed_inds, :].reshape(
+                                batch_size, -1, self.num_classes)
+                    else:
+                        points = points[batch_inds, topk_inds, :]
+                        bbox_pred = bbox_pred[batch_inds, topk_inds, :]
+                        scores = scores[batch_inds, topk_inds, :]
+
+                bboxes = distance2bbox(points, bbox_pred, max_shape=img_shapes)
+                mlvl_bboxes.append(bboxes)
+                mlvl_scores.append(scores)
+
 
         batch_mlvl_bboxes = torch.cat(mlvl_bboxes, dim=1)
         if rescale:
             batch_mlvl_bboxes /= batch_mlvl_bboxes.new_tensor(
                 scale_factors).unsqueeze(1)
         batch_mlvl_scores = torch.cat(mlvl_scores, dim=1)
-        batch_mlvl_centerness = torch.cat(mlvl_centerness, dim=1)
+        if self.with_centerness:
+            batch_mlvl_centerness = torch.cat(mlvl_centerness, dim=1)
+        else:
+            batch_mlvl_centerness = [None for i in range(len(batch_mlvl_scores))]
 
         # Replace multiclass_nms with ONNX::NonMaxSuppression in deployment
         if torch.onnx.is_in_onnx_export() and with_nms:
