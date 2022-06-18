@@ -486,7 +486,6 @@ class MyFCOSHead(AnchorFreeHead):
                 mlvl_bboxes.append(bboxes)
                 mlvl_scores.append(scores)
 
-
         batch_mlvl_bboxes = torch.cat(mlvl_bboxes, dim=1)
         if rescale:
             batch_mlvl_bboxes /= batch_mlvl_bboxes.new_tensor(

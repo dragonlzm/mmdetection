@@ -43,6 +43,8 @@ class BaseRoIHead(BaseModule, metaclass=ABCMeta):
         # save the feat for classification
         self.save_the_feat = self.test_cfg.get('save_the_feat', None) if self.test_cfg is not None else None
         self.use_pregenerated_proposal = self.test_cfg.get('use_pregenerated_proposal', None) if self.test_cfg is not None else None
+        # only using the gt bboxes for distillation
+        self.use_only_gt_pro_for_distill = self.train_cfg.get('use_only_gt_pro_for_distill', False) if self.train_cfg is not None else False
     @property
     def with_bbox(self):
         """bool: whether the RoI head contains a `bbox_head`"""
