@@ -244,11 +244,11 @@ class MyFCOSHead(AnchorFreeHead):
             flatten_centerness = torch.cat(flatten_centerness)
             pos_centerness = flatten_centerness[pos_inds]
         
+        pos_bbox_targets = flatten_bbox_targets[pos_inds]
         pos_centerness_targets = self.centerness_target(pos_bbox_targets)
         # centerness weighted iou loss
         centerness_denorm = max(
             reduce_mean(pos_centerness_targets.sum().detach()), 1e-6)
-        pos_bbox_targets = flatten_bbox_targets[pos_inds]
 
         if len(pos_inds) > 0:
             pos_points = flatten_points[pos_inds]
@@ -449,7 +449,7 @@ class MyFCOSHead(AnchorFreeHead):
                 mlvl_centerness.append(centerness)
         else:
             for cls_score, bbox_pred, points in zip(
-                    cls_scores, bbox_preds, centernesses, mlvl_points):
+                    cls_scores, bbox_preds, mlvl_points):
                 assert cls_score.size()[-2:] == bbox_pred.size()[-2:]
                 scores = cls_score.permute(0, 2, 3, 1).reshape(
                     batch_size, -1, self.cls_out_channels).sigmoid()
