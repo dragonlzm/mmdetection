@@ -40,6 +40,7 @@ from .clip_cls_head import ClipClsHead
 from .clip_encoder_head import ClipEncoderHead
 from .triway_rpn_head import TriWayRPNHead
 from .my_fcos_head import MyFCOSHead
+from .fcos_head_with_distillation import FCOSHeadWithDistillation
 
 __all__ = [
     'AnchorFreeHead', 'AnchorHead', 'GuidedAnchorHead', 'FeatureAdaption',
@@ -53,5 +54,5 @@ __all__ = [
     'AutoAssignHead', 'DETRHead', 'YOLOFHead', 'DeformableDETRHead',
     'SOLOHead', 'DecoupledSOLOHead', 'CenterNetHead', 'YOLOXHead',
     'DecoupledSOLOLightHead', 'EncoderHead', 'ClipClsHead', 'ClipEncoderHead',
-    'TriWayRPNHead', 'MyFCOSHead'
+    'TriWayRPNHead', 'MyFCOSHead', 'FCOSHeadWithDistillation'
 ]

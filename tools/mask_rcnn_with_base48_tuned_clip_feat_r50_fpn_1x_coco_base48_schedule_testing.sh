@@ -81,7 +81,6 @@ python -m torch.distributed.launch --nproc_per_node=2 \
     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=0.5 optimizer_config.grad_clip.max_norm=10 \
     --resume-from=/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_200clip_pro_distill_w_256/epoch_11.pth
 
-
 # mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x2023_coco_base48_200clip_pro (w256)
 # PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
 # python -m torch.distributed.launch --nproc_per_node=2 \
