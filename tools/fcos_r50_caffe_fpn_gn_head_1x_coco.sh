@@ -48,6 +48,6 @@ python -m torch.distributed.launch --nproc_per_node=2 \
 # test the model 
 bash tools/dist_test.sh configs/fcos/fcos_r50_caffe_fpn_gn-head_1x_coco_wo_centerness_base48.py \
 data/fcos/fcos_r50_caffe_fpn_gn-head_1x_coco_wo_centerness_base48/epoch_12.pth 2 --eval bbox \
---eval-options jsonfile_prefix=/data/zhuoming/detection/fcos/fcos_r50_caffe_fpn_gn-head_1x_coco_wo_centerness_base48/base \
+--eval-options jsonfile_prefix=data/fcos/fcos_r50_caffe_fpn_gn-head_1x_coco_wo_centerness_base48/base \
 --cfg-options data.test.eval_filter_empty_gt=False data.test.ann_file=data/coco/annotations/instances_val2017_65cates.json \
 model.test_cfg.score_thr=0.0 model.test_cfg.max_per_img=300
