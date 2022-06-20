@@ -35,8 +35,6 @@ model = dict(
             alpha=0.25,
             loss_weight=1.0),
         loss_bbox=dict(type='IoULoss', loss_weight=1.0),
-        loss_centerness=dict(
-            type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
         clip_dim=512,
         fg_vec_cfg=dict(fixed_param=True, load_path='data/embeddings/raw_80cates.pt')),
     # training and testing settings

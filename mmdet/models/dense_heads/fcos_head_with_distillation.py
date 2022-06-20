@@ -95,6 +95,14 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         self.center_sample_radius = center_sample_radius
         self.norm_on_bbox = norm_on_bbox
         self.centerness_on_reg = centerness_on_reg
+        self.cls_predictor_cfg=dict(type='Linear')
+        self.clip_dim=clip_dim
+        self.fg_vec_cfg=fg_vec_cfg
+        load_value = torch.load(self.fg_vec_cfg.load_path)
+        load_value = load_value / load_value.norm(dim=-1, keepdim=True)
+        #load_value = load_value.t()
+        self.load_value = load_value.cuda()
+
         super().__init__(
             num_classes,
             in_channels,
@@ -105,18 +113,14 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
             **kwargs)
         #self.loss_centerness = build_loss(loss_centerness)
         self.conv_cls = None
-        self.cls_predictor_cfg=dict(type='Linear')
-        self.clip_dim=clip_dim
-        self.fg_vec_cfg=fg_vec_cfg
-        load_value = torch.load(self.fg_vec_cfg.load_path)
-        load_value = load_value / load_value.norm(dim=-1, keepdim=True)
-        #load_value = load_value.t()
-        self.load_value = load_value.cuda()
+        self.distill_loss_factor = self.train_cfg.get('distill_loss_factor', (1.0/20.0)) if self.train_cfg is not None else (1.0/20.0)        
+        self.distillation_loss_config = dict(type='L1Loss', loss_weight=1.0)
+        self.distillation_loss = build_loss(self.distillation_loss_config)
 
     def _init_predictor(self):
         """Initialize predictor layers of the head."""
         self.map_to_clip = build_linear_layer(self.cls_predictor_cfg,
-                                in_features=self.fc_out_channels,
+                                in_features=self.feat_channels,
                                 out_features=self.clip_dim)
         self.fc_cls = build_linear_layer(self.cls_predictor_cfg,
                                 in_features=self.clip_dim,
@@ -206,8 +210,13 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
 
         for cls_layer in self.cls_convs:
             cls_feat = cls_layer(cls_feat)
+        # change the feat dim from ([bs, dim, h, w]) to ([bs, h, w, dim])
+        cls_feat = cls_feat.permute([0, 2, 3, 1])
         cls_feat = self.map_to_clip(cls_feat)
         cls_score = self.fc_cls(cls_feat)
+        # change the cls_score and the cls_feat back to original
+        cls_feat = cls_feat.permute([0, 3, 1, 2])
+        cls_score = cls_score.permute([0, 3, 1, 2])
 
         for reg_layer in self.reg_convs:
             reg_feat = reg_layer(reg_feat)
@@ -246,7 +255,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         #return cls_score, bbox_pred, centerness
         return cls_score, bbox_pred, cls_feat
 
-    @force_fp32(apply_to=('cls_scores', 'bbox_preds', 'centernesses'))
+    @force_fp32(apply_to=('cls_scores', 'bbox_preds', 'cls_feat'))
     def loss(self,
              cls_scores,
              bbox_preds,
@@ -297,38 +306,13 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
             bbox_pred.permute(0, 2, 3, 1).reshape(-1, 4)
             for bbox_pred in bbox_preds
         ]
-        # only distill the region which is only belong to any forground
-        # select the region which is belongs to the foregourd region for distillation
-        # also need to consider the weight of the distillation grids
-        
-        # assign the distillation bbox to the each grid
-        all_distill_bboxes = [torch.cat([gt_bbox, rand_bbox], dim=0) 
-                              for gt_bbox, rand_bbox in zip(gt_bboxes, rand_bboxes)]
-        temp_label = [torch.ones(ele.shape[0]).cuda() for ele in all_distill_bboxes]
-        _, _, assigned_idx = self.get_targets(all_level_points, all_distill_bboxes,
-                                              temp_label)        
-        # prepare the idx
-        #target_idx = target_idx[target_idx != -1]
-        
-        # aggregate the fg grid prediction base on the idx
-        
-        
-        # aggregate the fg grid target base on the idx
-        
-        # following the centerness method, use the centerness target as the weight 
-        
-        flatten_centerness = [
-            centerness.permute(0, 2, 3, 1).reshape(-1)
-            for centerness in centernesses
-        ]
         flatten_cls_scores = torch.cat(flatten_cls_scores)
         flatten_bbox_preds = torch.cat(flatten_bbox_preds)
-        flatten_centerness = torch.cat(flatten_centerness)
         flatten_labels = torch.cat(labels)
         flatten_bbox_targets = torch.cat(bbox_targets)
         # repeat points to align with bbox_preds
         flatten_points = torch.cat(
-            [points.repeat(num_imgs, 1) for points in all_level_points])
+                            [points.repeat(num_imgs, 1) for points in all_level_points])
 
         # FG cat_id: [0, num_classes -1], BG cat_id: num_classes
         bg_class_ind = self.num_classes
@@ -341,9 +325,10 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
             flatten_cls_scores, flatten_labels, avg_factor=num_pos)
 
         pos_bbox_preds = flatten_bbox_preds[pos_inds]
-        pos_centerness = flatten_centerness[pos_inds]
         pos_bbox_targets = flatten_bbox_targets[pos_inds]
+        #print('pos_bbox_targets', pos_bbox_targets.shape)
         pos_centerness_targets = self.centerness_target(pos_bbox_targets)
+        #print('pos_centerness_targets', pos_centerness_targets.shape)
         # centerness weighted iou loss
         centerness_denorm = max(
             reduce_mean(pos_centerness_targets.sum().detach()), 1e-6)
@@ -358,22 +343,80 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
                 pos_decoded_target_preds,
                 weight=pos_centerness_targets,
                 avg_factor=centerness_denorm)
-            loss_centerness = self.loss_centerness(
-                pos_centerness, pos_centerness_targets, avg_factor=num_pos)
         else:
             loss_bbox = pos_bbox_preds.sum()
-            loss_centerness = pos_centerness.sum()
+
+        # only distill the region which is only belong to any forground
+        # select the region which is belongs to the foregourd region for distillation
+        # also need to consider the weight of the distillation grids
+        
+        # assign the distillation bbox to the each grid
+        all_distill_bboxes = [torch.cat([gt_bbox, rand_bbox], dim=0) 
+                              for gt_bbox, rand_bbox in zip(gt_bboxes, rand_bboxes)]
+        temp_label = [torch.ones(ele.shape[0]).cuda() for ele in all_distill_bboxes]
+        _, matched_distill_bbox, assigned_idx = self.get_targets(all_level_points, all_distill_bboxes,
+                                              temp_label)        
+        # prepare the idx target_idx = -1 means it's the bg
+        #target_idx = target_idx[target_idx != -1] 
+        
+        # cls_feat 5 list[tensor] tensor [bs,dim,h,w] [2, 512, 152, 100]
+        # assigned_idx list[tuple(tensor)] 2 5 torch.Size([15200]) 
+        
+        # convert the feat shape, converted cls_feat 5 torch.Size([2, 15200, 512])
+        cls_feat = [ele.view(list(ele.shape[:-2]) + [-1]).permute([0,2,1]) 
+                    for ele in cls_feat]
+        # aggregate the fg grid prediction base on the idx
+        all_predict_feat = []
+        for img_id in range(len(assigned_idx)):
+            for feat_lvl in range(len(cls_feat)):
+                now_idx = assigned_idx[img_id][feat_lvl]
+                # select the grid which is not the BG grid
+                valid_idx = (now_idx != -1)
+                now_feat = cls_feat[feat_lvl][img_id]
+                
+                selected_feat = now_feat[valid_idx]
+                all_predict_feat.append(selected_feat)
+        all_predict_feat = torch.cat(all_predict_feat, dim=0)
+        # all_predict_feat torch.Size([4232, 512])
+        #print('all_predict_feat', all_predict_feat.shape)
+        
+        # preprocess the distillation feat
+        gt_feats = [patches[:len(gt_bbox)] 
+                        for patches, gt_bbox in zip(gt_feats, gt_bboxes)]
+        # all_gt_feat 2 torch.Size([111, 512])        
+        all_gt_feat = [torch.cat([gt_feat_per_img, rand_feat_per_img], dim=0)
+                        for gt_feat_per_img, rand_feat_per_img in zip(gt_feats, rand_feats)]
+        # aggregate the fg grid target base on the idx
+        all_target_feat = []
+        for img_id in range(len(assigned_idx)):
+            now_feat = all_gt_feat[img_id]
+            for feat_lvl in range(len(cls_feat)):
+                now_idx = assigned_idx[img_id][feat_lvl]
+                # select the grid which is not the BG grid
+                valid_idx = now_idx[now_idx != -1]
+                selected_feat = now_feat[valid_idx]
+                all_target_feat.append(selected_feat)
+        all_target_feat = torch.cat(all_target_feat, dim=0)
+        # all_target_feat torch.Size([4232, 512])
+        #print('all_target_feat', all_target_feat.shape)   
+        
+        
+        # TODO: following the centerness method, use the centerness target as the weight 
+        # use the matched_distill_bbox to calculate the weight following the way we calculate pos_centerness_targets
+        
+        distill_loss_value = self.distillation_loss(all_predict_feat, all_target_feat, weight=None)
+        distill_loss_value *= (self.clip_dim * self.distill_loss_factor)
 
         return dict(
             loss_cls=loss_cls,
             loss_bbox=loss_bbox,
-            loss_centerness=loss_centerness)
+            loss_distillation=distill_loss_value)
 
-    @force_fp32(apply_to=('cls_scores', 'bbox_preds', 'centernesses'))
+    @force_fp32(apply_to=('cls_scores', 'bbox_preds', 'cls_feat'))
     def get_bboxes(self,
                    cls_scores,
                    bbox_preds,
-                   centernesses,
+                   cls_feat,
                    img_metas,
                    cfg=None,
                    rescale=False,
@@ -385,8 +428,6 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
                 with shape (N, num_points * num_classes, H, W).
             bbox_preds (list[Tensor]): Box energies / deltas for each scale
                 level with shape (N, num_points * 4, H, W).
-            centernesses (list[Tensor]): Centerness for each scale level with
-                shape (N, num_points * 1, H, W).
             img_metas (list[dict]): Meta information of each image, e.g.,
                 image size, scaling factor, etc.
             cfg (mmcv.Config | None): Test / postprocessing configuration,
@@ -413,9 +454,6 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
 
         cls_score_list = [cls_scores[i].detach() for i in range(num_levels)]
         bbox_pred_list = [bbox_preds[i].detach() for i in range(num_levels)]
-        centerness_pred_list = [
-            centernesses[i].detach() for i in range(num_levels)
-        ]
         if torch.onnx.is_in_onnx_export():
             assert len(
                 img_metas
@@ -429,8 +467,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         scale_factors = [
             img_metas[i]['scale_factor'] for i in range(cls_scores[0].shape[0])
         ]
-        result_list = self._get_bboxes(cls_score_list, bbox_pred_list,
-                                       centerness_pred_list, mlvl_points,
+        result_list = self._get_bboxes(cls_score_list, bbox_pred_list, mlvl_points,
                                        img_shapes, scale_factors, cfg, rescale,
                                        with_nms)
         return result_list
@@ -438,7 +475,6 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
     def _get_bboxes(self,
                     cls_scores,
                     bbox_preds,
-                    centernesses,
                     mlvl_points,
                     img_shapes,
                     scale_factors,
@@ -452,8 +488,6 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
                 with shape (N, num_points * num_classes, H, W).
             bbox_preds (list[Tensor]): Box energies / deltas for a single scale
                 level with shape (N, num_points * 4, H, W).
-            centernesses (list[Tensor]): Centerness for a single scale level
-                with shape (N, num_points, H, W).
             mlvl_points (list[Tensor]): Box reference for a single scale level
                 with shape (num_total_points, 4).
             img_shapes (list[tuple[int]]): Shape of the input image,
@@ -485,15 +519,11 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
             cfg.get('nms_pre', -1), device=device, dtype=torch.long)
         mlvl_bboxes = []
         mlvl_scores = []
-        mlvl_centerness = []
-        for cls_score, bbox_pred, centerness, points in zip(
-                cls_scores, bbox_preds, centernesses, mlvl_points):
+        for cls_score, bbox_pred, points in zip(
+                cls_scores, bbox_preds, mlvl_points):
             assert cls_score.size()[-2:] == bbox_pred.size()[-2:]
             scores = cls_score.permute(0, 2, 3, 1).reshape(
                 batch_size, -1, self.cls_out_channels).sigmoid()
-            centerness = centerness.permute(0, 2, 3,
-                                            1).reshape(batch_size,
-                                                       -1).sigmoid()
 
             bbox_pred = bbox_pred.permute(0, 2, 3,
                                           1).reshape(batch_size, -1, 4)
@@ -502,7 +532,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
             from mmdet.core.export import get_k_for_topk
             nms_pre = get_k_for_topk(nms_pre_tensor, bbox_pred.shape[1])
             if nms_pre > 0:
-                max_scores, _ = (scores * centerness[..., None]).max(-1)
+                max_scores, _ = scores .max(-1)
                 _, topk_inds = max_scores.topk(nms_pre)
                 batch_inds = torch.arange(batch_size).view(
                     -1, 1).expand_as(topk_inds).long()
@@ -518,31 +548,24 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
                     scores = scores.reshape(
                         -1, self.num_classes)[transformed_inds, :].reshape(
                             batch_size, -1, self.num_classes)
-                    centerness = centerness.reshape(
-                        -1, 1)[transformed_inds].reshape(batch_size, -1)
                 else:
                     points = points[batch_inds, topk_inds, :]
                     bbox_pred = bbox_pred[batch_inds, topk_inds, :]
                     scores = scores[batch_inds, topk_inds, :]
-                    centerness = centerness[batch_inds, topk_inds]
 
             bboxes = distance2bbox(points, bbox_pred, max_shape=img_shapes)
             mlvl_bboxes.append(bboxes)
             mlvl_scores.append(scores)
-            mlvl_centerness.append(centerness)
 
         batch_mlvl_bboxes = torch.cat(mlvl_bboxes, dim=1)
         if rescale:
             batch_mlvl_bboxes /= batch_mlvl_bboxes.new_tensor(
                 scale_factors).unsqueeze(1)
         batch_mlvl_scores = torch.cat(mlvl_scores, dim=1)
-        batch_mlvl_centerness = torch.cat(mlvl_centerness, dim=1)
 
         # Replace multiclass_nms with ONNX::NonMaxSuppression in deployment
         if torch.onnx.is_in_onnx_export() and with_nms:
             from mmdet.core.export import add_dummy_nms_for_onnx
-            batch_mlvl_scores = batch_mlvl_scores * (
-                batch_mlvl_centerness.unsqueeze(2))
             max_output_boxes_per_class = cfg.nms.get(
                 'max_output_boxes_per_class', 200)
             iou_threshold = cfg.nms.get('iou_threshold', 0.5)
@@ -560,22 +583,18 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
 
         if with_nms:
             det_results = []
-            for (mlvl_bboxes, mlvl_scores,
-                 mlvl_centerness) in zip(batch_mlvl_bboxes, batch_mlvl_scores,
-                                         batch_mlvl_centerness):
+            for (mlvl_bboxes, mlvl_scores) in zip(batch_mlvl_bboxes, batch_mlvl_scores):
                 det_bbox, det_label = multiclass_nms(
                     mlvl_bboxes,
                     mlvl_scores,
                     cfg.score_thr,
                     cfg.nms,
-                    cfg.max_per_img,
-                    score_factors=mlvl_centerness)
+                    cfg.max_per_img)
                 det_results.append(tuple([det_bbox, det_label]))
         else:
             det_results = [
                 tuple(mlvl_bs)
-                for mlvl_bs in zip(batch_mlvl_bboxes, batch_mlvl_scores,
-                                   batch_mlvl_centerness)
+                for mlvl_bs in zip(batch_mlvl_bboxes, batch_mlvl_scores)
             ]
         return det_results
 
