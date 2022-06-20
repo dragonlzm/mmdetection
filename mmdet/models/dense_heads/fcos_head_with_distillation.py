@@ -191,6 +191,21 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
                 centernesses (list[Tensor]): centerness for each scale level, \
                     each is a 4D-tensor, the channel number is num_points * 1.
         """
+        # load the pretrained text embedding again
+        if False in (self.fc_cls.weight.data == self.load_value):
+            print('loading value again')
+            with torch.no_grad():
+                self.fc_cls.weight.copy_(self.load_value)
+            for param in self.fc_cls.parameters():
+                param.requires_grad = False        
+            # for testing
+            # if self.filter_base_cate != None:
+            #     print('base_load_value is loaded')
+            #     with torch.no_grad():
+            #         self.fc_cls_base.weight.copy_(self.base_load_value)
+            #     for param in self.fc_cls_base.parameters():
+            #         param.requires_grad = False         
+        
         return multi_apply(self.forward_single, feats, self.scales,
                            self.strides)
 
