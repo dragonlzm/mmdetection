@@ -2,6 +2,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import os
+import json
 from mmcv.runner import BaseModule, auto_fp16, force_fp32
 from torch.nn.modules.utils import _pair
 
@@ -322,7 +324,9 @@ class BBoxHead(BaseModule):
                    img_shape,
                    scale_factor,
                    rescale=False,
-                   cfg=None):
+                   cfg=None,
+                   img_metas=None,
+                   bbox_save_path_root=None):
         """Transform network output for a batch into bbox predictions.
 
         Args:
@@ -410,7 +414,22 @@ class BBoxHead(BaseModule):
                 num_pred, num_classes = scores.shape
                 padding = scores.new_zeros(num_pred, 1)
                 scores = torch.cat([scores, padding], dim=-1)  
-                
+            
+            # save the prediction before the NMS
+            if bbox_save_path_root != None:
+                if not os.path.exists(bbox_save_path_root):
+                    os.makedirs(bbox_save_path_root)
+                file_name = os.path.join(bbox_save_path_root, '.'.join(img_metas[0]['ori_filename'].split('.')[:-1]) + '.json')
+               
+                if not os.path.exists(file_name):
+                    file = open(file_name, 'w')
+                    max_score, _ = torch.max(scores, dim=1, keepdim=True)
+                    result = torch.cat([bboxes, max_score], dim=1)
+                    print('result', result.shape)
+                    result_json = {'image_id':int(img_metas[0]['ori_filename'].split('.')[0].strip('0')), 'score':result.tolist()}
+                    file.write(json.dumps(result_json))
+                    file.close()
+
             det_bboxes, det_labels = multiclass_nms(bboxes, scores,
                                                     cfg.score_thr, cfg.nms,
                                                     cfg.max_per_img)

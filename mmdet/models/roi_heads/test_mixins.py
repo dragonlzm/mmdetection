@@ -191,7 +191,9 @@ class BBoxTestMixin:
                     img_shapes[i],
                     scale_factors[i],
                     rescale=rescale,
-                    cfg=rcnn_test_cfg)
+                    cfg=rcnn_test_cfg,
+                    img_metas=img_metas,
+                    bbox_save_path_root=self.bbox_save_path_root)
             det_bboxes.append(det_bbox)
             det_labels.append(det_label)
         return det_bboxes, det_labels
