@@ -46,7 +46,10 @@ for info in gt_content['images']:
 
 # load the sortting info
 #sortting_score = json.load(open('/data/zhuoming/detection/test/proposal_selection_v1/testing.gt_acc.json'))
-sortting_score = json.load(open('/data/zhuoming/detection/test/proposal_selector_coco_with_feat/testing.gt_acc.json'))
+#sortting_score = json.load(open('/data/zhuoming/detection/test/proposal_selector_coco_with_feat/testing.gt_acc.json'))
+#sortting_score = json.load(open('/data/zhuoming/detection/test/proposal_selector_coco_v3/testing.gt_acc.json'))
+sortting_score = json.load(open('/data/zhuoming/detection/test/proposal_selector_coco_with_feat_v2/testing.gt_acc.json'))
+
 from_image_id_to_sortting_idx = {}
 for ele in sortting_score:
     image_id = ele['image_id']
@@ -56,7 +59,8 @@ for ele in sortting_score:
 
 # load the proposal and print the image
 #save_root = '/home/zhuoming/sorted_proposal'
-save_root = '/home/zhuoming/sorted_proposal_v2'
+#save_root = '/home/zhuoming/sorted_proposal_v2'
+save_root = '/home/zhuoming/sorted_proposal_with_feat_v2'
 proposal_path_root = 'data/coco/clip_proposal/32_32_512'
 
 for i, image_id in enumerate(from_image_id_to_annotation):

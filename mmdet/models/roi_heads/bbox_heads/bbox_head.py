@@ -425,7 +425,9 @@ class BBoxHead(BaseModule):
                     file = open(file_name, 'w')
                     max_score, _ = torch.max(scores, dim=1, keepdim=True)
                     result = torch.cat([bboxes, max_score], dim=1)
-                    print('result', result.shape)
+                    #print('result', result.shape)
+                    # the needed format should like this: 
+                    # {'image_id': 289343, 'bbox': [202.46621704101562, 234.70960998535156, 64.39511108398438, 199.79380798339844], 'score': 0.9922735095024109, 'category_id': 1}
                     result_json = {'image_id':int(img_metas[0]['ori_filename'].split('.')[0].strip('0')), 'score':result.tolist()}
                     file.write(json.dumps(result_json))
                     file.close()
