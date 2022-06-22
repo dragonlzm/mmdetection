@@ -84,7 +84,7 @@ class AnchorFreeHead(BaseDenseHead, BBoxTestMixin):
         self.conv_cfg = conv_cfg
         self.norm_cfg = norm_cfg
         self.fp16_enabled = False
-
+        self.filter_base_cate = self.test_cfg.get('filter_base_cate', None) if self.test_cfg is not None else None
         self._init_layers()
 
     def _init_layers(self):
