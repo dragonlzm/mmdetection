@@ -822,8 +822,13 @@ class LoadCLIPProposal:
         # divide the scores and the bboxes
         all_scores = all_bboxes[:, -1]
         all_bboxes = all_bboxes[:, :-1]
+        random_choice = np.random.choice(all_scores.shape[0], self.num_of_rand_bbox, replace=True)
+        all_scores = all_scores[random_choice]
+        all_bboxes = all_bboxes[random_choice]
+        
         results['proposal_bboxes'] = torch.from_numpy(all_bboxes)
         results['proposal_scores'] = torch.from_numpy(all_scores)
+        
         
         return results
 
