@@ -102,7 +102,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         load_value = load_value / load_value.norm(dim=-1, keepdim=True)
         #load_value = load_value.t()
         self.load_value = load_value.cuda()
-        self.filter_base_cate = self.test_cfg.get('filter_base_cate', None) if self.train_cfg is not None else None
+        self.filter_base_cate = self.test_cfg.get('filter_base_cate', None) if self.test_cfg is not None else None
 
         super().__init__(
             num_classes,
