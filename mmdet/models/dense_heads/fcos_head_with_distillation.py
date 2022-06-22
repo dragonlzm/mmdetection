@@ -102,6 +102,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         load_value = load_value / load_value.norm(dim=-1, keepdim=True)
         #load_value = load_value.t()
         self.load_value = load_value.cuda()
+        self.filter_base_cate = self.test_cfg.get('filter_base_cate', None) if self.train_cfg is not None else None
 
         super().__init__(
             num_classes,
@@ -116,7 +117,6 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         self.distill_loss_factor = self.train_cfg.get('distill_loss_factor', (1.0/20.0)) if self.train_cfg is not None else (1.0/20.0)        
         self.distillation_loss_config = dict(type='L1Loss', loss_weight=1.0)
         self.distillation_loss = build_loss(self.distillation_loss_config)
-        self.filter_base_cate = self.test_cfg.get('distill_loss_factor', None) if self.train_cfg is not None else None
 
     def _init_predictor(self):
         """Initialize predictor layers of the head."""
