@@ -97,6 +97,17 @@ class BBoxHead(BaseModule):
                     dict(
                         type='Normal', std=0.001, override=dict(name='fc_reg'))
                 ]
+                
+        self.from_idx_to_cate_id = {65: [1, 2, 3, 4, 5, 6, 7, 8, 9, 15, 16, 17, 18, 19, 
+                                         20, 21, 22, 23, 24, 25, 27, 28, 31, 32, 33, 34, 
+                                         35, 36, 38, 41, 42, 44, 47, 48, 49, 50, 51, 52, 
+                                         53, 54, 55, 56, 57, 59, 60, 61, 62, 63, 65, 70, 
+                                         72, 73, 74, 75, 76, 78, 79, 80, 81, 82, 84, 85, 
+                                         86, 87, 90],
+                                    48: [1, 2, 3, 4, 7, 8, 9, 15, 16, 19, 20, 23, 24, 25, 
+                                         27, 31, 33, 34, 35, 38, 42, 44, 48, 50, 51, 52, 
+                                         53, 54, 55, 56, 57, 59, 60, 62, 65, 70, 72, 73, 
+                                         74, 75, 78, 79, 80, 82, 84, 85, 86, 90]}
 
     @property
     def custom_cls_channels(self):
@@ -423,12 +434,16 @@ class BBoxHead(BaseModule):
                
                 if not os.path.exists(file_name):
                     file = open(file_name, 'w')
-                    max_score, _ = torch.max(scores, dim=1, keepdim=True)
+                    max_score, max_idx = torch.max(scores, dim=1, keepdim=True)
                     result = torch.cat([bboxes, max_score], dim=1)
                     #print('result', result.shape)
                     # the needed format should like this: 
                     # {'image_id': 289343, 'bbox': [202.46621704101562, 234.70960998535156, 64.39511108398438, 199.79380798339844], 'score': 0.9922735095024109, 'category_id': 1}
-                    result_json = {'image_id':int(img_metas[0]['ori_filename'].split('.')[0].strip('0')), 'score':result.tolist()}
+                    # deal with the categories_id
+                    need_cates_list = torch.tensor(self.from_idx_to_cate_id[scores.shape[0]]).cuda()
+                    all_pred_cates = need_cates_list[max_idx]
+                    
+                    result_json = {'image_id':int(img_metas[0]['ori_filename'].split('.')[0].strip('0')), 'score':result.tolist(), 'category_id':all_pred_cates.cpu().tolist()}
                     file.write(json.dumps(result_json))
                     file.close()
 

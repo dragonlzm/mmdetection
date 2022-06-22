@@ -44,17 +44,26 @@ classes_65 = ('person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
             'remote', 'keyboard', 'microwave', 'oven', 'toaster', 'sink', 
             'refrigerator', 'book', 'clock', 'vase', 'scissors', 'toothbrush')
 
+data_root = 'data/coco/'
 
 data = dict(
+    samples_per_gpu=2,
+    workers_per_gpu=2,
     train=dict(
         classes=classes_48,
+        ann_file=data_root + 'annotations/instances_train2017_48base_only.json',
+        img_prefix=data_root + 'train2017/',
         pipeline=train_pipeline),
     val=dict(
         classes=classes_65,
+        ann_file=data_root + 'annotations/instances_val2017_65cates.json',
+        img_prefix=data_root + 'val2017/',
         pipeline=test_pipeline,
         eval_filter_empty_gt=True),
     test=dict(
         classes=classes_65,
+        ann_file=data_root + 'annotations/instances_val2017_65cates.json',
+        img_prefix=data_root + 'val2017/',
         pipeline=test_pipeline,
         eval_filter_empty_gt=True))
 evaluation = dict(interval=1, metric='proposal_selection')

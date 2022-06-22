@@ -10,7 +10,8 @@ import matplotlib.patches as patches
 from PIL import Image
 
 # load the gt bboxes
-gt_content = json.load(open('/data/zhuoming/detection/coco/annotations/instances_train2017_except_48base_only.json'))
+#gt_content = json.load(open('/data/zhuoming/detection/coco/annotations/instances_train2017_except_48base_only.json'))
+gt_content = json.load(open('/data/zhuoming/detection/coco/annotations/instances_val2017_65cates.json'))
 
 base_cates_name = ('person', 'bicycle', 'car', 'motorcycle', 'train', 
             'truck', 'boat', 'bench', 'bird', 'horse', 'sheep', 
@@ -48,7 +49,8 @@ for info in gt_content['images']:
 #sortting_score = json.load(open('/data/zhuoming/detection/test/proposal_selection_v1/testing.gt_acc.json'))
 #sortting_score = json.load(open('/data/zhuoming/detection/test/proposal_selector_coco_with_feat/testing.gt_acc.json'))
 #sortting_score = json.load(open('/data/zhuoming/detection/test/proposal_selector_coco_v3/testing.gt_acc.json'))
-sortting_score = json.load(open('/data/zhuoming/detection/test/proposal_selector_coco_with_feat_v2/testing.gt_acc.json'))
+#sortting_score = json.load(open('/data/zhuoming/detection/test/proposal_selector_coco_with_feat_v2/testing.gt_acc.json'))
+sortting_score = json.load(open('/data/zhuoming/detection/test/proposal_selector_coco_with_pre_nms_pred/testing.gt_acc.json'))
 
 from_image_id_to_sortting_idx = {}
 for ele in sortting_score:
@@ -60,8 +62,11 @@ for ele in sortting_score:
 # load the proposal and print the image
 #save_root = '/home/zhuoming/sorted_proposal'
 #save_root = '/home/zhuoming/sorted_proposal_v2'
-save_root = '/home/zhuoming/sorted_proposal_with_feat_v2'
-proposal_path_root = 'data/coco/clip_proposal/32_32_512'
+#save_root = '/home/zhuoming/sorted_proposal_with_feat_v2'
+save_root = '/home/zhuoming/sorted_pre_nms_res_300'
+#proposal_path_root = 'data/coco/clip_proposal/32_32_512'
+proposal_path_root = 'data/coco/bn65_val_prediction'
+
 
 for i, image_id in enumerate(from_image_id_to_annotation):
     if i > 50:
@@ -97,7 +102,7 @@ for i, image_id in enumerate(from_image_id_to_annotation):
     sorted_proposal = all_proposals[from_image_id_to_sortting_idx[image_id]]
     
     # select top 50
-    sorted_proposal = sorted_proposal[:20]
+    sorted_proposal = sorted_proposal[:300]
     for box in sorted_proposal:
         rect = patches.Rectangle((box[0], box[1]),box[2]-box[0],box[3]-box[1],linewidth=1,edgecolor='r',facecolor='none')
         ax.add_patch(rect)    
@@ -108,18 +113,6 @@ for i, image_id in enumerate(from_image_id_to_annotation):
 
     plt.savefig(os.path.join(print_path,file_name))
     plt.close()
-
-
-
-
-
-
-
-
-
-
-
-
 
 # if the iou of one gt bboxes with all proposals are equal to 0, then we should not draw any proposal
 # for this bboxes
