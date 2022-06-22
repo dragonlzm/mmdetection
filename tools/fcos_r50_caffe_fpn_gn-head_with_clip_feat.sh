@@ -76,13 +76,13 @@ data/fcos/fcos_r50_caffe_fpn_gn-head_with_base48_tuned_clip_feat_1x_coco_base48_
 model.test_cfg.score_thr=0.0 model.test_cfg.max_per_img=300
 
 bash tools/dist_test.sh configs/fcos_distill/fcos_r50_caffe_fpn_gn-head_with_base48_tuned_clip_feat_1x_coco_base48.py \
-/data/zhuoming/detection/fcos/fcos_r50_caffe_fpn_gn-head_with_base48_tuned_clip_feat_1x_coco_base48_200_clip_pro_w01/epoch_12.pth 3 --eval bbox \
+/data/zhuoming/detection/fcos/fcos_r50_caffe_fpn_gn-head_with_base48_tuned_clip_feat_1x_coco_base48_200_clip_pro_w01/epoch_12.pth 2 --eval bbox \
 --eval-options jsonfile_prefix=/data/zhuoming/detection/fcos/fcos_r50_caffe_fpn_gn-head_with_base48_tuned_clip_feat_1x_coco_base48_200_clip_pro_w01/base_results \
 --cfg-options data.test.eval_filter_empty_gt=False data.test.ann_file=data/coco/annotations/instances_val2017_65cates.json \
 model.test_cfg.score_thr=0.0 model.test_cfg.max_per_img=300
 
 bash tools/dist_test.sh configs/fcos_distill/fcos_r50_caffe_fpn_gn-head_with_base48_tuned_clip_feat_1x_coco_novel17.py \
-/data/zhuoming/detection/fcos/fcos_r50_caffe_fpn_gn-head_with_base48_tuned_clip_feat_1x_coco_base48_200_clip_pro_w01/epoch_12.pth 3 --eval bbox \
+/data/zhuoming/detection/fcos/fcos_r50_caffe_fpn_gn-head_with_base48_tuned_clip_feat_1x_coco_base48_200_clip_pro_w01/epoch_12.pth 2 --eval bbox \
 --eval-options jsonfile_prefix=/data/zhuoming/detection/fcos/fcos_r50_caffe_fpn_gn-head_with_base48_tuned_clip_feat_1x_coco_base48_200_clip_pro_w01/novel_results \
 --cfg-options data.test.eval_filter_empty_gt=False data.test.ann_file=data/coco/annotations/instances_val2017_65cates.json \
 model.test_cfg.score_thr=0.0 model.test_cfg.max_per_img=300

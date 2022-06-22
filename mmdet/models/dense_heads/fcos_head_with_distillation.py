@@ -116,6 +116,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         self.distill_loss_factor = self.train_cfg.get('distill_loss_factor', (1.0/20.0)) if self.train_cfg is not None else (1.0/20.0)        
         self.distillation_loss_config = dict(type='L1Loss', loss_weight=1.0)
         self.distillation_loss = build_loss(self.distillation_loss_config)
+        self.filter_base_cate = self.test_cfg.get('distill_loss_factor', None) if self.train_cfg is not None else None
 
     def _init_predictor(self):
         """Initialize predictor layers of the head."""
@@ -127,6 +128,16 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
                                 out_features=self.num_classes,
                                 bias=False)
         self.conv_reg = nn.Conv2d(self.feat_channels, 4, 3, padding=1)
+        if self.filter_base_cate:
+            base_load_value = torch.load(self.filter_base_cate)
+            base_load_value = base_load_value / base_load_value.norm(dim=-1, keepdim=True)
+            #load_value = load_value.t()
+            self.base_load_value = base_load_value.cuda()
+            
+            self.fc_cls_base = build_linear_layer(self.cls_predictor_cfg,
+                                            in_features=self.clip_dim,
+                                            out_features=self.base_load_value.shape[0],
+                                            bias=False)            
 
     def _init_layers(self):
         """Initialize layers of the head."""
@@ -199,12 +210,12 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
             for param in self.fc_cls.parameters():
                 param.requires_grad = False        
             # for testing
-            # if self.filter_base_cate != None:
-            #     print('base_load_value is loaded')
-            #     with torch.no_grad():
-            #         self.fc_cls_base.weight.copy_(self.base_load_value)
-            #     for param in self.fc_cls_base.parameters():
-            #         param.requires_grad = False         
+            if self.filter_base_cate != None:
+                print('base_load_value is loaded')
+                with torch.no_grad():
+                    self.fc_cls_base.weight.copy_(self.base_load_value)
+                for param in self.fc_cls_base.parameters():
+                    param.requires_grad = False         
         
         return multi_apply(self.forward_single, feats, self.scales,
                            self.strides)
@@ -229,9 +240,16 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         cls_feat = cls_feat.permute([0, 2, 3, 1])
         cls_feat = self.map_to_clip(cls_feat)
         cls_score = self.fc_cls(cls_feat)
+
+        # for test only, calculate the base score
+        if self.filter_base_cate != None:
+            base_score = self.fc_cls_base(cls_feat)
+            cls_score = torch.cat([cls_score, base_score], dim=-1)        
+            
         # change the cls_score and the cls_feat back to original
         cls_feat = cls_feat.permute([0, 3, 1, 2])
         cls_score = cls_score.permute([0, 3, 1, 2])
+        
 
         for reg_layer in self.reg_convs:
             reg_feat = reg_layer(reg_feat)
@@ -537,12 +555,26 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         for cls_score, bbox_pred, points in zip(
                 cls_scores, bbox_preds, mlvl_points):
             assert cls_score.size()[-2:] == bbox_pred.size()[-2:]
-            scores = cls_score.permute(0, 2, 3, 1).reshape(
-                batch_size, -1, self.cls_out_channels).sigmoid()
-
             bbox_pred = bbox_pred.permute(0, 2, 3,
-                                          1).reshape(batch_size, -1, 4)
+                                1).reshape(batch_size, -1, 4)
+            
+            scores = cls_score.permute(0, 2, 3, 1).reshape(
+                batch_size, bbox_pred.shape[1], -1).sigmoid()
+
             points = points.expand(batch_size, -1, 2)
+            # add for filter the base categories
+            bg_idx = self.num_classes
+            ## the filtering procedure
+            # BS > BGS and NS 
+            max_idx = torch.max(scores, dim=1)[1]
+            novel_bg_idx = (max_idx < bg_idx)            
+            # filter the bbox
+            scores = scores[novel_bg_idx]
+            # assuming that it's using the sigmoid loss and does not have the bg vector
+            scores = scores[:, :bg_idx]
+            points = points[novel_bg_idx]
+            bbox_pred = bbox_pred[novel_bg_idx]
+            
             # Get top-k prediction
             from mmdet.core.export import get_k_for_topk
             nms_pre = get_k_for_topk(nms_pre_tensor, bbox_pred.shape[1])
