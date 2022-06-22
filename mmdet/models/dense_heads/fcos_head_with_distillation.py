@@ -561,18 +561,19 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
                 batch_size, bbox_pred.shape[1], -1).sigmoid()
 
             points = points.expand(batch_size, -1, 2)
-            # add for filter the base categories
-            bg_idx = self.num_classes
-            ## the filtering procedure
-            # BS > BGS and NS 
-            max_idx = torch.max(scores, dim=1)[1]
-            novel_bg_idx = (max_idx < bg_idx)            
-            # filter the bbox
-            scores = scores[novel_bg_idx]
-            # assuming that it's using the sigmoid loss and does not have the bg vector
-            scores = scores[:, :bg_idx]
-            points = points[novel_bg_idx]
-            bbox_pred = bbox_pred[novel_bg_idx]
+            if self.filter_base_cate != None:
+                # add for filter the base categories
+                bg_idx = self.num_classes
+                ## the filtering procedure
+                # BS > BGS and NS 
+                max_idx = torch.max(scores, dim=-1)[1]
+                novel_bg_idx = (max_idx < bg_idx)            
+                # filter the bbox
+                scores = scores[novel_bg_idx]
+                # assuming that it's using the sigmoid loss and does not have the bg vector
+                scores = scores[:, :bg_idx]
+                points = points[novel_bg_idx]
+                bbox_pred = bbox_pred[novel_bg_idx]
             
             # Get top-k prediction
             from mmdet.core.export import get_k_for_topk
