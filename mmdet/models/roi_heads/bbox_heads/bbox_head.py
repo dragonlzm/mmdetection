@@ -440,7 +440,7 @@ class BBoxHead(BaseModule):
                     # the needed format should like this: 
                     # {'image_id': 289343, 'bbox': [202.46621704101562, 234.70960998535156, 64.39511108398438, 199.79380798339844], 'score': 0.9922735095024109, 'category_id': 1}
                     # deal with the categories_id
-                    need_cates_list = torch.tensor(self.from_idx_to_cate_id[scores.shape[0]]).cuda()
+                    need_cates_list = torch.tensor(self.from_idx_to_cate_id[scores.shape[-1]]).cuda()
                     all_pred_cates = need_cates_list[max_idx]
                     
                     result_json = {'image_id':int(img_metas[0]['ori_filename'].split('.')[0].strip('0')), 'score':result.tolist(), 'category_id':all_pred_cates.cpu().tolist()}
