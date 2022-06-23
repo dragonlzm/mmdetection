@@ -434,15 +434,20 @@ class BBoxHead(BaseModule):
                
                 if not os.path.exists(file_name):
                     file = open(file_name, 'w')
-                    max_score, max_idx = torch.max(scores, dim=1, keepdim=True)
+                    fg_classes_num = scores.shape[-1] - 1
+                    
+                    max_score, max_idx = torch.max(scores[..., :fg_classes_num], dim=1, keepdim=True)
                     result = torch.cat([bboxes, max_score], dim=1)
                     #print('result', result.shape)
                     # the needed format should like this: 
                     # {'image_id': 289343, 'bbox': [202.46621704101562, 234.70960998535156, 64.39511108398438, 199.79380798339844], 'score': 0.9922735095024109, 'category_id': 1}
                     # deal with the categories_id
-                    need_cates_list = torch.tensor(self.from_idx_to_cate_id[self.num_classes]).cuda()
+                    need_cates_list = self.from_idx_to_cate_id[fg_classes_num]
+                    #print('need_cates_list',need_cates_list)
+                    need_cates_list = torch.tensor(need_cates_list)
                     all_pred_cates = need_cates_list[max_idx]
                     
+                    #result_json = {'image_id':int(img_metas[0]['ori_filename'].split('.')[0].strip('0')), 'score':result.tolist()}
                     result_json = {'image_id':int(img_metas[0]['ori_filename'].split('.')[0].strip('0')), 'score':result.tolist(), 'category_id':all_pred_cates.cpu().tolist()}
                     file.write(json.dumps(result_json))
                     file.close()

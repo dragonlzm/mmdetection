@@ -63,6 +63,25 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
         
         self.even_sample_uk = self.train_cfg.get('even_sample_uk', False) if self.train_cfg is not None else False
         self.test_head_name = self.test_cfg.get('test_head_name', 'both') if self.test_cfg is not None else 'both'
+        self.fixed_param = self.train_cfg.get('fixed_param', False) if self.train_cfg is not None else False
+        if self.fixed_param == True:
+            self.fix_model_parameter()
+    
+    def fix_model_parameter(self):
+        # fix backbone 
+        for para_name, param in zip(self.backbone.state_dict(), self.backbone.parameters()):
+            param.requires_grad = False
+            print('backbone', para_name)
+        # fix neck
+        for para_name, param in zip(self.neck.state_dict(), self.neck.parameters()):
+            param.requires_grad = False
+            print('neck', para_name)     
+        # fix rpn_head
+        for para_name, param in zip(self.rpn_head.state_dict(), self.rpn_head.parameters()):
+            param.requires_grad = False
+            print('rpn_head', para_name)
+        print('backbone, neck, rpn_head parameters are fixed')
+
 
     @property
     def with_rpn(self):
