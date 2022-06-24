@@ -820,19 +820,19 @@ class LoadCLIPProposal:
         #the loaded bboxes are in xyxy format
         all_bboxes = np.array(proposal_file_content['score']).astype(np.float32)
         # divide the scores and the bboxes
-        all_scores = all_bboxes[:, -1]
-        all_bboxes = all_bboxes[:, :-1]
+        all_scores = torch.from_numpy(all_bboxes[:, -1])
+        all_bboxes = torch.from_numpy(all_bboxes[:, :-1])
         #random_choice = np.random.choice(all_scores.shape[0], self.num_of_rand_bbox, replace=True)
         if len(all_bboxes) < 1000:
             print('file_name', file_name)
             padded_len = 1000 - len(all_bboxes)
             padded_results = torch.zeros([padded_len] + list(all_bboxes.shape[1:]))
-            paddes_scores = torch.full(padded_len, -1)
+            padded_scores = torch.full((padded_len,), -1)
             all_bboxes = torch.cat([all_bboxes, padded_results], dim=0)
-            all_scores = torch.cat([all_scores, paddes_scores], dim=0)
-        
-        results['proposal_bboxes'] = torch.from_numpy(all_bboxes)
-        results['proposal_scores'] = torch.from_numpy(all_scores)
+            all_scores = torch.cat([all_scores, padded_scores], dim=0)
+
+        results['proposal_bboxes'] = all_scores
+        results['proposal_scores'] = all_bboxes
         
         return results
 

@@ -73,11 +73,13 @@ class ProposalSelector(BaseDetector):
 
     def encoder_forward(self, gt_bboxes, gt_labels, proposal_bboxes, proposal_scores, proposal_feats=None):
         # filter the padded bboxes
-        remaining_idx = (proposal_scores != -1)
-        proposal_bboxes = proposal_bboxes[remaining_idx]
-        proposal_scores = proposal_scores[remaining_idx]
-        if len(proposal_scores) < 1000: 
-            print(len(proposal_scores))
+        # remaining_idx = (proposal_scores != -1)
+        if -1 in proposal_scores:
+            remaining_idx = [(ele != -1) for ele in proposal_scores]
+            proposal_bboxes = [ele[idx] for ele, idx in zip(proposal_bboxes, remaining_idx)]
+            proposal_scores = [ele[idx] for ele, idx in zip(proposal_scores, remaining_idx)]
+        if len(proposal_scores[0]) < 1000: 
+            print(proposal_scores.shape)
         
         # concate the proposal_bboxes and proposal_bboxes
         if proposal_feats == None:
