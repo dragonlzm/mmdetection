@@ -63,7 +63,7 @@ for ele in sortting_score:
 #save_root = '/home/zhuoming/sorted_proposal'
 #save_root = '/home/zhuoming/sorted_proposal_v2'
 #save_root = '/home/zhuoming/sorted_proposal_with_feat_v2'
-save_root = '/home/zhuoming/sorted_pre_nms_res_300'
+save_root = '/home/zhuoming/sorted_pre_nms_res_50'
 #proposal_path_root = 'data/coco/clip_proposal/32_32_512'
 proposal_path_root = 'data/coco/bn65_val_prediction'
 
@@ -102,7 +102,7 @@ for i, image_id in enumerate(from_image_id_to_annotation):
     sorted_proposal = all_proposals[from_image_id_to_sortting_idx[image_id]]
     
     # select top 50
-    sorted_proposal = sorted_proposal[:300]
+    sorted_proposal = sorted_proposal[:50]
     for box in sorted_proposal:
         rect = patches.Rectangle((box[0], box[1]),box[2]-box[0],box[3]-box[1],linewidth=1,edgecolor='r',facecolor='none')
         ax.add_patch(rect)    
