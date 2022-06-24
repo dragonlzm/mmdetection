@@ -468,8 +468,8 @@ class CocoDataset(CustomDataset):
 
     def calc_proposal_selection_eval(self, results):
         loss = torch.nn.L1Loss()
-        pred_val = torch.cat([torch.from_numpy(ele[0]).unsqueeze(dim=0) for ele in results],dim=0)
-        pred_val_target = torch.cat([torch.from_numpy(ele[1]).unsqueeze(dim=0) for ele in results],dim=0)
+        pred_val = torch.cat([torch.from_numpy(ele[0]) for ele in results],dim=0)
+        pred_val_target = torch.cat([torch.from_numpy(ele[1]) for ele in results],dim=0)
         loss_val = loss(pred_val, pred_val_target)
         return loss_val.item()
 

@@ -831,8 +831,8 @@ class LoadCLIPProposal:
             all_bboxes = torch.cat([all_bboxes, padded_results], dim=0)
             all_scores = torch.cat([all_scores, padded_scores], dim=0)
 
-        results['proposal_bboxes'] = all_scores
-        results['proposal_scores'] = all_bboxes
+        results['proposal_bboxes'] = all_bboxes
+        results['proposal_scores'] = all_scores
         
         return results
 
