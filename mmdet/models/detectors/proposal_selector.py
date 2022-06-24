@@ -72,6 +72,11 @@ class ProposalSelector(BaseDetector):
         return all_pred_target
 
     def encoder_forward(self, gt_bboxes, gt_labels, proposal_bboxes, proposal_scores, proposal_feats=None):
+        # filter the padded bboxes
+        filter_idx = (proposal_scores == -1)
+        proposal_bboxes = proposal_bboxes[filter_idx]
+        proposal_scores = proposal_scores[filter_idx]
+        
         # concate the proposal_bboxes and proposal_bboxes
         if proposal_feats == None:
             all_inputs = [torch.cat([proposal_bbox_per_img, proposal_score_per_img.unsqueeze(dim=-1)], dim=-1).unsqueeze(dim=0)
