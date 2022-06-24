@@ -38,6 +38,7 @@ for image_id in from_image_id_to_predicted_score:
     pred_bboxes = bbox_and_old_score[:, :4]
     pred_cate_ids = torch.tensor(pred_file_content['category_id'])
     
+    print('predict_scores', predict_scores.shape, 'pred_bboxes', pred_bboxes.shape, 'pred_cate_ids', pred_cate_ids.shape)
     # select the top 300 prediction
     top_vals, top_idxes = torch.topk(predict_scores, 300)
     pred_bboxes = pred_bboxes[top_idxes]

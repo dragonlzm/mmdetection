@@ -824,7 +824,8 @@ class LoadCLIPProposal:
         all_bboxes = all_bboxes[:, :-1]
         #random_choice = np.random.choice(all_scores.shape[0], self.num_of_rand_bbox, replace=True)
         if len(all_bboxes) < 1000:
-            padded_len = 100 - len(all_bboxes)
+            print('file_name', file_name)
+            padded_len = 1000 - len(all_bboxes)
             padded_results = torch.zeros([padded_len] + list(all_bboxes.shape[1:]))
             paddes_scores = torch.full(padded_len, -1)
             all_bboxes = torch.cat([all_bboxes, padded_results], dim=0)
