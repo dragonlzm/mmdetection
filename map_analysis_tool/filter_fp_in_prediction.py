@@ -2,6 +2,8 @@
 # setting the confidence score to 0 for the bbox which has max iou with gt smaller than 0.5 
 import json
 import torch
+import sys
+sys.path.append('../mmdetection')
 from mmdet.core.bbox.iou_calculators.iou2d_calculator import BboxOverlaps2D
 
 # aggregate the gt on each image base on the categoires

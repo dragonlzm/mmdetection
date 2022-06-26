@@ -11,7 +11,8 @@ import mmcv
 import numpy as np
 import pycocotools.mask as maskUtils
 import json
-
+from mmdet.core.bbox.iou_calculators.iou2d_calculator import BboxOverlaps2D
+iou_calculator = BboxOverlaps2D()
 from mmdet.core import BitmapMasks, PolygonMasks
 from ..builder import PIPELINES
 
@@ -591,7 +592,8 @@ class LoadCLIPFeat:
                  file_path_prefix=None,
                  num_of_rand_bbox=20,
                  select_fixed_subset=None,
-                 extra_rand_path_prefix=None):
+                 extra_rand_path_prefix=None,
+                 filter_iop=False):
         self.file_path_prefix = file_path_prefix
         # the path should like this
         # /data/zhuoming/detection/coco/feat
@@ -600,6 +602,7 @@ class LoadCLIPFeat:
         self.num_of_rand_bbox = num_of_rand_bbox
         self.select_fixed_subset = select_fixed_subset
         self.extra_rand_path_prefix = extra_rand_path_prefix
+        self.filter_iop = filter_iop
 
     def __call__(self, results):
         '''load the pre-extracted CLIP feat'''
@@ -658,8 +661,7 @@ class LoadCLIPFeat:
         if len(remaining_feat) < 100:
             padded_len = 100 - len(remaining_feat)
             padded_results = torch.zeros([padded_len] + list(remaining_feat.shape[1:]))
-            remaining_feat = torch.cat([remaining_feat, padded_results], dim=0)        
-        
+            remaining_feat = torch.cat([remaining_feat, padded_results], dim=0)
         results['gt_feats'] = remaining_feat
         
         # load the random feat
@@ -717,6 +719,27 @@ class LoadCLIPFeat:
             
             final_rand_bbox = final_rand_bbox.numpy()
             rand_feat = rand_feat.numpy()
+        
+        #filter the iop sample
+        # TODO: add condition
+        if self.filter_iop:
+            # scale the pred and the gt back to the original scale
+            now_gt_bbox = results['gt_bboxes']
+            now_gt_bbox /= now_scale_factor
+            temp_random_bbox = final_rand_bbox / now_scale_factor
+            # calculate the iop
+            iop = iou_calculator(temp_random_bbox, now_gt_bbox, mode='iof')
+            max_iop_per_pred, max_iop_per_pred_idx = torch.max(iop, dim=-1)
+            
+            # filter the clip proposal which iop > 0.9
+            remaining_idx = (max_iop_per_pred <= 0.9)
+            
+            # show the number of the rest of the proposal  
+            print('after filtering', remaining_idx.shape, torch.sum(remaining_idx))
+            # filter the bboxes 
+            final_rand_bbox = final_rand_bbox[remaining_idx]
+            rand_feat = rand_feat[remaining_idx]
+        
         # in some images the valid clip proposal is fewer than 500, which need to replicate some of the clip proposals
         # to reach the needed number of distillation proposal
         # therefore we need to set the replace to True to avoid the error
