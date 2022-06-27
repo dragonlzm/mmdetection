@@ -593,7 +593,8 @@ class LoadCLIPFeat:
                  num_of_rand_bbox=20,
                  select_fixed_subset=None,
                  extra_rand_path_prefix=None,
-                 filter_iop=False):
+                 filter_iop=False,
+                 max_filter_num=100):
         self.file_path_prefix = file_path_prefix
         # the path should like this
         # /data/zhuoming/detection/coco/feat
@@ -603,6 +604,7 @@ class LoadCLIPFeat:
         self.select_fixed_subset = select_fixed_subset
         self.extra_rand_path_prefix = extra_rand_path_prefix
         self.filter_iop = filter_iop
+        self.max_filter_num = max_filter_num
 
     def __call__(self, results):
         '''load the pre-extracted CLIP feat'''
@@ -743,9 +745,9 @@ class LoadCLIPFeat:
             ### in this situation, all the clip proposal will be in this GT bboxes
             ### therefore in this situation we randomly sample the iop prediction for filtering 
             
-            # random sample at most 100 bbox for filtering
-            if filtered_idx.shape[0] > 100:
-                random_filtered_choice = torch.from_numpy(np.random.choice(filtered_idx.shape[0], 100, replace=False))
+            # random sample at most self.max_filter_num bbox for filtering
+            if filtered_idx.shape[0] > self.max_filter_num:
+                random_filtered_choice = torch.from_numpy(np.random.choice(filtered_idx.shape[0], self.max_filter_num, replace=False))
                 final_filtered_idx = filtered_idx[random_filtered_choice]
             else:
                 final_filtered_idx = filtered_idx
