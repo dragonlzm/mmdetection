@@ -720,34 +720,54 @@ class LoadCLIPFeat:
             final_rand_bbox = final_rand_bbox.numpy()
             rand_feat = rand_feat.numpy()
         
+        # convert to the torch tensor
+        final_rand_bbox = torch.from_numpy(final_rand_bbox)
+        rand_feat = torch.from_numpy(rand_feat)
         #filter the iop sample
-        # TODO: add condition
         if self.filter_iop:
             # scale the pred and the gt back to the original scale
-            now_gt_bbox = results['gt_bboxes']
-            now_gt_bbox /= now_scale_factor
+            now_gt_bbox = torch.from_numpy(results['gt_bboxes'])
+            now_scale_factor = torch.from_numpy(now_scale_factor)
+            now_gt_bbox = now_gt_bbox / now_scale_factor
             temp_random_bbox = final_rand_bbox / now_scale_factor
             # calculate the iop
             iop = iou_calculator(temp_random_bbox, now_gt_bbox, mode='iof')
             max_iop_per_pred, max_iop_per_pred_idx = torch.max(iop, dim=-1)
             
-            # filter the clip proposal which iop > 0.9
-            remaining_idx = (max_iop_per_pred <= 0.9)
+            # the clip proposal inside the gt which need to be filtered
+            # remaining_idx is the idx of the need filtered result: tensor([1, 2, 5, 6, 8, 9])
+            #remaining_idx = (max_iop_per_pred > 0.9)
+            filtered_idx = (max_iop_per_pred > 0.9).nonzero().view(-1)
+            
+            ### since in some situation, there is a big base GT bboxes which cover most of the image
+            ### in this situation, all the clip proposal will be in this GT bboxes
+            ### therefore in this situation we randomly sample the iop prediction for filtering 
+            
+            # random sample at most 100 bbox for filtering
+            if filtered_idx.shape[0] > 100:
+                random_filtered_choice = torch.from_numpy(np.random.choice(filtered_idx.shape[0], 100, replace=False))
+                final_filtered_idx = filtered_idx[random_filtered_choice]
+            else:
+                final_filtered_idx = filtered_idx
+            final_idx = torch.full(max_iop_per_pred.shape, True)
+            final_idx[final_filtered_idx] = False
             
             # show the number of the rest of the proposal  
-            print('after filtering', remaining_idx.shape, torch.sum(remaining_idx))
+            #print('after filtering', final_idx.shape, torch.sum(final_idx))
+            #if filtered_idx.shape[0] > 100:
+            #    print('original_idx:', (max_iop_per_pred > 0.9), 'final_idx', ~final_idx)
             # filter the bboxes 
-            final_rand_bbox = final_rand_bbox[remaining_idx]
-            rand_feat = rand_feat[remaining_idx]
+            final_rand_bbox = final_rand_bbox[final_idx]
+            rand_feat = rand_feat[final_idx]
         
         # in some images the valid clip proposal is fewer than 500, which need to replicate some of the clip proposals
         # to reach the needed number of distillation proposal
         # therefore we need to set the replace to True to avoid the error
-        random_choice = np.random.choice(rand_feat.shape[0], self.num_of_rand_bbox, replace=True)
+        random_choice = torch.from_numpy(np.random.choice(rand_feat.shape[0], self.num_of_rand_bbox, replace=True))
         final_rand_bbox = final_rand_bbox[random_choice]
         final_rand_feat = rand_feat[random_choice]
-        results['rand_bboxes'] = torch.from_numpy(final_rand_bbox)
-        results['rand_feats'] = torch.from_numpy(final_rand_feat)
+        results['rand_bboxes'] = final_rand_bbox
+        results['rand_feats'] = final_rand_feat
         
         return results
 
