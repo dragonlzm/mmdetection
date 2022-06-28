@@ -221,6 +221,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                             bg_bboxes=None,
                             bg_feats=None):
         """Run forward function and calculate loss for box head in training."""
+        """the gt_bboxes and rand_bboxes are in the format of xyxy """
         
         # prepare the roi for the proposal
         if self.use_bg_pro_as_ns:
@@ -229,12 +230,46 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             rois = bbox2roi([res.bboxes for res in sampling_results])
         # prepare the roi for the gt and the random bboxes
         if self.use_bg_pro_for_distill:
-            gt_rand_rois = bbox2roi([torch.cat([gt_bbox, random_bbox, bg_bbox], dim=0) for gt_bbox, random_bbox, bg_bbox in zip(gt_bboxes, rand_bboxes, bg_bboxes)])
+            gt_rand_rois = [torch.cat([gt_bbox, random_bbox, bg_bbox], dim=0) for gt_bbox, random_bbox, bg_bbox in zip(gt_bboxes, rand_bboxes, bg_bboxes)]
         elif self.use_only_gt_pro_for_distill:
-            gt_rand_rois = bbox2roi(gt_bboxes)
-        else:   
-            gt_rand_rois = bbox2roi([torch.cat([gt_bbox, random_bbox], dim=0) for gt_bbox, random_bbox in zip(gt_bboxes, rand_bboxes)])
+            gt_rand_rois = gt_bboxes
+        else:
+            gt_rand_rois = [torch.cat([gt_bbox, random_bbox], dim=0) for gt_bbox, random_bbox in zip(gt_bboxes, rand_bboxes)]
         
+        # add pertrubation
+        if self.add_distill_pertrub:
+            perturbed_result = []
+            for gt_rand_roi, img_meta in zip(gt_rand_rois, img_metas):
+                #print('before perturbation:', gt_rand_roi[:10])
+                H, W, channel = img_meta['img_shape']
+                tl_x, tl_y, br_x, br_y = gt_rand_roi[:, 0], gt_rand_roi[:, 1], gt_rand_roi[:, 2], gt_rand_roi[:, 3]
+                w = br_x - tl_x
+                h = br_y - tl_y
+                # change the bbox location by changing the top left position
+                # bbox change direction
+                x_direction_sign = torch.randint(low=-1,high=1,size=w.shape).cuda()
+                y_direction_sign = torch.randint(low=-1,high=1,size=w.shape).cuda()
+                # bbox direction change ratio(the ration should be 1/2, 1/3, 1/4, 1/5)
+                # commonly we will mantain the size of the bbox unchange while changing
+                # the localization of the bbox
+                x_change_pixel = w * self.crop_loca_modi_ratio * x_direction_sign
+                y_change_pixel = h * self.crop_loca_modi_ratio * y_direction_sign
+                # change the bbox size ratio
+                x_change_for_size = ((self.crop_size_modi_ratio - 1) / 2) * w
+                y_change_for_size = ((self.crop_size_modi_ratio - 1) / 2) * h
+                # the final format for the
+                x_start_pos = torch.clamp(tl_x-x_change_for_size+x_change_pixel , min=0.1).unsqueeze(dim=-1)
+                y_start_pos = torch.clamp(tl_y-y_change_for_size+y_change_pixel, min=0.1).unsqueeze(dim=-1)
+                x_end_pos = torch.clamp(tl_x+x_change_for_size+w, max=W-1).unsqueeze(dim=-1)
+                y_end_pos = torch.clamp(tl_y+y_change_for_size+h, max=H-1).unsqueeze(dim=-1)
+                # concat the result
+                perturbed_bbox_per_img = torch.cat([x_start_pos, y_start_pos, x_end_pos, y_end_pos], dim=-1)
+                perturbed_result.append(perturbed_bbox_per_img)
+                #perturbed_result.append(gt_rand_roi)
+                #print('after perturbation:', perturbed_bbox_per_img[:10])
+            gt_rand_rois = perturbed_result
+    
+        gt_rand_rois = bbox2roi(gt_rand_rois)  
         bbox_results = self._bbox_forward(x, rois, distilled_feat, gt_rand_rois, gt_labels)
         
         if self.use_bg_pro_as_ns:

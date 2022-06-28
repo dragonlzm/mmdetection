@@ -47,6 +47,10 @@ class BaseRoIHead(BaseModule, metaclass=ABCMeta):
         self.use_only_gt_pro_for_distill = self.train_cfg.get('use_only_gt_pro_for_distill', False) if self.train_cfg is not None else False
         # save the prediction
         self.bbox_save_path_root = self.test_cfg.get('bbox_save_path_root', None) if self.test_cfg is not None else None
+        # add perturbation to the distillation
+        self.add_distill_pertrub = self.train_cfg.get('add_distill_pertrub', False) if self.train_cfg is not None else False
+        self.crop_loca_modi_ratio = self.train_cfg.get('crop_loca_modi_ratio', 0.1) if self.train_cfg is not None else 0.1
+        self.crop_size_modi_ratio = self.train_cfg.get('crop_size_modi_ratio', 1.1) if self.train_cfg is not None else 1.1
     @property
     def with_bbox(self):
         """bool: whether the RoI head contains a `bbox_head`"""
