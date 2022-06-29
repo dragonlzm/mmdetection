@@ -262,16 +262,38 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=0.5 optimizer_config.grad_clip.max_norm=10 \
 #     #--resume-from=${WORK_DIR}/latest.pth
 
-# perturbation 0.2
-WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_200clip_pro_purturb02"
+# filter iop w=512 500 300(2x)
+START_FROM="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_200clip_pro_filter_iop_500_300_w512"
+WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_200clip_pro_filter_iop_500_300_w512"
 PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
-    configs/mask_rcnn_distill/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_200clip_pro.py --launcher pytorch \
+    configs/mask_rcnn_distill/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_200clip_pro_filter_iop_500_300.py --launcher pytorch \
     --work-dir=${WORK_DIR} \
     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
-    model.train_cfg.rcnn.add_distill_pertrub=True model.train_cfg.rcnn.crop_loca_modi_ratio=0.2 model.train_cfg.rcnn.crop_size_modi_ratio=1.2
-    #--resume-from=${WORK_DIR}/latest.pth
+    --resume-from=${START_FROM}/epoch_8.pth
+
+# filter iop w=256 500 300(2x)
+# START_FROM="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_200clip_pro_filter_iop_500_300_w256"
+# WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_200clip_pro_filter_iop_500_300_w256"
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#     configs/mask_rcnn_distill/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_200clip_pro_filter_iop_500_300.py --launcher pytorch \
+#     --work-dir=${WORK_DIR} \
+#     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=0.5 optimizer_config.grad_clip.max_norm=10 \
+#     --resume-from=${START_FROM}/epoch_8.pth
+
+# perturbation 0.2
+# WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_200clip_pro_purturb02"
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#     configs/mask_rcnn_distill/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_200clip_pro.py --launcher pytorch \
+#     --work-dir=${WORK_DIR} \
+#     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
+#     model.train_cfg.rcnn.add_distill_pertrub=True model.train_cfg.rcnn.crop_loca_modi_ratio=0.2 model.train_cfg.rcnn.crop_size_modi_ratio=1.2
+#     #--resume-from=${WORK_DIR}/latest.pth
 
 # perturbation 0.1
 # WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_200clip_pro_purturb01"
@@ -297,22 +319,25 @@ python -m torch.distributed.launch --nproc_per_node=2 \
 
 
 # test the model
+#CHECKPOINT_NAME="epoch_12.pth"
+CHECKPOINT_NAME="epoch_24.pth"
+
 bash tools/dist_test.sh configs/mask_rcnn_distill/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48.py \
-${WORK_DIR}/epoch_12.pth 2 --eval bbox segm \
+${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox segm \
 --eval-options jsonfile_prefix=${WORK_DIR}/base_results \
 --cfg-options data.test.eval_filter_empty_gt=False data.test.ann_file=data/coco/annotations/instances_val2017_65cates.json
 
 bash tools/dist_test.sh configs/mask_rcnn_distill/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_novel17.py \
-${WORK_DIR}/epoch_12.pth 2 --eval bbox segm \
+${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox segm \
 --eval-options jsonfile_prefix=${WORK_DIR}/novel_results \
 --cfg-options data.test.eval_filter_empty_gt=False data.test.ann_file=data/coco/annotations/instances_val2017_65cates.json
 
 bash tools/dist_test.sh configs/mask_rcnn_distill/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_novel17.py \
-${WORK_DIR}/epoch_12.pth 2 --eval bbox segm \
+${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox segm \
 --eval-options jsonfile_prefix=${WORK_DIR}/novel_results_trick \
 --cfg-options model.roi_head.bbox_head.filter_base_cate=data/embeddings/base_finetuned_48cates.pt data.test.eval_filter_empty_gt=False data.test.ann_file=data/coco/annotations/instances_val2017_65cates.json
 
 bash tools/dist_test.sh configs/mask_rcnn_distill/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_bn65.py \
-${WORK_DIR}/epoch_12.pth 2 --eval bbox segm \
+${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox segm \
 --eval-options jsonfile_prefix=${WORK_DIR}/base_and_novel \
 --cfg-options data.test.eval_filter_empty_gt=False data.test.ann_file=data/coco/annotations/instances_val2017_65cates.json
