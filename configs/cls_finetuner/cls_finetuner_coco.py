@@ -15,7 +15,6 @@ train_pipeline = [
     dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels']),
 ]
 
-
 test_pipeline = [
     dict(type='LoadImageFromFile', channel_order='rgb'),
     dict(type='LoadAnnotations', with_bbox=True, with_label=True),

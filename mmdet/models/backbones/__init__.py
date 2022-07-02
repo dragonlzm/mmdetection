@@ -15,7 +15,7 @@ from .resnext import ResNeXt
 from .ssd_vgg import SSDVGG
 from .swin import SwinTransformer
 from .trident_resnet import TridentResNet
-from .vision_transformer import myVisionTransformer, myTransformer
+from .vision_transformer import myVisionTransformer, myTransformer, ModifiedResNet
 
 
 __all__ = [
@@ -23,5 +23,5 @@ __all__ = [
     'MobileNetV2', 'Res2Net', 'HourglassNet', 'DetectoRS_ResNet',
     'DetectoRS_ResNeXt', 'Darknet', 'ResNeSt', 'TridentResNet', 'CSPDarknet',
     'SwinTransformer', 'PyramidVisionTransformer', 'PyramidVisionTransformerV2',
-    'myVisionTransformer', 'myTransformer'
+    'myVisionTransformer', 'myTransformer', 'ModifiedResNet'
 ]
