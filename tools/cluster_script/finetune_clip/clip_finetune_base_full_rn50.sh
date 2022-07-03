@@ -34,3 +34,16 @@ python -m torch.distributed.launch --nproc_per_node=2 \
     configs/cls_finetuner/cls_finetuner_clip_base48_all_train_resnet50_only_bn.py --launcher pytorch \
     --work-dir=${WORK_DIR} \
     #--resume-from=${WORK_DIR}/latest.pth
+
+# for testing
+bash tools/dist_test.sh configs/cls_finetuner/cls_finetuner_clip_base48_all_train_resnet50.py \
+${WORK_DIR}/latest.pth 2 \
+--eval=gt_acc --options jsonfile_prefix=${WORK_DIR}/base_results
+
+bash tools/dist_test.sh configs/cls_finetuner/cls_finetuner_clip_full_coco_resnet50.py \
+${WORK_DIR}/latest.pth 2 \
+--eval=gt_acc --options jsonfile_prefix=${WORK_DIR}/all_results
+
+bash tools/dist_test.sh configs/cls_finetuner/cls_finetuner_clip_novel17_all_train_resnet50.py \
+${WORK_DIR}/latest.pth 2 \
+--eval=gt_acc --options jsonfile_prefix=${WORK_DIR}/novel_results

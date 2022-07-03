@@ -138,8 +138,8 @@ class ModifiedResNet(BaseModule):
             self.fix_model_parameter()
             
         # testing the model parameters
-        for para_name, param in zip(self.state_dict(), self.parameters()):
-            print(para_name, param.requires_grad)
+        # for para_name, param in zip(self.state_dict(), self.parameters()):
+        #     print(para_name, param.requires_grad)
 
     def _make_layer(self, planes, blocks, stride=1):
         layers = [Bottleneck(self._inplanes, planes, stride)]
