@@ -394,7 +394,7 @@ python -m torch.distributed.launch --nproc_per_node=2 \
     configs/mask_rcnn_distill/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_200clip_pro_with_filp.py --launcher pytorch \
     --work-dir=${WORK_DIR} \
     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
-    --resume-from=${WORK_DIR}/latest.pth
+    #--resume-from=${WORK_DIR}/latest.pth
 
 # test the model
 CHECKPOINT_NAME="epoch_12.pth"
