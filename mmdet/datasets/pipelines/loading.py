@@ -771,6 +771,8 @@ class LoadCLIPFeat:
         results['rand_bboxes'] = final_rand_bbox
         results['rand_feats'] = final_rand_feat
         
+        results['bbox_fields'].append('rand_bboxes')
+        
         return results
 
     def __repr__(self):

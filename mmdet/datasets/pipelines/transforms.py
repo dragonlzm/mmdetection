@@ -484,9 +484,13 @@ class RandomFlip:
                     results[key], direction=results['flip_direction'])
             # flip bboxes
             for key in results.get('bbox_fields', []):
+                if key == 'rand_bboxes':
+                    print('before', results[key][:10])
                 results[key] = self.bbox_flip(results[key],
                                               results['img_shape'],
                                               results['flip_direction'])
+                if key == 'rand_bboxes':
+                    print('after', results[key][:10])
             # flip masks
             for key in results.get('mask_fields', []):
                 results[key] = results[key].flip(results['flip_direction'])
