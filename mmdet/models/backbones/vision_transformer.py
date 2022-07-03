@@ -136,6 +136,10 @@ class ModifiedResNet(BaseModule):
         # fix the model parameter
         if self.fixed_param == True:
             self.fix_model_parameter()
+            
+        # testing the model parameters
+        for para_name, param in zip(self.state_dict(), self.parameters()):
+            print(para_name, param.requires_grad)
 
     def _make_layer(self, planes, blocks, stride=1):
         layers = [Bottleneck(self._inplanes, planes, stride)]
@@ -171,10 +175,10 @@ class ModifiedResNet(BaseModule):
         else:
             #print(self.state_dict())
             for para_name, param in zip(self.state_dict(), self.parameters()):
-                if 'bn_' not in para_name:
+                if 'bn' not in para_name:
                     param.requires_grad = False
                     continue
-                print(para_name, self.state_dict()[para_name].shape, param.shape)
+                #print(para_name, self.state_dict()[para_name].shape, param.shape)
             #for para_name, param in zip(self.state_dict(), self.parameters()):
             #    print(para_name, param.requires_grad, param.shape)            
             print('backbone parameters are fixed, with ln open')
