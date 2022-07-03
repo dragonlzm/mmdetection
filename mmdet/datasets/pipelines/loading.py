@@ -768,7 +768,7 @@ class LoadCLIPFeat:
         random_choice = torch.from_numpy(np.random.choice(rand_feat.shape[0], self.num_of_rand_bbox, replace=True))
         final_rand_bbox = final_rand_bbox[random_choice]
         final_rand_feat = rand_feat[random_choice]
-        results['rand_bboxes'] = final_rand_bbox
+        results['rand_bboxes'] = final_rand_bbox.cpu().numpy()
         results['rand_feats'] = final_rand_feat
         
         results['bbox_fields'].append('rand_bboxes')
