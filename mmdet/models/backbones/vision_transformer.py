@@ -96,6 +96,7 @@ class AttentionPool2d(BaseModule):
         return x[0]
 
 
+@BACKBONES.register_module()
 class ModifiedResNet(BaseModule):
     """
     A ResNet class that is similar to torchvision's but contains the following changes:
@@ -104,10 +105,13 @@ class ModifiedResNet(BaseModule):
     - The final pooling layer is a QKV attention instead of an average pool
     """
 
-    def __init__(self, layers, output_dim, heads, input_resolution=224, width=64):
+    def __init__(self, layers, output_dim, heads, input_resolution=224, width=64, init_cfg=None, fixed_param=False, open_ln=False):
         super().__init__()
         self.output_dim = output_dim
         self.input_resolution = input_resolution
+        self.init_cfg = init_cfg
+        self.fixed_param = fixed_param
+        self.open_ln = open_ln
 
         # the 3-layer stem
         self.conv1 = nn.Conv2d(3, width // 2, kernel_size=3, stride=2, padding=1, bias=False)
@@ -128,6 +132,10 @@ class ModifiedResNet(BaseModule):
 
         embed_dim = width * 32  # the ResNet feature dimension
         self.attnpool = AttentionPool2d(input_resolution // 32, embed_dim, heads, output_dim)
+        
+        # fix the model parameter
+        if self.fixed_param == True:
+            self.fix_model_parameter()
 
     def _make_layer(self, planes, blocks, stride=1):
         layers = [Bottleneck(self._inplanes, planes, stride)]
@@ -154,6 +162,22 @@ class ModifiedResNet(BaseModule):
         x = self.attnpool(x)
 
         return x
+
+    def fix_model_parameter(self):
+        if self.open_ln == False:
+            for param in self.parameters():
+                param.requires_grad = False
+            print('backbone parameters are fixed')
+        else:
+            #print(self.state_dict())
+            for para_name, param in zip(self.state_dict(), self.parameters()):
+                if 'bn_' not in para_name:
+                    param.requires_grad = False
+                    continue
+                print(para_name, self.state_dict()[para_name].shape, param.shape)
+            #for para_name, param in zip(self.state_dict(), self.parameters()):
+            #    print(para_name, param.requires_grad, param.shape)            
+            print('backbone parameters are fixed, with ln open')
 
 
 class LayerNorm(nn.LayerNorm):

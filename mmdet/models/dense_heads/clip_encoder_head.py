@@ -125,7 +125,7 @@ class ClipEncoderHead(AnchorFreeHead):
         self.transformer_width = transformer_width
         self.transformer_layers = transformer_layers
         self.transformer_heads = transformer_heads
-        self.embed_dim = embed_dim
+        self.vision_embed_dim = embed_dim
         self.sentence_templates = sentence_templates
         self.cate_names = cate_names
         self.template_num = len(self.sentence_templates)
@@ -232,7 +232,7 @@ class ClipEncoderHead(AnchorFreeHead):
                                         attn_mask=self.build_attention_mask()
                                         )
         self.transformer = build_backbone(transformer_config_dict)
-        self.text_projection = nn.Parameter(torch.empty(self.transformer_width, self.embed_dim))
+        self.text_projection = nn.Parameter(torch.empty(self.transformer_width, self.vision_embed_dim))
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
 
     def tokenize(self, texts, context_length: int = 77, truncate: bool = False) -> torch.LongTensor:

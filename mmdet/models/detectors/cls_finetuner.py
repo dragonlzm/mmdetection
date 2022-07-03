@@ -396,7 +396,10 @@ class ClsFinetuner(BaseDetector):
         # the input of the vision transformer should be torch.Size([64, 3, 224, 224])
         result_list = []
         for patches in cropped_patches_list:
-            x = self.backbone(patches.cuda(), return_all_feats=self.return_all_feats)
+            if self.backbone.__class__.__name__ == 'myVisionTransformer':
+                x = self.backbone(patches.cuda(), return_all_feats=self.return_all_feats)
+            else:
+                x = self.backbone(patches.cuda())
             if self.with_neck:
                 x = self.neck(x)
             result_list.append(x)
