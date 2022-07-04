@@ -46,6 +46,8 @@ from .mask_rcnn_with_clip_feat import MaskRCNNWithCLIPFeat
 from .proposal_selector import ProposalSelector
 from .fcos_with_distillation import FCOSWithDistillation
 from .query_support_detector import QuerySupportDetector
+from .attention_rpn_detector import AttentionRPNDetector
+from .attention_rpn_head import AttentionRPNHead
 
 __all__ = [
     'ATSS', 'BaseDetector', 'SingleStageDetector', 'TwoStageDetector', 'RPN',
@@ -58,5 +60,5 @@ __all__ = [
     'TwoStagePanopticSegmentor', 'PanopticFPN', 'NEWRPN', 'DistillBackboneModule',
     'ClsFinetuner', 'ClsProposalGenerator', 'MaskRCNNDistill', 'MaskRCNNDistill',
     'MaskRCNNWithCLIPFeat', 'ProposalSelector', 'FCOSWithDistillation',
-    'QuerySupportDetector'
+    'QuerySupportDetector', 'AttentionRPNDetector', 'AttentionRPNHead',
 ]

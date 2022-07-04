@@ -24,6 +24,7 @@ from .standard_roi_head import StandardRoIHead
 from .trident_roi_head import TridentRoIHead
 from .standard_roi_head_distillation import StandardRoIHeadDistill
 from .standard_roi_head_clip_cls import StandardRoIHeadCLIPCls
+from .multi_relation_roi_head import MultiRelationRoIHead
 
 __all__ = [
     'BaseRoIHead', 'CascadeRoIHead', 'DoubleHeadRoIHead', 'MaskScoringRoIHead',
@@ -36,5 +37,5 @@ __all__ = [
     'CoarseMaskHead', 'DynamicRoIHead', 'SparseRoIHead', 'TridentRoIHead',
     'SCNetRoIHead', 'SCNetMaskHead', 'SCNetSemanticHead', 'SCNetBBoxHead',
     'FeatureRelayHead', 'GlobalContextHead', 'StandardRoIHeadDistill',
-    'StandardRoIHeadCLIPCls'
+    'StandardRoIHeadCLIPCls', 'MultiRelationRoIHead'
 ]
