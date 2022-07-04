@@ -6,9 +6,9 @@ import warnings
 from typing import Dict, List, Optional, Sequence, Union
 
 import numpy as np
-from mmdet.datasets.builder import DATASETS
-from mmdet.datasets.custom import CustomDataset
-from mmdet.datasets.pipelines import Compose
+from .builder import DATASETS
+from .custom import CustomDataset
+from .pipelines import Compose
 from terminaltables import AsciiTable
 
 from .utils import NumpyEncoder, get_root_logger
