@@ -45,6 +45,7 @@ from .mask_rcnn_distillation import MaskRCNNDistill
 from .mask_rcnn_with_clip_feat import MaskRCNNWithCLIPFeat
 from .proposal_selector import ProposalSelector
 from .fcos_with_distillation import FCOSWithDistillation
+from .query_support_detector import QuerySupportDetector
 
 __all__ = [
     'ATSS', 'BaseDetector', 'SingleStageDetector', 'TwoStageDetector', 'RPN',
@@ -56,5 +57,6 @@ __all__ = [
     'DeformableDETR', 'AutoAssign', 'YOLOF', 'CenterNet', 'YOLOX',
     'TwoStagePanopticSegmentor', 'PanopticFPN', 'NEWRPN', 'DistillBackboneModule',
     'ClsFinetuner', 'ClsProposalGenerator', 'MaskRCNNDistill', 'MaskRCNNDistill',
-    'MaskRCNNWithCLIPFeat', 'ProposalSelector', 'FCOSWithDistillation'
+    'MaskRCNNWithCLIPFeat', 'ProposalSelector', 'FCOSWithDistillation',
+    'QuerySupportDetector'
 ]

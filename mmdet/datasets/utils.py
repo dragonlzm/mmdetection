@@ -4,11 +4,40 @@ import warnings
 
 from mmcv.cnn import VGG
 from mmcv.runner.hooks import HOOKS, Hook
+import json
+import numpy as np
+import logging
 
+from mmcv.utils import get_logger
 from mmdet.datasets.builder import PIPELINES
 from mmdet.datasets.pipelines import LoadAnnotations, LoadImageFromFile
 from mmdet.models.dense_heads import GARPNHead, RPNHead, TriWayRPNHead
 from mmdet.models.roi_heads.mask_heads import FusedSemanticHead
+
+class NumpyEncoder(json.JSONEncoder):
+    """Save numpy array obj to json."""
+
+    def default(self, obj: object) -> object:
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
+
+
+def get_copy_dataset_type(dataset_type: str) -> str:
+    """Return corresponding copy dataset type."""
+    if dataset_type in ['FewShotVOCDataset', 'FewShotVOCDefaultDataset']:
+        copy_dataset_type = 'FewShotVOCCopyDataset'
+    elif dataset_type in ['FewShotCocoDataset', 'FewShotCocoDefaultDataset']:
+        copy_dataset_type = 'FewShotCocoCopyDataset'
+    else:
+        raise TypeError(f'{dataset_type} '
+                        f'not support copy data_infos operation.')
+
+    return copy_dataset_type
+
+
+def get_root_logger(log_file=None, log_level=logging.INFO):
+    return get_logger('mmfewshot', log_file, log_level)
 
 
 def replace_ImageToTensor(pipelines):

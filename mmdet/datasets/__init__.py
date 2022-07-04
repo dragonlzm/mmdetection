@@ -5,15 +5,19 @@ from .coco import CocoDataset
 from .coco_panoptic import CocoPanopticDataset
 from .custom import CustomDataset
 from .dataset_wrappers import (ClassBalancedDataset, ConcatDataset,
-                               MultiImageMixDataset, RepeatDataset)
+                               MultiImageMixDataset, RepeatDataset,
+                               QueryAwareDataset)
 from .deepfashion import DeepFashionDataset
 from .lvis import LVISDataset, LVISV1Dataset, LVISV05Dataset
-from .samplers import DistributedGroupSampler, DistributedSampler, GroupSampler
+from .samplers import (DistributedGroupSampler, DistributedSampler, GroupSampler,
+                       InfiniteSampler, InfiniteGroupSampler, DistributedInfiniteSampler, 
+                       DistributedInfiniteGroupSampler)
 from .utils import (NumClassCheckHook, get_loading_pipeline,
                     replace_ImageToTensor)
 from .voc import VOCDataset
 from .wider_face import WIDERFaceDataset
 from .xml_style import XMLDataset
+from .collate import multi_pipeline_collate_fn
 
 __all__ = [
     'CustomDataset', 'XMLDataset', 'CocoDataset', 'DeepFashionDataset',
@@ -22,5 +26,8 @@ __all__ = [
     'DistributedSampler', 'build_dataloader', 'ConcatDataset', 'RepeatDataset',
     'ClassBalancedDataset', 'WIDERFaceDataset', 'DATASETS', 'PIPELINES',
     'build_dataset', 'replace_ImageToTensor', 'get_loading_pipeline',
-    'NumClassCheckHook', 'CocoPanopticDataset', 'MultiImageMixDataset'
+    'NumClassCheckHook', 'CocoPanopticDataset', 'MultiImageMixDataset',
+    'QueryAwareDataset', 'InfiniteSampler', 'InfiniteGroupSampler', 
+    'DistributedInfiniteSampler', 'DistributedInfiniteGroupSampler',
+    'multi_pipeline_collate_fn',
 ]
