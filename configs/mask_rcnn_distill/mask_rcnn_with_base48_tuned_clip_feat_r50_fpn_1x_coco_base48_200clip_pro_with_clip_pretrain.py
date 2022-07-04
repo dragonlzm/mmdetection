@@ -52,4 +52,4 @@ optimizer = dict(type='SGD',
                  momentum=0.9, 
                  weight_decay=0.0001,
                  paramwise_cfg=dict(
-                 custom_keys={'backbone': dict(lr_mult=0.01, decay_mult=1.0)}))
+                 custom_keys={'backbone': dict(lr_mult=0.02, decay_mult=1.0)}))
