@@ -17,10 +17,7 @@ from torch.utils.data import DataLoader
 from .samplers import (DistributedGroupSampler, DistributedSampler, GroupSampler,
                        InfiniteSampler, InfiniteGroupSampler, DistributedInfiniteSampler, 
                        DistributedInfiniteGroupSampler)
-from .dataset_wrappers import (ConcatDataset, RepeatDataset,
-                                ClassBalancedDataset, MultiImageMixDataset,
-                                QueryAwareDataset)
-from .utils import get_copy_dataset_type
+
 from .collate import multi_pipeline_collate_fn
 
 if platform.system() != 'Windows':
@@ -68,6 +65,10 @@ def build_dataset(cfg: ConfigDict,
                   rank: Optional[int] = None,
                   work_dir: Optional[str] = None,
                   timestamp: Optional[str] = None) -> Dataset:
+    from .dataset_wrappers import (ConcatDataset, RepeatDataset,
+                                ClassBalancedDataset, MultiImageMixDataset,
+                                QueryAwareDataset)
+    from .utils import get_copy_dataset_type
     # If save_dataset is set to True, dataset will be saved into json.
     save_dataset = cfg.pop('save_dataset', False)
 
@@ -170,6 +171,9 @@ def build_dataloader(dataset: Dataset,
     Returns:
         DataLoader: A PyTorch dataloader.
     """
+    from .dataset_wrappers import (ConcatDataset, RepeatDataset,
+                            ClassBalancedDataset, MultiImageMixDataset,
+                            QueryAwareDataset)
     rank, world_size = get_dist_info()
     (sampler, batch_size, num_workers) = build_sampler(
         dist=dist,
@@ -196,113 +200,6 @@ def build_dataloader(dataset: Dataset,
                 multi_pipeline_collate_fn, samples_per_gpu=samples_per_gpu),
             pin_memory=False,
             worker_init_fn=init_fn,
-            **kwargs)
-    elif isinstance(dataset, NWayKShotDataset):
-        from .dataloader_wrappers import NWayKShotDataloader
-
-        # `NWayKShotDataset` will return a list of DataContainer
-        # `multi_pipeline_collate_fn` are designed to handle
-        # the data with list[list[DataContainer]]
-        # initialize query dataloader
-        query_data_loader = DataLoader(
-            dataset,
-            batch_size=batch_size,
-            sampler=sampler,
-            num_workers=num_workers,
-            collate_fn=partial(
-                multi_pipeline_collate_fn, samples_per_gpu=samples_per_gpu),
-            pin_memory=False,
-            worker_init_fn=init_fn,
-            **kwargs)
-
-        support_dataset = copy.deepcopy(dataset)
-        # if infinite sampler is used, the length of batch indices in
-        # support_dataset can be longer than the length of query dataset
-        # as it can achieve better sample diversity
-        if use_infinite_sampler:
-            support_dataset.convert_query_to_support(len(dataset) * num_gpus)
-        # create support dataset from query dataset and
-        # sample batch indices with same length as query dataloader
-        else:
-            support_dataset.convert_query_to_support(
-                len(query_data_loader) * num_gpus)
-
-        (support_sampler, _, _) = build_sampler(
-            dist=dist,
-            shuffle=False,
-            dataset=support_dataset,
-            num_gpus=num_gpus,
-            samples_per_gpu=1,
-            workers_per_gpu=workers_per_gpu,
-            seed=seed,
-            use_infinite_sampler=use_infinite_sampler)
-        # support dataloader is initialized with batch_size 1 as default.
-        # each batch contains (num_support_ways * num_support_shots) images,
-        # since changing batch_size is equal to changing num_support_shots.
-        support_data_loader = DataLoader(
-            support_dataset,
-            batch_size=1,
-            sampler=support_sampler,
-            num_workers=num_workers,
-            collate_fn=partial(multi_pipeline_collate_fn, samples_per_gpu=1),
-            pin_memory=False,
-            worker_init_fn=init_fn,
-            **kwargs)
-
-        # wrap two dataloaders with dataloader wrapper
-        data_loader = NWayKShotDataloader(
-            query_data_loader=query_data_loader,
-            support_data_loader=support_data_loader)
-    elif isinstance(dataset, TwoBranchDataset):
-        from .dataloader_wrappers import TwoBranchDataloader
-
-        # `TwoBranchDataset` will return a list of DataContainer
-        # `multi_pipeline_collate_fn` are designed to handle
-        # the data with list[list[DataContainer]]
-        # initialize main dataloader
-        main_data_loader = DataLoader(
-            dataset,
-            batch_size=batch_size,
-            sampler=sampler,
-            num_workers=num_workers,
-            collate_fn=partial(
-                multi_pipeline_collate_fn, samples_per_gpu=samples_per_gpu),
-            pin_memory=False,
-            worker_init_fn=init_fn,
-            **kwargs)
-        # convert main dataset to auxiliary dataset
-        auxiliary_dataset = copy.deepcopy(dataset)
-        auxiliary_dataset.convert_main_to_auxiliary()
-        # initialize auxiliary sampler and dataloader
-        auxiliary_samples_per_gpu = \
-            data_cfg.get('auxiliary_samples_per_gpu', samples_per_gpu)
-        auxiliary_workers_per_gpu = \
-            data_cfg.get('auxiliary_workers_per_gpu', workers_per_gpu)
-        (auxiliary_sampler, auxiliary_batch_size,
-         auxiliary_num_workers) = build_sampler(
-             dist=dist,
-             shuffle=shuffle,
-             dataset=auxiliary_dataset,
-             num_gpus=num_gpus,
-             samples_per_gpu=auxiliary_samples_per_gpu,
-             workers_per_gpu=auxiliary_workers_per_gpu,
-             seed=seed,
-             use_infinite_sampler=use_infinite_sampler)
-        auxiliary_data_loader = DataLoader(
-            auxiliary_dataset,
-            batch_size=auxiliary_batch_size,
-            sampler=auxiliary_sampler,
-            num_workers=auxiliary_num_workers,
-            collate_fn=partial(
-                multi_pipeline_collate_fn,
-                samples_per_gpu=auxiliary_samples_per_gpu),
-            pin_memory=False,
-            worker_init_fn=init_fn,
-            **kwargs)
-        # wrap two dataloaders with dataloader wrapper
-        data_loader = TwoBranchDataloader(
-            main_data_loader=main_data_loader,
-            auxiliary_data_loader=auxiliary_data_loader,
             **kwargs)
     else:
         data_loader = DataLoader(

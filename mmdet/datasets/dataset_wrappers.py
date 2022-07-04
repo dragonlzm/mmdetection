@@ -11,6 +11,9 @@ from torch.utils.data.dataset import ConcatDataset as _ConcatDataset
 
 from .builder import DATASETS, PIPELINES
 from .coco import CocoDataset
+from .coco_few_shot_base import BaseFewShotDataset
+from typing import Dict, List, Optional, Sequence, Tuple, Union
+import warnings
 
 
 @DATASETS.register_module()
