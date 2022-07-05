@@ -18,6 +18,8 @@ from .voc import VOCDataset
 from .wider_face import WIDERFaceDataset
 from .xml_style import XMLDataset
 from .collate import multi_pipeline_collate_fn
+from .coco_few_shot import FewShotCocoDataset, FewShotCocoCopyDataset, FewShotCocoDefaultDataset
+from .coco_few_shot_base import BaseFewShotDataset
 
 __all__ = [
     'CustomDataset', 'XMLDataset', 'CocoDataset', 'DeepFashionDataset',
@@ -29,5 +31,6 @@ __all__ = [
     'NumClassCheckHook', 'CocoPanopticDataset', 'MultiImageMixDataset',
     'QueryAwareDataset', 'InfiniteSampler', 'InfiniteGroupSampler', 
     'DistributedInfiniteSampler', 'DistributedInfiniteGroupSampler',
-    'multi_pipeline_collate_fn',
+    'multi_pipeline_collate_fn', 'FewShotCocoDataset', 'FewShotCocoCopyDataset', 
+    'FewShotCocoDefaultDataset', 'BaseFewShotDataset'
 ]

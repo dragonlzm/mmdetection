@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from mmcv.runner import force_fp32
 from mmdet.models.builder import HEADS
 from mmdet.models.losses import accuracy
-from mmdet.models.roi_heads import BBoxHead
+from .bbox_head import BBoxHead
 from torch import Tensor
 
 

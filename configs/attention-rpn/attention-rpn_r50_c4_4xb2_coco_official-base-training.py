@@ -6,6 +6,8 @@ _base_ = [
 num_support_ways = 2
 num_support_shots = 10
 data = dict(
+    samples_per_gpu=4,
+    workers_per_gpu=4,    
     train=dict(
         num_support_ways=num_support_ways,
         num_support_shots=num_support_shots,
@@ -30,10 +32,13 @@ data = dict(
             ann_file='data/coco/annotations/instances_train2017.json')
     ]))
 
+
+# for 2 gpu setting (2*4, maintaining the overall batchsize the same)
 optimizer = dict(
     lr=0.004,
     momentum=0.9,
     paramwise_cfg=dict(custom_keys={'roi_head.bbox_head': dict(lr_mult=2.0)}))
+#optimizer_config = dict(_delete_=True, grad_clip=dict(max_norm=10, norm_type=2))
 lr_config = dict(warmup_iters=1000, warmup_ratio=0.1, step=[112000, 120000])
 runner = dict(max_iters=120000)
 evaluation = dict(interval=60000)
