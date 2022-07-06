@@ -46,6 +46,7 @@ model = dict(
         init_cfg=dict(type='Pretrained', checkpoint="data/pretrain/clip_rn50_full_name_modified.pth", prefix='visual.')),
     roi_head=dict(
         bbox_head=dict(
+            clip_dim=1024,
             fg_vec_cfg=dict(fixed_param=True,
                             load_path='data/embeddings/raw_rn50_80cates.pt'))))
 
