@@ -27,13 +27,13 @@ for anno in gt_anno['annotations']:
     from_image_id_to_gtbboxes[image_id][category_id].append(bbox)
 
 # we aggregate the prediction on each image base on the categories
-# pred_paths = ['/data/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_1x_coco_2gpu_base48/base_results.bbox.json', 
-#               '/data/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_2x_coco_2gpu_base48/base_results.bbox.json',
-#               '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_gn_10_200clipproposal/base_results.bbox.json',
-#               '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_200clip_pro/base_results_e18.bbox.json',
-#               '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_200clip_pro/base_results.bbox.json']
-pred_paths = ['/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_200clip_pro_repro/base_results_e18.bbox.json',
-              '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_200clip_pro_repro/base_results.bbox.json']
+pred_paths = ['/data/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_1x_coco_2gpu_base48/base_results.bbox.json', 
+              '/data/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_2x_coco_2gpu_base48/base_results.bbox.json',
+              '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_gn_10_200clipproposal/base_results.bbox.json',
+              '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_200clip_pro/base_results_e18.bbox.json',
+              '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_200clip_pro/base_results.bbox.json']
+#pred_paths = ['/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_200clip_pro_repro/base_results_e18.bbox.json',
+#              '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_200clip_pro_repro/base_results.bbox.json']
 
 #pred_path = '/data/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_1x_coco_2gpu_base48/base_results.bbox.json'
 #pred_path = '/data/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_2x_coco_2gpu_base48/base_results.bbox.json'
@@ -41,15 +41,17 @@ pred_paths = ['/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tu
 #pred_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_200clip_pro/base_results_e18.bbox.json'
 #pred_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_200clip_pro/base_results.bbox.json'
 iou_thresholds = [0.5, 0.7, 0.9]
+#iou_thresholds = [0.9]
 
 #iou_threshold = 0.5
 #iou_threshold = 0.7
 #iou_threshold = 0.9
-methods = ['iog', 'iop', 'iog_or_iop', 'iou']
+#methods = ['iog', 'iop', 'iog_or_iop', 'iou']
 #method = 'iog'
 #method = 'iop'
 #method = 'iog_or_iop'
 #method = 'iou'
+methods = ['iop_and_iou']
 
 for pred_path in pred_paths:
     pred_res = json.load(open(pred_path))
@@ -114,11 +116,14 @@ for pred_path in pred_paths:
                     # calculate the iop
                     if 'iop' in method:
                         iop = iou_calculator(all_pred_bboxes, all_gt_bboxes, mode='iof')
+                        #print('iop shape', iop.shape)
                         max_iop_per_pred, max_iop_per_pred_idx = torch.max(iop, dim=-1)
+                        #print('max_iop_per_pred_idx shape', max_iop_per_pred_idx.shape)
                         
                     # calculate the iou
                     if 'iou' in method:
                         iou = iou_calculator(all_pred_bboxes, all_gt_bboxes)
+                        #print('iou shape', iou.shape)
                         max_iou_per_pred, max_iou_per_pred_idx = torch.max(iou, dim=-1)
                     
                     # the valid idx 
@@ -128,6 +133,12 @@ for pred_path in pred_paths:
                         valid_idx = (max_iop_per_pred > iou_threshold)
                     elif method == 'iou':
                         valid_idx = (max_iou_per_pred > iou_threshold)
+                    elif method == 'iop_and_iou':
+                        max_iop_per_pred_idx = max_iop_per_pred_idx.unsqueeze(dim=-1)
+                        # repective_iou = torch.take_along_dim(iou, max_iop_per_pred_idx,dim=-1).squeeze(dim=-1)
+                        # valid_idx = ((max_iop_per_pred > iou_threshold) & (repective_iou < 0.5))
+                        
+                        valid_idx = ((max_iop_per_pred > iou_threshold) & (max_iou_per_pred < 0.5))
                     else:
                         valid_idx = (iog_valid_idx | (max_iop_per_pred > iou_threshold))
                     valid_num = torch.sum(valid_idx)

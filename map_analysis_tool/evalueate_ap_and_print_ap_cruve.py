@@ -66,12 +66,14 @@ CLASSES_48 = ('person', 'bicycle', 'car', 'motorcycle', 'train',
 #file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_use_bg_pro_60/novel_results_65cates.bbox.json'
 #file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_200clip_pro/base_results.bbox.json'
 #file_path = '/home/zhuoming/final_pred_v1.json'
-file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_200clip_pro/base_results_e18.bbox.json'
+#file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_200clip_pro/base_results_e18.bbox.json'
 
+#file_path = '/data/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_1x_coco_2gpu_base48/filter_iop_prediction.json'
+file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_gn_10_200clipproposal/filter_iop_prediction.json'
 
-ann_file = '/data/zhuoming/detection/coco/annotations/instances_val2017_65cates.json'
+#ann_file = '/data/zhuoming/detection/coco/annotations/instances_val2017_65cates.json'
 #ann_file = '/data/zhuoming/detection/coco/annotations/instances_val2017_novel17.json'
-#ann_file = '/data/zhuoming/detection/coco/annotations/instances_val2017_base48.json'
+ann_file = '/data/zhuoming/detection/coco/annotations/instances_val2017_base48.json'
 
 coco_object = COCO(ann_file)
 
@@ -80,8 +82,8 @@ coco_object = COCO(ann_file)
 cat_ids = coco_object.get_cat_ids(cat_names=CLASSES_48)
 img_ids = coco_object.get_img_ids()
 proposal_nums=(100, 300, 1000)
-#iou_thrs = np.linspace(.5, 0.95, int(np.round((0.95 - .5) / .05)) + 1, endpoint=True)
-iou_thrs = np.array([0.5])
+iou_thrs = np.linspace(.5, 0.95, int(np.round((0.95 - .5) / .05)) + 1, endpoint=True)
+#iou_thrs = np.array([0.5])
 metric_items = ['mAP', 'mAP_50', 'mAP_75', 'mAP_s', 'mAP_m', 'mAP_l']
 
 
