@@ -1,7 +1,5 @@
 _base_ = './cls_finetuner_clip_full_coco_resnet50.py'
 
-data_root = 'data/coco/'
-
 classes = ('person', 'bicycle', 'car', 'motorcycle', 'train', 
             'truck', 'boat', 'bench', 'bird', 'horse', 'sheep', 
             'bear', 'zebra', 'giraffe', 'backpack', 'handbag', 
