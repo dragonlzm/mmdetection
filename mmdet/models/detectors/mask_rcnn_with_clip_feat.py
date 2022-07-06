@@ -66,6 +66,9 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
         self.fixed_param = self.train_cfg.get('fixed_param', False) if self.train_cfg is not None else False
         if self.fixed_param == True:
             self.fix_model_parameter()
+        # check the model parameters in backbone
+        # for para_name, param in zip(self.backbone.state_dict(), self.backbone.parameters()):
+        #     print(para_name, param.requires_grad)
     
     def fix_model_parameter(self):
         # fix backbone 
