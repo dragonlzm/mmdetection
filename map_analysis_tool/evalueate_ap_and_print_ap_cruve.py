@@ -69,7 +69,11 @@ CLASSES_48 = ('person', 'bicycle', 'car', 'motorcycle', 'train',
 #file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_200clip_pro/base_results_e18.bbox.json'
 
 #file_path = '/data/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_1x_coco_2gpu_base48/filter_iop_prediction.json'
-file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_gn_10_200clipproposal/filter_iop_prediction.json'
+#file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_gn_10_200clipproposal/filter_iop_prediction.json'
+#file_path = '/data/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_1x_coco_2gpu_base48/filter_iop_prediction_07.json'
+#file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_gn_10_200clipproposal/filter_iop_prediction_07.json'
+#file_path = '/data/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_1x_coco_2gpu_base48/filter_iop_prediction_05.json'
+file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_gn_10_200clipproposal/filter_iop_prediction_05.json'
 
 #ann_file = '/data/zhuoming/detection/coco/annotations/instances_val2017_65cates.json'
 #ann_file = '/data/zhuoming/detection/coco/annotations/instances_val2017_novel17.json'

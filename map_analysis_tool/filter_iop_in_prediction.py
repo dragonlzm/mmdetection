@@ -93,7 +93,7 @@ for pred_path in pred_paths:
             all_pred_bboxes[:, 3] = all_pred_bboxes[:, 3] - all_pred_bboxes[:, 1]
             #for pred_bbox, max_iop_val, max_iop_idx, iou_per_pred in zip(all_pred_bboxes, max_iop_per_pred, max_iop_per_pred_idx, iou):
             for pred_bbox, max_iop_val, max_iou_val in zip(all_pred_bboxes, max_iop_per_pred, max_iou_per_pred):
-                if max_iop_val > 0.9 and max_iou_val < 0.5:
+                if max_iop_val > 0.5 and max_iou_val < 0.5:
                 #if max_iop_val > 0.9 and iou_per_pred[max_iop_idx] < 0.5:
                     info = {'image_id': image_id, 'bbox': pred_bbox[:-1].tolist(), 'score': 0.0, 'category_id': cate_id}
                 else:
@@ -101,7 +101,7 @@ for pred_path in pred_paths:
                 all_final_prediction.append(info)
 
     print(len(all_final_prediction))
-    save_path = os.path.join('/'.join(pred_path.split('/')[:-1]), 'filter_iop_prediction.json')
+    save_path = os.path.join('/'.join(pred_path.split('/')[:-1]), 'filter_iop_prediction_05.json')
     file = open(save_path, 'w')
     file.write(json.dumps(all_final_prediction))
     #print(all_final_prediction[0])
