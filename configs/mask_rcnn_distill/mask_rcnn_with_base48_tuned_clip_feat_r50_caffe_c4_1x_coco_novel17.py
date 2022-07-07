@@ -1,4 +1,4 @@
-_base_ = './mask_rcnn_with_base48_tuned_clip_feat_r50_caffe_c4_1x_coco_base48_200clip_pro_with_flip.py'
+_base_ = './mask_rcnn_with_base48_tuned_clip_feat_r50_caffe_c4_1x_coco.py'
 
 classes = ('airplane', 'bus', 'cat', 'dog', 'cow', 
         'elephant', 'umbrella', 'tie', 'snowboard', 
