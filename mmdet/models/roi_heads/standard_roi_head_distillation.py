@@ -158,7 +158,8 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         # we use the fpn do not need to consider the share head
         if self.with_shared_head:
             bbox_feats = self.shared_head(bbox_feats)
-            gt_and_rand_bbox_feat = self.shared_head(gt_and_rand_bbox_feat)
+            if distilled_feat != None and gt_rand_rois != None:
+                gt_and_rand_bbox_feat = self.shared_head(gt_and_rand_bbox_feat)
         
         # if we use bg proposal, the cls_score will has the the length of samples + bg number
         cls_score, bbox_pred, gt_and_bg_feats = self.bbox_head(bbox_feats)
