@@ -155,6 +155,7 @@ class ClipEncoderHead(AnchorFreeHead):
         else:
             self.loss_cls = None
         #self.activate = build_activation_layer(self.act_cfg)
+        self.text_embeddings = None
 
     def prepare_the_text_embedding(self):
         # if do not use the attribute
@@ -293,6 +294,29 @@ class ClipEncoderHead(AnchorFreeHead):
         x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)] @ self.text_projection
 
         return x
+    
+    def get_text_embedding(self):
+        # for each forward we need to calculate the text embeddings
+        # self.all_cate_tokenize_res: tensor tensor.shape = [number of cls * num_of_template, 77]
+        # obtain the text embedding [number of cls * num_of_template, 512]
+        if self.training or self.text_embeddings == None:
+            print('creating the text embedding')
+            text_embeddings = self.encode_text(self.all_cate_tokenize_res)
+            # group by the cate_name [number of cls, num_of_template, 512]
+            #text_embeddings = text_embeddings.view(len(self.cate_names), -1, text_embeddings.shape[-1])
+            text_embeddings = text_embeddings.view(-1, len(self.sentence_templates), text_embeddings.shape[-1])
+            # average over all templates: [number_of_cls, 512]
+            text_embeddings = torch.mean(text_embeddings, dim=1)
+            # normalized features
+            text_embeddings = text_embeddings / text_embeddings.norm(dim=-1, keepdim=True)
+            
+            if not self.training:
+                self.text_embeddings = text_embeddings
+            
+            return text_embeddings
+        else:
+            print('testing the update')
+            return self.text_embeddings
 
     def forward(self, feats, img_metas):
         """Forward function.
@@ -306,22 +330,11 @@ class ClipEncoderHead(AnchorFreeHead):
 
                 - all_cls_scores [gt_num_in_batch, cls_out_channels].
         """
-        # for each forward we need to calculate the text embeddings
-        # self.all_cate_tokenize_res: tensor tensor.shape = [number of cls * num_of_template, 77]
-        # obtain the text embedding [number of cls * num_of_template, 512]
-        text_embeddings = self.encode_text(self.all_cate_tokenize_res)
-        # group by the cate_name [number of cls, num_of_template, 512]
-        #text_embeddings = text_embeddings.view(len(self.cate_names), -1, text_embeddings.shape[-1])
-        text_embeddings = text_embeddings.view(-1, len(self.sentence_templates), text_embeddings.shape[-1])
-        # average over all templates: [number_of_cls, 512]
-        text_embeddings = torch.mean(text_embeddings, dim=1)
-        
         #path = '/data/zhuoming/code/new_rpn/mmdetection/embedding.pt'
         #print(text_embeddings.shape, 'saving to path', path)
         #torch.save(text_embeddings.cpu(), path)
+        text_embeddings = self.get_text_embedding()
 
-        # normalized features
-        text_embeddings = text_embeddings / text_embeddings.norm(dim=-1, keepdim=True)
         logit_scale = self.logit_scale.exp()
 
         all_cls_scores_list = []

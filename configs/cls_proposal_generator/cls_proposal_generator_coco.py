@@ -27,26 +27,6 @@ test_pipeline = [
     dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels']),
 ]
 
-'''
-test_pipeline = [
-    dict(type='LoadImageFromFile'),
-    dict(
-        type='MultiScaleFlipAug',
-        img_scale=(1333, 800),
-        flip=False,
-        transforms=[
-            dict(type='Resize', keep_ratio=True),
-            dict(type='RandomFlip'),
-            #dict(type='Normalize', **img_norm_cfg),
-            dict(type='Pad', size_divisor=32),
-            dict(type='ImageToTensor', keys=['img']),
-            dict(type='Collect', keys=['img'], 
-                    meta_keys=('filename', 'ori_filename', 'ori_shape',
-                            'img_shape', 'pad_shape', 'scale_factor', 'flip',
-                            'flip_direction')),
-        ])
-]'''
-
 classes = ('person', 'bicycle', 'car', 'motorcycle', 
 'airplane', 'bus', 'train', 'boat', 'bird', 'cat', 
 'dog', 'horse', 'sheep', 'cow', 'bottle', 'chair', 
