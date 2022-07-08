@@ -300,7 +300,7 @@ class ClipEncoderHead(AnchorFreeHead):
         # self.all_cate_tokenize_res: tensor tensor.shape = [number of cls * num_of_template, 77]
         # obtain the text embedding [number of cls * num_of_template, 512]
         if self.training or self.text_embeddings == None:
-            print('creating the text embedding')
+            #print('creating the text embedding')
             text_embeddings = self.encode_text(self.all_cate_tokenize_res)
             # group by the cate_name [number of cls, num_of_template, 512]
             #text_embeddings = text_embeddings.view(len(self.cate_names), -1, text_embeddings.shape[-1])
@@ -315,7 +315,7 @@ class ClipEncoderHead(AnchorFreeHead):
             
             return text_embeddings
         else:
-            print('testing the update')
+            #print('testing the update')
             return self.text_embeddings
 
     def forward(self, feats, img_metas):
