@@ -40,6 +40,7 @@ class BBoxHead(BaseModule):
                      loss_weight=1.0),
                  loss_bbox=dict(
                      type='SmoothL1Loss', beta=1.0, loss_weight=1.0),
+                 reg_with_cls_embedding=False,
                  init_cfg=None):
         super(BBoxHead, self).__init__(init_cfg)
         assert with_cls or with_reg
@@ -55,6 +56,7 @@ class BBoxHead(BaseModule):
         self.reg_predictor_cfg = reg_predictor_cfg
         self.cls_predictor_cfg = cls_predictor_cfg
         self.fp16_enabled = False
+        self.reg_with_cls_embedding = reg_with_cls_embedding
 
         self.bbox_coder = build_bbox_coder(bbox_coder)
         self.loss_cls = build_loss(loss_cls)
@@ -79,11 +81,19 @@ class BBoxHead(BaseModule):
                 in_features=in_channels,
                 out_features=cls_channels)
         if self.with_reg:
-            out_dim_reg = 4 if reg_class_agnostic else 4 * num_classes
-            self.fc_reg = build_linear_layer(
-                self.reg_predictor_cfg,
-                in_features=in_channels,
-                out_features=out_dim_reg)
+            out_dim_reg = 4
+            reg_channel = self.in_channels + self.clip_dim
+            if self.reg_with_cls_embedding:
+                self.fc_reg = build_linear_layer(
+                    self.reg_predictor_cfg,
+                    in_features=reg_channel,
+                    out_features=out_dim_reg)
+            else:
+                out_dim_reg = 4 if reg_class_agnostic else 4 * num_classes
+                self.fc_reg = build_linear_layer(
+                    self.reg_predictor_cfg,
+                    in_features=in_channels,
+                    out_features=out_dim_reg)
         self.debug_imgs = None
         if init_cfg is None:
             self.init_cfg = []

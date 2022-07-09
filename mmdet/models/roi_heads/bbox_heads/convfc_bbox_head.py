@@ -341,12 +341,20 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                                                 bias=False)
                 
         if self.with_reg:
-            out_dim_reg = (4 if self.reg_class_agnostic else 4 *
-                           self.num_classes)
-            self.fc_reg = build_linear_layer(
-                self.reg_predictor_cfg,
-                in_features=self.reg_last_dim,
-                out_features=out_dim_reg)
+            if self.reg_with_cls_embedding:
+                out_dim_reg = 4
+                self.fc_reg = build_linear_layer(
+                    self.reg_predictor_cfg,
+                    in_features=(self.reg_last_dim+self.clip_dim),
+                    out_features=out_dim_reg)
+
+            else:
+                out_dim_reg = (4 if self.reg_class_agnostic else 4 *
+                            self.num_classes)
+                self.fc_reg = build_linear_layer(
+                    self.reg_predictor_cfg,
+                    in_features=self.reg_last_dim,
+                    out_features=out_dim_reg)
 
         if init_cfg is None:
             self.init_cfg += [
@@ -369,6 +377,7 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
             self.fc_cls_fg.weight.copy_(self.load_value)
         for param in self.fc_cls_fg.parameters():
             param.requires_grad = False
+        self.load_value.require_grad = False
         #self.fc_cls_fg.weight.require_grad = False
 
 
@@ -485,5 +494,18 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
             cls_score = torch.cat([cls_score, base_score], dim=-1)
         
         cls_score *= self._temperature
-        bbox_pred = self.fc_reg(x_reg) if self.with_reg else None
+        
+        if self.reg_with_cls_embedding:
+            print('original shape', x_reg.shape)
+            x_reg = x_reg.unsqueeze(dim=-2)
+            x_reg = x_reg.repeat(1, self.num_classes, 1)
+            # concat the word embedding
+            prepared_class_embedding = self.load_value.unsqueeze(dim=0).repeat(x_reg.shape[0],1,1)
+            concated_x_reg = torch.cat([x_reg, prepared_class_embedding],dim=-1)
+            print('concated_x_reg', concated_x_reg.shape)
+            bbox_pred = self.fc_reg(concated_x_reg)
+            bbox_pred = bbox_pred.view(x_reg.shape[0], -1)
+            print('final_prediction')
+        else:
+            bbox_pred = self.fc_reg(x_reg) if self.with_reg else None
         return cls_score, bbox_pred, x_cls
