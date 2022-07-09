@@ -1,6 +1,5 @@
 _base_ = './cls_proposal_generator_coco.py'
 
-
 model = dict(
     rpn_head=dict(
         num_classes=48,
