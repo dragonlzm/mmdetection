@@ -17,7 +17,7 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #rm -rf ./data
 #ln -sf /project/nevatia_174/zhuoming/detection ./data
 
-CONFIG_FILE="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_with_clip_rn50_feat_r50_fpn_1x_coco_with_clip_pretrain_base48"
+CONFIG_FILE="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection/configs/cls_proposal_generator/cls_proposal_generator_coco_base48.py"
 JSONFILE_PREFIX="data/test/cls_proposal_generator_coco/results_32_32_512_base48"
 BBOX_SAVE_PATH_ROOT="data/coco/clip_proposal/32_32_512_base48"
 
