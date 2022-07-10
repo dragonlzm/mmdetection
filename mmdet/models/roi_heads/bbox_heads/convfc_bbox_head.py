@@ -496,16 +496,16 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         cls_score *= self._temperature
         
         if self.reg_with_cls_embedding:
-            print('original shape', x_reg.shape)
+            #print('original shape', x_reg.shape)
             x_reg = x_reg.unsqueeze(dim=-2)
             x_reg = x_reg.repeat(1, self.num_classes, 1)
             # concat the word embedding
             prepared_class_embedding = self.load_value.unsqueeze(dim=0).repeat(x_reg.shape[0],1,1)
             concated_x_reg = torch.cat([x_reg, prepared_class_embedding],dim=-1)
-            print('concated_x_reg', concated_x_reg.shape)
+            #print('concated_x_reg', concated_x_reg.shape)
             bbox_pred = self.fc_reg(concated_x_reg)
             bbox_pred = bbox_pred.view(x_reg.shape[0], -1)
-            print('final_prediction')
+            #print('final_prediction', bbox_pred.shape)
         else:
             bbox_pred = self.fc_reg(x_reg) if self.with_reg else None
         return cls_score, bbox_pred, x_cls

@@ -81,19 +81,11 @@ class BBoxHead(BaseModule):
                 in_features=in_channels,
                 out_features=cls_channels)
         if self.with_reg:
-            out_dim_reg = 4
-            reg_channel = self.in_channels + self.clip_dim
-            if self.reg_with_cls_embedding:
-                self.fc_reg = build_linear_layer(
-                    self.reg_predictor_cfg,
-                    in_features=reg_channel,
-                    out_features=out_dim_reg)
-            else:
-                out_dim_reg = 4 if reg_class_agnostic else 4 * num_classes
-                self.fc_reg = build_linear_layer(
-                    self.reg_predictor_cfg,
-                    in_features=in_channels,
-                    out_features=out_dim_reg)
+            out_dim_reg = 4 if reg_class_agnostic else 4 * num_classes
+            self.fc_reg = build_linear_layer(
+                self.reg_predictor_cfg,
+                in_features=in_channels,
+                out_features=out_dim_reg)
         self.debug_imgs = None
         if init_cfg is None:
             self.init_cfg = []
@@ -319,7 +311,7 @@ class BBoxHead(BaseModule):
                     # the decoded bounding boxes, it decodes the
                     # already encoded coordinates to absolute format.
                     bbox_pred = self.bbox_coder.decode(rois[:, 1:], bbox_pred)
-                if self.reg_class_agnostic:
+                if self.reg_class_agnostic and not self.reg_with_cls_embedding:
                     pos_bbox_pred = bbox_pred.view(
                         bbox_pred.size(0), 4)[pos_inds.type(torch.bool)]
                 else:
