@@ -19,10 +19,10 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #ln -sf /project/nevatia_174/zhuoming/detection ./data
 
 # rn50 initialization
-WORK_DIR="/project/nevatia_174/zhuoming/detection/meta_learning/attention-rpn_r50_c4_4xb2_coco_official-base-training"
+WORK_DIR="/project/nevatia_174/zhuoming/detection/meta_learning/attention-rpn_r50_c4_4xb2_coco_official-base-training_2gpu"
 PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
-    configs/attention-rpn/attention-rpn_r50_c4_4xb2_coco_official-base-training.py --launcher pytorch \
+    configs/attention-rpn/attention-rpn_r50_c4_4xb2_coco_official-base-training_2gpu.py --launcher pytorch \
     --work-dir=${WORK_DIR} \
     #--resume-from=${WORK_DIR}/latest.pth

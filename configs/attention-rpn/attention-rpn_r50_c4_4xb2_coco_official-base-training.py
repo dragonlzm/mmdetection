@@ -6,8 +6,8 @@ _base_ = [
 num_support_ways = 2
 num_support_shots = 10
 data = dict(
-    samples_per_gpu=4,
-    workers_per_gpu=4,    
+    samples_per_gpu=2,
+    workers_per_gpu=2,    
     train=dict(
         num_support_ways=num_support_ways,
         num_support_shots=num_support_shots,
@@ -33,7 +33,7 @@ data = dict(
     ]))
 
 
-# for 2 gpu setting (2*4, maintaining the overall batchsize the same)
+# for 4 gpu setting (4*2, maintaining the overall batchsize the same)
 optimizer = dict(
     lr=0.004,
     momentum=0.9,
