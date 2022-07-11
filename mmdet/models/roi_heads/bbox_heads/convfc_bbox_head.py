@@ -513,6 +513,7 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                 # concat the word embedding
                 final_x_reg = torch.cat([x_reg, prepared_class_embedding],dim=-1)
             else:
+                x_reg = self.reg_map_to_clip(x_reg)
                 final_x_reg = x_reg + prepared_class_embedding
             #print('final_x_reg', final_x_reg.shape)
             bbox_pred = self.fc_reg(final_x_reg)
