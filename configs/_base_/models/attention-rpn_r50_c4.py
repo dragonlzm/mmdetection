@@ -1,4 +1,7 @@
-_base_ = './faster_rcnn_r50_caffe_c4.py'
+_base_ = [
+    './faster_rcnn_r50_caffe_c4.py',
+]
+
 num_support_ways = 2
 num_support_shots = 10
 # model settings

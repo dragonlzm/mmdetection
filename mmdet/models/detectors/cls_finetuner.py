@@ -514,8 +514,8 @@ class ClsFinetuner(BaseDetector):
                 #print('testing gt json', result_json)
                 file.write(json.dumps(result_json))
                 file.close()
-            else:
-                return [torch.zeros(10, 4)]
+            
+            return [torch.zeros(10, 4)]
             
         elif self.test_with_rand_bboxes:
             now_rand_bbox = self.generate_rand_bboxes(img_metas, self.num_of_rand_bboxes)

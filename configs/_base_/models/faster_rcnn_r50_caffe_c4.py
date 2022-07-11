@@ -1,5 +1,6 @@
 # model settings
 norm_cfg = dict(type='BN', requires_grad=False)
+pretrained = 'open-mmlab://detectron2/resnet50_caffe'
 model = dict(
     type='FasterRCNN',
     backbone=dict(
@@ -36,6 +37,7 @@ model = dict(
         type='StandardRoIHead',
         shared_head=dict(
             type='ResLayer',
+            pretrained=pretrained,
             depth=50,
             stage=3,
             stride=2,
