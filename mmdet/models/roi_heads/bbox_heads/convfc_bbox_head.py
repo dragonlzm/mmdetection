@@ -342,12 +342,22 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                 
         if self.with_reg:
             if self.reg_with_cls_embedding:
-                out_dim_reg = 4
-                self.fc_reg = build_linear_layer(
-                    self.reg_predictor_cfg,
-                    in_features=(self.reg_last_dim+self.clip_dim),
-                    out_features=out_dim_reg)
-
+                if self.combine_reg_and_cls_embedding == 'add':
+                    out_dim_reg = 4
+                    self.reg_map_to_clip = build_linear_layer(
+                        self.reg_predictor_cfg,
+                        in_features=self.reg_last_dim,
+                        out_features=self.clip_dim)
+                    self.fc_reg = build_linear_layer(
+                        self.reg_predictor_cfg,
+                        in_features=self.clip_dim,
+                        out_features=out_dim_reg)
+                else:      
+                    out_dim_reg = 4
+                    self.fc_reg = build_linear_layer(
+                        self.reg_predictor_cfg,
+                        in_features=(self.reg_last_dim+self.clip_dim),
+                        out_features=out_dim_reg)
             else:
                 out_dim_reg = (4 if self.reg_class_agnostic else 4 *
                             self.num_classes)
@@ -379,7 +389,6 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
             param.requires_grad = False
         self.load_value.require_grad = False
         #self.fc_cls_fg.weight.require_grad = False
-
 
     def _add_conv_fc_branch(self,
                             num_branch_convs,
@@ -499,11 +508,14 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
             #print('original shape', x_reg.shape)
             x_reg = x_reg.unsqueeze(dim=-2)
             x_reg = x_reg.repeat(1, self.num_classes, 1)
-            # concat the word embedding
             prepared_class_embedding = self.load_value.unsqueeze(dim=0).repeat(x_reg.shape[0],1,1)
-            concated_x_reg = torch.cat([x_reg, prepared_class_embedding],dim=-1)
-            #print('concated_x_reg', concated_x_reg.shape)
-            bbox_pred = self.fc_reg(concated_x_reg)
+            if self.combine_reg_and_cls_embedding == 'cat':
+                # concat the word embedding
+                final_x_reg = torch.cat([x_reg, prepared_class_embedding],dim=-1)
+            else:
+                final_x_reg = x_reg + prepared_class_embedding
+            #print('final_x_reg', final_x_reg.shape)
+            bbox_pred = self.fc_reg(final_x_reg)
             bbox_pred = bbox_pred.view(x_reg.shape[0], -1)
             #print('final_prediction', bbox_pred.shape)
         else:

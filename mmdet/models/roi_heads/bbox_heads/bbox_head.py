@@ -41,6 +41,7 @@ class BBoxHead(BaseModule):
                  loss_bbox=dict(
                      type='SmoothL1Loss', beta=1.0, loss_weight=1.0),
                  reg_with_cls_embedding=False,
+                 combine_reg_and_cls_embedding='cat',
                  init_cfg=None):
         super(BBoxHead, self).__init__(init_cfg)
         assert with_cls or with_reg
@@ -57,6 +58,7 @@ class BBoxHead(BaseModule):
         self.cls_predictor_cfg = cls_predictor_cfg
         self.fp16_enabled = False
         self.reg_with_cls_embedding = reg_with_cls_embedding
+        self.combine_reg_and_cls_embedding = combine_reg_and_cls_embedding
 
         self.bbox_coder = build_bbox_coder(bbox_coder)
         self.loss_cls = build_loss(loss_cls)
