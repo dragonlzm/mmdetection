@@ -24,7 +24,8 @@ class BaseRoIHead(BaseModule, metaclass=ABCMeta):
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
         if shared_head is not None:
-            shared_head.pretrained = pretrained
+            if 'pretrained' not in shared_head:
+                shared_head.pretrained = pretrained
             self.shared_head = build_shared_head(shared_head)
 
         if bbox_head is not None:
