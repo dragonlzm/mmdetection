@@ -1,8 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import warnings
-
+from typing import Optional
 from mmcv.cnn import MODELS as MMCV_MODELS
-from mmcv.utils import Registry
+from mmcv.utils import Registry, ConfigDict, print_log
 
 MODELS = Registry('models', parent=MMCV_MODELS)
 
@@ -44,8 +44,8 @@ def build_loss(cfg):
     """Build loss."""
     return LOSSES.build(cfg)
 
-
-def build_detector(cfg, train_cfg=None, test_cfg=None):
+# update for few-shot detection
+def build_detector(cfg, train_cfg=None, test_cfg=None, logger: Optional[object] = None):
     """Build detector."""
     if train_cfg is not None or test_cfg is not None:
         warnings.warn(
@@ -55,5 +55,20 @@ def build_detector(cfg, train_cfg=None, test_cfg=None):
         'train_cfg specified in both outer field and model field '
     assert cfg.get('test_cfg') is None or test_cfg is None, \
         'test_cfg specified in both outer field and model field '
-    return DETECTORS.build(
+
+    # get the prefix of fixed parameters
+    frozen_parameters = cfg.pop('frozen_parameters', None)
+
+    model = DETECTORS.build(
         cfg, default_args=dict(train_cfg=train_cfg, test_cfg=test_cfg))
+    model.init_weights()
+    # freeze parameters by prefix
+    if frozen_parameters is not None:
+        print_log(f'Frozen parameters: {frozen_parameters}', logger)
+        for name, param in model.named_parameters():
+            for frozen_prefix in frozen_parameters:
+                if frozen_prefix in name:
+                    param.requires_grad = False
+            if param.requires_grad:
+                print_log(f'Training parameters: {name}', logger)
+    return model
