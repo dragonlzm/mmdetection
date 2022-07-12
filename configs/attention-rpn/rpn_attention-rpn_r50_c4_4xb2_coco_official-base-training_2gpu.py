@@ -1,4 +1,4 @@
-_base_ = 'rpn_attention-rpn_r50_c4_4xb2_coco_official-base-training'
+_base_ = './rpn_attention-rpn_r50_c4_4xb2_coco_official-base-training.py'
 
 data = dict(
     samples_per_gpu=2,
