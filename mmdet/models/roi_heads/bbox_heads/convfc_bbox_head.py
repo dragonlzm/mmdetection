@@ -389,6 +389,12 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
             param.requires_grad = False
         self.load_value.require_grad = False
         #self.fc_cls_fg.weight.require_grad = False
+        
+        if self.filter_base_cate != None:
+            with torch.no_grad():
+                self.fc_cls_base.weight.copy_(self.base_load_value)
+            for param in self.fc_cls_base.parameters():
+                param.requires_grad = False 
 
     def _add_conv_fc_branch(self,
                             num_branch_convs,
