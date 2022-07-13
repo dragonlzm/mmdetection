@@ -13,7 +13,7 @@ from .samplers import (DistributedGroupSampler, DistributedSampler, GroupSampler
                        InfiniteSampler, InfiniteGroupSampler, DistributedInfiniteSampler, 
                        DistributedInfiniteGroupSampler)
 from .utils import (NumClassCheckHook, get_loading_pipeline,
-                    replace_ImageToTensor)
+                    replace_ImageToTensor, get_copy_dataset_type)
 from .voc import VOCDataset
 from .wider_face import WIDERFaceDataset
 from .xml_style import XMLDataset
@@ -32,5 +32,5 @@ __all__ = [
     'QueryAwareDataset', 'InfiniteSampler', 'InfiniteGroupSampler', 
     'DistributedInfiniteSampler', 'DistributedInfiniteGroupSampler',
     'multi_pipeline_collate_fn', 'FewShotCocoDataset', 'FewShotCocoCopyDataset', 
-    'FewShotCocoDefaultDataset', 'BaseFewShotDataset'
+    'FewShotCocoDefaultDataset', 'BaseFewShotDataset', 'get_copy_dataset_type'
 ]
