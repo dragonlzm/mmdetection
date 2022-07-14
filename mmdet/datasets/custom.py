@@ -259,7 +259,7 @@ class CustomDataset(Dataset):
         #results = dict(img_info=img_info)
         if self.proposals is not None:
             results['proposals'] = self.proposals[idx]
-        if self.patches_gt is not None:
+        if hasattr(self, 'patches_gt') and self.patches_gt is not None:
             results['patches_gt'] = self.patches_gt[idx]
         self.pre_pipeline(results)
         return self.pipeline(results)
