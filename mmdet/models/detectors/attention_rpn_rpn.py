@@ -64,7 +64,7 @@ class AttentionRPNRPN(QuerySupportDetector):
         self._forward_saved_support_dict = {
             'gt_labels': [],
             'res4_roi_feats': [],
-            'res5_roi_feats': []
+            #'res5_roi_feats': []
         }
         # save processed support template features for inference,
         # the processed support template features are generated

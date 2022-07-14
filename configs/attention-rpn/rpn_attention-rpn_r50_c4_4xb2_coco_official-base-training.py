@@ -41,7 +41,7 @@ optimizer = dict(
 #optimizer_config = dict(_delete_=True, grad_clip=dict(max_norm=10, norm_type=2))
 lr_config = dict(warmup_iters=1000, warmup_ratio=0.1, step=[112000, 120000])
 runner = dict(max_iters=120000)
-evaluation = dict(interval=60000)
+evaluation = dict(interval=60000, metric='proposal_fast')
 checkpoint_config = dict(interval=20000)
 log_config = dict(interval=10)
 

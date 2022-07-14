@@ -6,7 +6,7 @@ num_support_ways = 2
 num_support_shots = 10
 # model settings
 model = dict(
-    type='RPN',
+    type='AttentionRPNRPN',
     backbone=dict(frozen_stages=2),
     rpn_head=dict(
         type='AttentionRPNHead',
