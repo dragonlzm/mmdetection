@@ -387,6 +387,16 @@ class FewShotCocoDataset(BaseFewShotDataset, CocoDataset):
             if logger is None:
                 msg = '\n' + msg
             print_log(msg, logger=logger)
+            if metric == 'proposal_fast':
+                ar = self.fast_eval_recall(
+                    results, proposal_nums, iou_thrs, logger='silent')
+                log_msg = []
+                for i, num in enumerate(proposal_nums):
+                    eval_results[f'AR@{num}'] = ar[i]
+                    log_msg.append(f'\nAR@{num}\t{ar[i]:.4f}')
+                log_msg = ''.join(log_msg)
+                print_log(log_msg, logger=logger)
+                continue
 
             iou_type = 'bbox' if metric == 'proposal' else metric
             if metric not in result_files:

@@ -332,10 +332,10 @@ class CocoDataset(CustomDataset):
             json_results = self._gtacc2json(results)
             result_files['gt_acc'] = f'{outfile_prefix}.gt_acc.json'
             mmcv.dump(json_results, result_files['gt_acc'])
-        elif isinstance(results[0], np.ndarray) and len(results[0]) > 5:
-            json_results = self._patchacc2json(results)
-            result_files['patch_acc'] = f'{outfile_prefix}.patch_acc.json'
-            mmcv.dump(json_results, result_files['patch_acc'])
+        # elif isinstance(results[0], np.ndarray) and len(results[0]) > 5:
+        #     json_results = self._patchacc2json(results)
+        #     result_files['patch_acc'] = f'{outfile_prefix}.patch_acc.json'
+        #     mmcv.dump(json_results, result_files['patch_acc'])
         elif isinstance(results[0], list):
             json_results = self._det2json(results)
             result_files['bbox'] = f'{outfile_prefix}.bbox.json'

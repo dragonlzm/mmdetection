@@ -187,7 +187,7 @@ class AttentionRPNRPN(QuerySupportDetector):
                 The outer list corresponds to each image. The inner list
                 corresponds to each class.
         """
-        assert self.with_bbox, 'Bbox head must be implemented.'
+        #assert self.with_bbox, 'Bbox head must be implemented.'
         assert len(img_metas) == 1, 'Only support single image inference.'
         if (self.inference_support_dict == {}) or (not self.is_model_init):
             # process the saved support features
@@ -213,12 +213,14 @@ class AttentionRPNRPN(QuerySupportDetector):
                 for proposals, meta in zip(proposal_list, img_metas):
                     proposals[:, :4] /= proposals.new_tensor(meta['scale_factor'])
             results_dict[class_id] = proposal_list
-            print("proposal_list.shape", proposal_list.shape)
-        results = [
-            results_dict[i][0][0] for i in sorted(results_dict.keys())
+            #proposal_list.shape 1 <class 'torch.Tensor'> torch.Size([100, 5])
+            #print("proposal_list.shape", len(proposal_list), len(proposal_list[0]))
+        # results torch.Size([6000, 5]) in rpn torch.Size([1000, 5])
+        results = torch.cat([
+            results_dict[i][0] for i in sorted(results_dict.keys())
             if len(results_dict[i])
-        ]
-        return [results]
+        ], dim=0)
+        return [results.cpu().numpy()]
 
     def forward_train(self,
                       query_data: Dict,
