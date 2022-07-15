@@ -476,7 +476,7 @@ class CocoDataset(CustomDataset):
     def fast_eval_recall(self, results, proposal_nums, iou_thrs, logger=None):
         gt_bboxes = []
         for i in range(len(self.img_ids)):
-            ann_ids = self.coco.get_ann_ids(img_ids=self.img_ids[i])
+            ann_ids = self.coco.get_ann_ids(img_ids=self.img_ids[i], cat_ids=self.cat_ids)
             ann_info = self.coco.load_anns(ann_ids)
             if len(ann_info) == 0:
                 gt_bboxes.append(np.zeros((0, 4)))
