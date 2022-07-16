@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import torch
 import torch.nn as nn
+from collections import OrderedDict
 from mmcv.cnn import ConvModule
 
 from mmdet.models.builder import HEADS
@@ -247,6 +248,7 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                  fg_vec_cfg=None,
                  clip_dim=512,
                  temperature=100,
+                 reg_with_mlp=False,
                  use_bg_vector=True,
                  filter_base_cate=None,
                  conv_cfg=None,
@@ -279,6 +281,7 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         self._temperature = temperature
         self.filter_base_cate = filter_base_cate
         self.use_bg_vector = use_bg_vector
+        self.reg_with_mlp = reg_with_mlp
 
         # add shared convs and fcs
         self.shared_convs, self.shared_fcs, last_layer_dim = \
@@ -343,28 +346,42 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         if self.with_reg:
             if self.reg_with_cls_embedding:
                 if self.combine_reg_and_cls_embedding == 'add':
-                    out_dim_reg = 4
                     self.reg_map_to_clip = build_linear_layer(
                         self.reg_predictor_cfg,
                         in_features=self.reg_last_dim,
                         out_features=self.clip_dim)
-                    self.fc_reg = build_linear_layer(
-                        self.reg_predictor_cfg,
-                        in_features=self.clip_dim,
-                        out_features=out_dim_reg)
-                else:      
-                    out_dim_reg = 4
-                    self.fc_reg = build_linear_layer(
-                        self.reg_predictor_cfg,
-                        in_features=(self.reg_last_dim+self.clip_dim),
-                        out_features=out_dim_reg)
+                    final_reg_in_dim = self.reg_last_dim
+                    final_reg_out_dim = 4     
+                else:
+                    final_reg_in_dim = self.reg_last_dim + self.clip_dim
+                    final_reg_out_dim = 4
             else:
-                out_dim_reg = (4 if self.reg_class_agnostic else 4 *
+                final_reg_in_dim = self.reg_last_dim
+                final_reg_out_dim = (4 if self.reg_class_agnostic else 4 *
                             self.num_classes)
+            
+            if self.reg_with_mlp:
+                self.fc_reg = nn.Sequential(OrderedDict([
+                    ("c_fc", nn.Linear(final_reg_in_dim, 1024)),
+                    ("gelu", nn.ReLU(inplace=True)),
+                    ("dropout", nn.Dropout(0.1)),
+                    ("c_proj", nn.Linear(1024, final_reg_out_dim))
+                ]))
+            else:
                 self.fc_reg = build_linear_layer(
                     self.reg_predictor_cfg,
-                    in_features=self.reg_last_dim,
-                    out_features=out_dim_reg)
+                    in_features=final_reg_in_dim,
+                    out_features=final_reg_out_dim)
+            
+        # for _ in range(num_fcs - 1):
+        #     layers.append(
+        #         Sequential(
+        #             Linear(in_channels, feedforward_channels), self.activate,
+        #             nn.Dropout(ffn_drop)))
+        #     in_channels = feedforward_channels
+        # layers.append(Linear(feedforward_channels, embed_dims))
+        # layers.append(nn.Dropout(ffn_drop))
+        # self.layers = Sequential(*layers)
 
         if init_cfg is None:
             self.init_cfg += [
