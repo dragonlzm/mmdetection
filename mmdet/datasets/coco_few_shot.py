@@ -86,13 +86,17 @@ class FewShotCocoDataset(BaseFewShotDataset, CocoDataset):
                  min_bbox_area: Optional[Union[int, float]] = None,
                  dataset_name: Optional[str] = None,
                  test_mode: bool = False,
+                 def_coco_split:dict = None,
                  **kwargs) -> None:
         if dataset_name is None:
             self.dataset_name = 'Test dataset' \
                 if test_mode else 'Train dataset'
         else:
             self.dataset_name = dataset_name
-        self.SPLIT = COCO_SPLIT
+        if def_coco_split is not None:
+            self.SPLIT = def_coco_split
+        else:
+            self.SPLIT = COCO_SPLIT
         assert classes is not None, f'{self.dataset_name}: classes in ' \
                                     f'`FewShotCocoDataset` can not be None.'
         # `ann_shot_filter` will be used to filter out excess annotations
