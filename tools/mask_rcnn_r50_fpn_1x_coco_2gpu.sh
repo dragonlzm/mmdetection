@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --partition=gpu 
-#SBATCH --gres=gpu:v100:2
+#SBATCH --gres=gpu:p100:2
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=30GB
@@ -68,12 +68,12 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #    --resume-from=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_1x_coco_2gpu_vild_baseline/latest.pth
 
 # for the new norm test
-PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
-python -m torch.distributed.launch --nproc_per_node=2 \
-    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
-    configs/mask_rcnn/mask_rcnn_r50_fpn_1x_coco_2gpu_clip_pretrain_base48_ori_norm.py --launcher pytorch \
-    --work-dir=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_1x_coco_2gpu_clip_pretrain_base48_ori_norm
-    #--resume-from=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_1x_coco_2gpu_clip_pretrain_base48_ori_norm/latest.pth
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#     configs/mask_rcnn/mask_rcnn_r50_fpn_1x_coco_2gpu_clip_pretrain_base48_ori_norm.py --launcher pytorch \
+#     --work-dir=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_1x_coco_2gpu_clip_pretrain_base48_ori_norm
+#     #--resume-from=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_1x_coco_2gpu_clip_pretrain_base48_ori_norm/latest.pth
 
 # PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
 # python -m torch.distributed.launch --nproc_per_node=2 \
@@ -81,3 +81,21 @@ python -m torch.distributed.launch --nproc_per_node=2 \
 #     configs/mask_rcnn/mask_rcnn_r50_fpn_1x_coco_2gpu_clip_pretrain_base48_ori_norm_ori_opt.py --launcher pytorch \
 #     --work-dir=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_1x_coco_2gpu_clip_pretrain_base48_ori_norm_ori_opt
 #     #--resume-from=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_1x_coco_2gpu_clip_pretrain_base48_ori_norm_ori_opt/latest.pth
+
+
+# for 3x training
+PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+python -m torch.distributed.launch --nproc_per_node=2 \
+   /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+   configs/mask_rcnn/mask_rcnn_r50_fpn_3x_coco_2gpu_base48.py --launcher pytorch \
+   --work-dir=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_3x_coco_2gpu_base48 \
+   --resume-from=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_2x_coco_2gpu_base48/epoch_16.pth
+
+
+# for 4x training
+#PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+#python -m torch.distributed.launch --nproc_per_node=2 \
+#    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#    configs/mask_rcnn/mask_rcnn_r50_fpn_4x_coco_2gpu_base48.py --launcher pytorch \
+#    --work-dir=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_4x_coco_2gpu_base48 \
+#    --resume-from=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_3x_coco_2gpu_base48/epoch_24.pth
