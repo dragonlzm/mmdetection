@@ -11,5 +11,4 @@ lr_config = dict(warmup_iters=1000, warmup_ratio=0.1, step=[224000, 240000])
 runner = dict(max_iters=240000)
 evaluation = dict(interval=60000)
 checkpoint_config = dict(interval=20000)
-log_config = dict(interval=50)
 
