@@ -19,13 +19,13 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #ln -sf /project/nevatia_174/zhuoming/detection ./data
 
 # 2*2 batch size
-WORK_DIR="/project/nevatia_174/zhuoming/detection/meta_learning/rpn_attention-rpn_r50_c4_2xb2_coco_official-base-training"
-PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
-python -m torch.distributed.launch --nproc_per_node=2 \
-    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/few_shot_train.py \
-	configs/attention-rpn/rpn_attention-rpn_r50_c4_2xb2_coco_official-base-training.py --launcher pytorch \
-	--work-dir=${WORK_DIR} \
-	#--resume-from=${WORK_DIR}/latest.pth
+# WORK_DIR="/project/nevatia_174/zhuoming/detection/meta_learning/rpn_attention-rpn_r50_c4_2xb2_coco_official-base-training"
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/few_shot_train.py \
+# 	configs/attention-rpn/rpn_attention-rpn_r50_c4_2xb2_coco_official-base-training.py --launcher pytorch \
+# 	--work-dir=${WORK_DIR} \
+# 	#--resume-from=${WORK_DIR}/latest.pth
 
 # 4*2 batch size
 # WORK_DIR="/project/nevatia_174/zhuoming/detection/meta_learning/rpn_attention-rpn_r50_c4_2xb4_coco_official-base-training"
@@ -37,10 +37,10 @@ python -m torch.distributed.launch --nproc_per_node=2 \
 # 	#--resume-from=${WORK_DIR}/latest.pth
 
 # # 4*2 batch size base48
-# WORK_DIR="/project/nevatia_174/zhuoming/detection/meta_learning/rpn_attention-rpn_r50_c4_2xb4_coco_official-base48-training"
-# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
-# python -m torch.distributed.launch --nproc_per_node=2 \
-#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/few_shot_train.py \
-# 	configs/attention-rpn/rpn_attention-rpn_r50_c4_2xb4_coco_official-base48-training.py --launcher pytorch \
-# 	--work-dir=${WORK_DIR} \
-# 	#--resume-from=${WORK_DIR}/latest.pth
+WORK_DIR="/project/nevatia_174/zhuoming/detection/meta_learning/rpn_attention-rpn_r50_c4_2xb4_coco_official-base48-training"
+PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+python -m torch.distributed.launch --nproc_per_node=2 \
+    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/few_shot_train.py \
+	configs/attention-rpn/rpn_attention-rpn_r50_c4_2xb4_coco_official-base48-training.py --launcher pytorch \
+	--work-dir=${WORK_DIR} \
+	#--resume-from=${WORK_DIR}/latest.pth
