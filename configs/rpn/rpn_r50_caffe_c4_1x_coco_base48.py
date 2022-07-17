@@ -1,4 +1,4 @@
-_base_ = './rpn_r50_fpn_1x_coco.py'
+_base_ = './rpn_r50_caffe_c4_1x_coco.py'
 
 classes = ('person', 'bicycle', 'car', 'motorcycle', 'train', 
             'truck', 'boat', 'bench', 'bird', 'horse', 'sheep', 
