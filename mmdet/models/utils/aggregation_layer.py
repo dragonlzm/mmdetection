@@ -97,7 +97,7 @@ class DepthWiseCorrelationAggregator(BaseModule):
             query_feat (Tensor): Input query features with shape (N, C, H, W).
             support_feat (Tensor): Input support features with shape
                 (1, C, H, W).
-
+            query_feat torch.Size([1, 1024, 43, 48]) support_feat torch.Size([1, 1024, 1, 1])
         Returns:
             Tensor: When `with_fc` is True, the aggregate feature is with
                 shape (N, C), otherwise, its shape is (N, C, H, W).

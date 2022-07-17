@@ -49,6 +49,8 @@ from .query_support_detector import QuerySupportDetector
 from .attention_rpn_detector import AttentionRPNDetector
 from .attention_rpn_head import AttentionRPNHead
 from .attention_rpn_rpn import AttentionRPNRPN
+from .attention_rpn_text_head import AttentionRPNTextHead
+from .attention_rpn_text_rpn import AttentionRPNTextRPN
 
 __all__ = [
     'ATSS', 'BaseDetector', 'SingleStageDetector', 'TwoStageDetector', 'RPN',
@@ -62,5 +64,5 @@ __all__ = [
     'ClsFinetuner', 'ClsProposalGenerator', 'MaskRCNNDistill', 'MaskRCNNDistill',
     'MaskRCNNWithCLIPFeat', 'ProposalSelector', 'FCOSWithDistillation',
     'QuerySupportDetector', 'AttentionRPNDetector', 'AttentionRPNHead',
-    'AttentionRPNRPN',
+    'AttentionRPNRPN', 'AttentionRPNTextRPN', 'AttentionRPNTextHead'
 ]
