@@ -1,5 +1,5 @@
 _base_ = [
-    './faster_rcnn_r50_caffe_c4.py',
+    './faster_rcnn_r50_caffe_c4_with_pretrain.py',
 ]
 
 num_support_ways = 2
