@@ -69,11 +69,13 @@ class AttentionRPNTextHead(RPNHead):
         load_value = torch.load(self.fg_vec_cfg.load_path)
         load_value = load_value / load_value.norm(dim=-1, keepdim=True)
         self.load_value = load_value.cuda()
-        # fix the text embedding
-        self.load_value.require_grad = False
         
         # reshape the text embedding
         self.load_value = self.load_value.unsqueeze(dim=-1).unsqueeze(dim=-1)
+        # fix the text embedding
+        self.load_value.require_grad = False
+        print('self.load_value.require_grad', self.load_value.require_grad)
+        
         self.num_classes = num_classes
 
     def extract_roi_feat(self, feats: List[Tensor], rois: Tensor) -> Tensor:
