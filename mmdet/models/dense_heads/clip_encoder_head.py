@@ -307,6 +307,9 @@ class ClipEncoderHead(AnchorFreeHead):
             text_embeddings = text_embeddings.view(-1, len(self.sentence_templates), text_embeddings.shape[-1])
             # average over all templates: [number_of_cls, 512]
             text_embeddings = torch.mean(text_embeddings, dim=1)
+            #path = '/data/zhuoming/code/new_rpn/mmdetection/embedding.pt'
+            #print(text_embeddings.shape, 'saving to path', path)
+            #torch.save(text_embeddings.cpu(), path)
             # normalized features
             text_embeddings = text_embeddings / text_embeddings.norm(dim=-1, keepdim=True)
             
@@ -330,9 +333,6 @@ class ClipEncoderHead(AnchorFreeHead):
 
                 - all_cls_scores [gt_num_in_batch, cls_out_channels].
         """
-        #path = '/data/zhuoming/code/new_rpn/mmdetection/embedding.pt'
-        #print(text_embeddings.shape, 'saving to path', path)
-        #torch.save(text_embeddings.cpu(), path)
         text_embeddings = self.get_text_embedding()
 
         logit_scale = self.logit_scale.exp()

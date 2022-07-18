@@ -29,7 +29,7 @@ model = dict(
             ]),
             clip_dim=512,
             backbone_feat_out_channels=1024,
-            fg_vec_cfg=dict(fixed_param=True, load_path='data/embeddings/raw_80cates.pt'),
+            fg_vec_cfg=dict(fixed_param=True, load_path='data/embeddings/base_finetuned_80cates.pt'),
             num_classes=80),
     # model training and testing settings
     train_cfg=dict(

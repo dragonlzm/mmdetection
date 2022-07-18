@@ -65,11 +65,13 @@ class AttentionRPNTextHead(RPNHead):
         # add one extra convolution layer to map the feature map to clip dimension
         self.map_to_clip_dim = nn.Conv2d(self.backbone_feat_out_channels, self.clip_dim, 1, bias=False)
         self.fg_vec_cfg = fg_vec_cfg
-        
+        # load the text embeddings
         load_value = torch.load(self.fg_vec_cfg.load_path)
         load_value = load_value / load_value.norm(dim=-1, keepdim=True)
-        #load_value = load_value.t()
         self.load_value = load_value.cuda()
+        # fix the text embedding
+        self.load_value.require_grad = False
+        
         # reshape the text embedding
         self.load_value = self.load_value.unsqueeze(dim=-1).unsqueeze(dim=-1)
         self.num_classes = num_classes

@@ -3,6 +3,7 @@ _base_ = [
     '../_base_/schedules/few_shot_base_training_schedule.py', '../_base_/models/rpn_attention_text_rpn_r50_c4.py',
     '../_base_/few_shot_default_runtime.py'
 ]
+
 num_support_ways = 2
 num_support_shots = 10
 data = dict(
@@ -49,5 +50,6 @@ model = dict(
     rpn_head=dict(
         num_support_ways=num_support_ways,
         num_support_shots=num_support_shots,
+        fg_vec_cfg=dict(fixed_param=True, load_path='data/embeddings/base_finetuned_60cates.pt')
     )
 )
