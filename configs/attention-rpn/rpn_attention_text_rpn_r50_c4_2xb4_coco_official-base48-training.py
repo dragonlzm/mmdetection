@@ -41,6 +41,7 @@ data = dict(
 
 model = dict(
     rpn_head=dict(
-        fg_vec_cfg=dict(fixed_param=True, load_path='data/embeddings/base_finetuned_48cates.pt')
+        fg_vec_cfg=dict(fixed_param=True, load_path='data/embeddings/base_finetuned_48cates.pt'),
+        num_classes=48
     )
 )

@@ -50,6 +50,7 @@ model = dict(
     rpn_head=dict(
         num_support_ways=num_support_ways,
         num_support_shots=num_support_shots,
-        fg_vec_cfg=dict(fixed_param=True, load_path='data/embeddings/base_finetuned_60cates.pt')
+        fg_vec_cfg=dict(fixed_param=True, load_path='data/embeddings/base_finetuned_60cates.pt'),
+        num_classes=60
     )
 )
