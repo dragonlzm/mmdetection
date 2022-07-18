@@ -115,23 +115,27 @@ bash tools/dist_test.sh configs/mask_rcnn_distill/mask_rcnn_with_base48_tuned_cl
 ${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox segm \
 --eval-options jsonfile_prefix=${WORK_DIR}/base_results \
 --cfg-options data.test.eval_filter_empty_gt=False data.test.ann_file=data/coco/annotations/instances_val2017_65cates.json \
-model.roi_head.bbox_head.combine_reg_and_cls_embedding=${COMBINE_METHOD} model.roi_head.bbox_head.reg_with_cls_embedding=True
+model.roi_head.bbox_head.combine_reg_and_cls_embedding=${COMBINE_METHOD} model.roi_head.bbox_head.reg_with_cls_embedding=True \
+model.roi_head.bbox_head.reg_with_mlp=True
 
 bash tools/dist_test.sh configs/mask_rcnn_distill/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_novel17.py \
 ${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox segm \
 --eval-options jsonfile_prefix=${WORK_DIR}/novel_results \
 --cfg-options data.test.eval_filter_empty_gt=False data.test.ann_file=data/coco/annotations/instances_val2017_65cates.json \
-model.roi_head.bbox_head.combine_reg_and_cls_embedding=${COMBINE_METHOD} model.roi_head.bbox_head.reg_with_cls_embedding=True
+model.roi_head.bbox_head.combine_reg_and_cls_embedding=${COMBINE_METHOD} model.roi_head.bbox_head.reg_with_cls_embedding=True \
+model.roi_head.bbox_head.reg_with_mlp=True
 
 bash tools/dist_test.sh configs/mask_rcnn_distill/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_novel17.py \
 ${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox segm \
 --eval-options jsonfile_prefix=${WORK_DIR}/novel_results_trick \
 --cfg-options model.roi_head.bbox_head.filter_base_cate=data/embeddings/base_finetuned_48cates.pt data.test.eval_filter_empty_gt=False \
 data.test.ann_file=data/coco/annotations/instances_val2017_65cates.json \
-model.roi_head.bbox_head.combine_reg_and_cls_embedding=${COMBINE_METHOD} model.roi_head.bbox_head.reg_with_cls_embedding=True
+model.roi_head.bbox_head.combine_reg_and_cls_embedding=${COMBINE_METHOD} model.roi_head.bbox_head.reg_with_cls_embedding=True \
+model.roi_head.bbox_head.reg_with_mlp=True
 
 bash tools/dist_test.sh configs/mask_rcnn_distill/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_bn65.py \
 ${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox segm \
 --eval-options jsonfile_prefix=${WORK_DIR}/base_and_novel \
 --cfg-options data.test.eval_filter_empty_gt=False data.test.ann_file=data/coco/annotations/instances_val2017_65cates.json \
-model.roi_head.bbox_head.combine_reg_and_cls_embedding=${COMBINE_METHOD} model.roi_head.bbox_head.reg_with_cls_embedding=True
+model.roi_head.bbox_head.combine_reg_and_cls_embedding=${COMBINE_METHOD} model.roi_head.bbox_head.reg_with_cls_embedding=True \
+model.roi_head.bbox_head.reg_with_mlp=True
