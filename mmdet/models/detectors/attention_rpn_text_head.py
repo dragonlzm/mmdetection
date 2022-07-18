@@ -74,8 +74,7 @@ class AttentionRPNTextHead(RPNHead):
         self.load_value = self.load_value.unsqueeze(dim=-1).unsqueeze(dim=-1)
         # fix the text embedding
         self.load_value.require_grad = False
-        print('in init, self.load_value.require_grad', self.load_value.require_grad)
-        
+        #print('in init, self.load_value.require_grad', self.load_value.require_grad)
         self.num_classes = num_classes
 
     def extract_roi_feat(self, feats: List[Tensor], rois: Tensor) -> Tensor:
@@ -154,7 +153,7 @@ class AttentionRPNTextHead(RPNHead):
         #     for i in range(
         #         support_roi_feats.size(0) // self.num_support_shots)
         # ]
-        print('in forward self.load_value.require_grad', self.load_value.require_grad, self.load_value[0])
+        #print('in forward self.load_value.require_grad', self.load_value.require_grad, self.load_value[0])
         # generate the positve feat
         # select the needed text embedding
         # for the image i the cate_idx should be query_gt_labels[i][0]
