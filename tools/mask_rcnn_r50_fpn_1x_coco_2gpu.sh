@@ -22,8 +22,8 @@ PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH 
 python -m torch.distributed.launch --nproc_per_node=2 \
     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
     configs/mask_rcnn/mask_rcnn_r50_fpn_1x_coco_2gpu.py --launcher pytorch \
-    --work-dir=/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_2gpu_reg_class_agno 
-    --resume-from=/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_2gpu_reg_class_agno/latest.pth
+    --work-dir=/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_2gpu_reg_class_agno \
+    --resume-from=/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_2gpu_reg_class_agno/epoch_7.pth
 
 # for 1x training
 #PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \

@@ -116,46 +116,43 @@ class AttentionRPNTextRPN(QuerySupportDetector):
                 - `res4_roi_feat` (Tensor): roi features of res4 layer.
                 - `res5_roi_feat` (Tensor): roi features of res5 layer.
         """
-        # self.is_model_init = False
-        # # extract support template features will reset `is_model_init` flag
-        # assert gt_bboxes is not None and gt_labels is not None, \
-        #     'forward support template require gt_bboxes and gt_labels.'
-        # assert len(gt_labels) == img.size(0), \
-        #     'Support instance have more than two labels'
+        self.is_model_init = False
+        # extract support template features will reset `is_model_init` flag
+        assert gt_bboxes is not None and gt_labels is not None, \
+            'forward support template require gt_bboxes and gt_labels.'
+        assert len(gt_labels) == img.size(0), \
+            'Support instance have more than two labels'
 
-        # feats = self.extract_support_feat(img)
-        # rois = bbox2roi([bboxes for bboxes in gt_bboxes])
-        # res4_roi_feat = self.rpn_head.extract_roi_feat(feats, rois)
-        # self._forward_saved_support_dict['gt_labels'].extend(gt_labels)
-        # self._forward_saved_support_dict['res4_roi_feats'].append(
-        #     res4_roi_feat)
+        #feats = self.extract_support_feat(img)
+        #rois = bbox2roi([bboxes for bboxes in gt_bboxes])
+        #res4_roi_feat = self.rpn_head.extract_roi_feat(feats, rois)
+        self._forward_saved_support_dict['gt_labels'].extend(gt_labels)
+        #self._forward_saved_support_dict['res4_roi_feats'].append(
+        #    res4_roi_feat)
 
-        # return {
-        #     'gt_labels': gt_labels,
-        #     'res4_roi_feats': res4_roi_feat,
-        #     #'res5_roi_feats': res5_roi_feat
-        # }
-        pass
+        return {
+            'gt_labels': gt_labels,
+            #'res4_roi_feats': res4_roi_feat,
+            #'res5_roi_feats': res5_roi_feat
+        }
+        #pass
 
     def model_init(self) -> None:
         """process the saved support features for model initialization."""
-        # self.inference_support_dict.clear()
-        # gt_labels = torch.cat(self._forward_saved_support_dict['gt_labels'])
-        # # used for attention rpn head
-        # res4_roi_feats = torch.cat(
-        #     self._forward_saved_support_dict['res4_roi_feats'])
-        # class_ids = set(gt_labels.data.tolist())
-        # for class_id in class_ids:
-        #     self.inference_support_dict[class_id] = {
-        #         'res4_roi_feats':
-        #         res4_roi_feats[gt_labels == class_id].mean([0, 2, 3], True),
-        #     }
-        # # set the init flag
-        # self.is_model_init = True
-        # # clear support dict
-        # for k in self._forward_saved_support_dict.keys():
-        #     self._forward_saved_support_dict[k].clear()
-        pass
+        self.inference_support_dict.clear()
+        gt_labels = torch.cat(self._forward_saved_support_dict['gt_labels'])
+        # used for attention rpn head
+        #res4_roi_feats = torch.cat(
+        #    self._forward_saved_support_dict['res4_roi_feats'])
+        class_ids = set(gt_labels.data.tolist())
+        for class_id in class_ids:
+            self.inference_support_dict[class_id] = {}
+        # set the init flag
+        self.is_model_init = True
+        # clear support dict
+        for k in self._forward_saved_support_dict.keys():
+            self._forward_saved_support_dict[k].clear()
+        #pass
 
     def simple_test(self,
                     img: Tensor,
@@ -183,24 +180,21 @@ class AttentionRPNTextRPN(QuerySupportDetector):
         """
         #assert self.with_bbox, 'Bbox head must be implemented.'
         assert len(img_metas) == 1, 'Only support single image inference.'
-        # if (self.inference_support_dict == {}) or (not self.is_model_init):
-        #     # process the saved support features
-        #     self.model_init()
+        if (self.inference_support_dict == {}) or (not self.is_model_init):
+            # process the saved support features
+            self.model_init()
 
         results_dict = {}
         query_feats = self.extract_feat(img)
         for class_id in self.inference_support_dict.keys():
-            # support_res4_roi_feat = \
-            #     self.inference_support_dict[class_id]['res4_roi_feats']
-            proposal_list = self.rpn_head.simple_test(
-                    query_feats, class_id, img_metas)
-
-            if rescale:
-                for proposals, meta in zip(proposal_list, img_metas):
-                    proposals[:, :4] /= proposals.new_tensor(meta['scale_factor'])
-            results_dict[class_id] = proposal_list
             #proposal_list.shape 1 <class 'torch.Tensor'> torch.Size([100, 5])
-            #print("proposal_list.shape", len(proposal_list), len(proposal_list[0]))
+            proposal_list = self.rpn_head.simple_test(
+                    query_feats, class_id, img_metas, rescale=rescale)
+            # if rescale:
+            #     for proposals, meta in zip(proposal_list, img_metas):
+            #         proposals[:, :4] /= proposals.new_tensor(meta['scale_factor'])
+            results_dict[class_id] = proposal_list
+            
         # results torch.Size([6000, 5]), in rpn torch.Size([1000, 5])
         results = torch.cat([
             results_dict[i][0] for i in sorted(results_dict.keys())
