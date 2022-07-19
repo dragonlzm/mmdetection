@@ -48,6 +48,7 @@ class AttentionRPNTextHead(RPNHead):
                  fg_vec_cfg=None,
                  num_classes=80,
                  normalize_img_feat=False,
+                 linear_mapping=None,
                  **kwargs) -> None:
         super().__init__(**kwargs)
         self.num_support_ways = num_support_ways
@@ -62,17 +63,21 @@ class AttentionRPNTextHead(RPNHead):
             build_roi_extractor(copy.deepcopy(roi_extractor))
         self.clip_dim = clip_dim
         self.backbone_feat_out_channels = backbone_feat_out_channels
-            
-        # add one extra convolution layer to map the feature map to clip dimension
-        self.map_to_clip_dim = nn.Conv2d(self.backbone_feat_out_channels, self.clip_dim, 1, bias=False)
-        self.fg_vec_cfg = fg_vec_cfg
-        # load the text embeddings
-        load_value = torch.load(self.fg_vec_cfg.load_path)
-        load_value = load_value / load_value.norm(dim=-1, keepdim=True)
-        self.load_value = load_value.cuda()
+        self.linear_mapping = linear_mapping
         
-        # reshape the text embedding
-        self.load_value = self.load_value.unsqueeze(dim=-1).unsqueeze(dim=-1)
+        if self.linear_mapping == None:
+            # add one extra convolution layer to map the feature map to clip dimension
+            self.map_to_clip_dim = nn.Conv2d(self.backbone_feat_out_channels, self.clip_dim, 1, bias=False)
+        elif self.linear_mapping == 'on_query':
+            self.map_to_clip_dim = nn.Linear(self.backbone_feat_out_channels, self.clip_dim, bias=True)
+        elif self.linear_mapping == 'on_both':
+            self.map_to_clip_dim = nn.Linear(self.backbone_feat_out_channels, self.clip_dim, bias=True)
+            self.support_mapping = nn.Linear(self.clip_dim, self.clip_dim, bias=True)
+            
+        # load the text embeddings
+        self.fg_vec_cfg = fg_vec_cfg
+        load_value = torch.load(self.fg_vec_cfg.load_path)
+        self.load_value = load_value.cuda()
         # fix the text embedding
         self.load_value.require_grad = False
         #print('in init, self.load_value.require_grad', self.load_value.require_grad)
@@ -137,38 +142,18 @@ class AttentionRPNTextHead(RPNHead):
                 - losses: (dict[str, Tensor]): A dictionary of loss components.
                 - proposal_list (list[Tensor]): Proposals of each image.
         """
-        query_feat = query_feats[0]
-        query_feat = self.map_to_clip_dim(query_feat)
         batch_size = len(query_img_metas)
         neg_sample_num = self.num_support_ways - 1
-
-        # support features are placed in follow order:
-        # [pos * num_support_shots,
-        #  neg * num_support_shots * (num_support_ways - 1 )] * batch size
-
-        # get the average features:
-        # [pos_avg, neg_avg * (num_support_ways - 1 )] * batch size
-        # avg_support_feats = [
-        #     support_roi_feats[i * self.num_support_shots:(i + 1) *
-        #                       self.num_support_shots].mean([0, 2, 3],
-        #                                                    keepdim=True)
-        #     for i in range(
-        #         support_roi_feats.size(0) // self.num_support_shots)
-        # ]
-        #print('in forward self.load_value.require_grad', self.load_value.require_grad, self.load_value[0])
+        query_feat = query_feats[0]
+        query_feat_input, support_feat_input = self.preprocess_feats(query_feat)
+        
         # generate the positve feat
         # select the needed text embedding
         # for the image i the cate_idx should be query_gt_labels[i][0]
-        if self.normalize_img_feat:
-            query_feat_input = [(ele / ele.norm(dim=0, keepdim=True)).unsqueeze(0) for ele in query_feat]
-            #print(query_feat_input[0].shape, torch.norm(query_feat_input[0][0,:,0,0]))
-        else:
-            query_feat_input = [ele.unsqueeze(0) for ele in query_feat]
-        
         pos_pair_feats = [
             self.aggregation_layer(
                 query_feat=query_feat_input[i],
-                support_feat=self.load_value[query_gt_labels[i][0]].unsqueeze(dim=0)
+                support_feat=support_feat_input[query_gt_labels[i][0]].unsqueeze(dim=0)
                 )[0]
             for i in range(batch_size)
         ]
@@ -189,8 +174,8 @@ class AttentionRPNTextHead(RPNHead):
         
         neg_pair_feats = [
             self.aggregation_layer(
-                query_feat=query_feat[i].unsqueeze(0),
-                support_feat=self.load_value[random_idx[i][j]].unsqueeze(dim=0)
+                query_feat=query_feat_input[i],
+                support_feat=support_feat_input[random_idx[i][j]].unsqueeze(dim=0)
                 )[0]
             for i in range(batch_size)
             for j in range(neg_sample_num)
@@ -333,20 +318,45 @@ class AttentionRPNTextHead(RPNHead):
         """
         # fuse support and query features
         query_feat = query_feats[0]
-        query_feat = self.map_to_clip_dim(query_feat)
-        
-        if self.normalize_img_feat:
-            query_feat = [(ele / ele.norm(dim=0, keepdim=True)).unsqueeze(0) for ele in query_feat]
-            #print(query_feat_input[0].shape, torch.norm(query_feat_input[0][0,:,0,0]))
-        else:
-            query_feat = [ele.unsqueeze(0) for ele in query_feat]
+        query_feat_input, support_feat_input = self.preprocess_feats(query_feat)
 
         # default test batch size is 1
         feats = self.aggregation_layer(
-            query_feat=query_feat[0], support_feat=self.load_value[class_id].unsqueeze(dim=0))
+            query_feat=query_feat_input[0], support_feat=support_feat_input[class_id].unsqueeze(dim=0))
         proposal_list = self.simple_test_rpn(feats, query_img_metas)
         if rescale:
             for proposals, meta in zip(proposal_list, query_img_metas):
                 proposals[:, :4] /= proposals.new_tensor(meta['scale_factor'])
 
         return proposal_list
+
+
+    def preprocess_feats(self, query_feat):
+        # map the query feature
+        if self.linear_mapping == None:
+            query_feat = self.map_to_clip_dim(query_feat)
+        else:
+            # permute the dim
+            query_feat = query_feat.permute([0,2,3,1])
+            query_feat = self.map_to_clip_dim(query_feat)
+            query_feat = query_feat.permute([0,3,1,2])
+            print("query_feat.shape", query_feat.shape)
+        
+        ## normalize the query feat
+        if self.normalize_img_feat:
+            query_feat_input = [(ele / ele.norm(dim=0, keepdim=True)).unsqueeze(0) for ele in query_feat]
+        else:
+            query_feat_input = [ele.unsqueeze(0) for ele in query_feat]        
+        
+        # map the support feature
+        support_feat_input = self.load_value
+        if self.linear_mapping == "on_both":
+            support_feat_input = self.support_mapping(support_feat_input)
+            print('support feat shape', support_feat_input.shape)
+
+        # normalize the support feat
+        support_feat_input = support_feat_input / support_feat_input.norm(dim=-1, keepdim=True)
+        # reshape the text embedding
+        support_feat_input = support_feat_input.unsqueeze(dim=-1).unsqueeze(dim=-1)
+        
+        return query_feat_input, support_feat_input
