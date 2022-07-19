@@ -21,9 +21,6 @@ data = dict(
 # make model head = 60
 # model settings
 model = dict(
-    backbone=dict(
-            init_cfg=dict(type='Pretrained', 
-                checkpoint='data/pretrain/resnet50-0676ba61.pth')),
     roi_head=dict(
         bbox_head=dict(
             num_classes=60)))
