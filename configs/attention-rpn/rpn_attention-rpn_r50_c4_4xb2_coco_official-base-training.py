@@ -36,8 +36,7 @@ data = dict(
 # for 4 gpu setting (4*2, maintaining the overall batchsize the same)
 optimizer = dict(
     lr=0.004,
-    momentum=0.9,
-    paramwise_cfg=dict(custom_keys={'roi_head.bbox_head': dict(lr_mult=2.0)}))
+    momentum=0.9)
 #optimizer_config = dict(_delete_=True, grad_clip=dict(max_norm=10, norm_type=2))
 lr_config = dict(warmup_iters=1000, warmup_ratio=0.1, step=[112000, 120000])
 runner = dict(max_iters=120000)
