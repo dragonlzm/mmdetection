@@ -340,7 +340,7 @@ class AttentionRPNTextHead(RPNHead):
             query_feat = query_feat.permute([0,2,3,1])
             query_feat = self.map_to_clip_dim(query_feat)
             query_feat = query_feat.permute([0,3,1,2])
-            print("query_feat.shape", query_feat.shape)
+            #print("query_feat.shape", query_feat.shape)
         
         ## normalize the query feat
         if self.normalize_img_feat:
@@ -352,7 +352,7 @@ class AttentionRPNTextHead(RPNHead):
         support_feat_input = self.load_value
         if self.linear_mapping == "on_both":
             support_feat_input = self.support_mapping(support_feat_input)
-            print('support feat shape', support_feat_input.shape)
+            #print('support feat shape', support_feat_input.shape)
 
         # normalize the support feat
         support_feat_input = support_feat_input / support_feat_input.norm(dim=-1, keepdim=True)
