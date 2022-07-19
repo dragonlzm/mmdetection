@@ -47,6 +47,7 @@ class AttentionRPNTextHead(RPNHead):
                  backbone_feat_out_channels=1024,
                  fg_vec_cfg=None,
                  num_classes=80,
+                 normalize_img_feat=False,
                  **kwargs) -> None:
         super().__init__(**kwargs)
         self.num_support_ways = num_support_ways
@@ -76,6 +77,7 @@ class AttentionRPNTextHead(RPNHead):
         self.load_value.require_grad = False
         #print('in init, self.load_value.require_grad', self.load_value.require_grad)
         self.num_classes = num_classes
+        self.normalize_img_feat = normalize_img_feat
 
     def extract_roi_feat(self, feats: List[Tensor], rois: Tensor) -> Tensor:
         """Forward function.
@@ -157,9 +159,15 @@ class AttentionRPNTextHead(RPNHead):
         # generate the positve feat
         # select the needed text embedding
         # for the image i the cate_idx should be query_gt_labels[i][0]
+        if self.normalize_img_feat:
+            query_feat_input = [ele.unsqueeze(0) for ele in query_feat]
+            print(query_feat_input[0].shape)
+        else:
+            query_feat_input = [ele.unsqueeze(0) for ele in query_feat]
+        
         pos_pair_feats = [
             self.aggregation_layer(
-                query_feat=query_feat[i].unsqueeze(0),
+                query_feat=query_feat_input[i],
                 support_feat=self.load_value[query_gt_labels[i][0]].unsqueeze(dim=0)
                 )[0]
             for i in range(batch_size)
