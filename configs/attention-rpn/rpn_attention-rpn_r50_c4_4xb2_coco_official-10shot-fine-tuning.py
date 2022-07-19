@@ -54,9 +54,5 @@ model = dict(
     rpn_head=dict(
         num_support_ways=num_support_ways,
         num_support_shots=num_support_shots,
-    ),
-    roi_head=dict(
-        num_support_ways=num_support_ways,
-        num_support_shots=num_support_shots,
-    ),
+    )
 )

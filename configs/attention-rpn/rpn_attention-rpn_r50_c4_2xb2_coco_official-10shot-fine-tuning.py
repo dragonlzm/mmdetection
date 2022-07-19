@@ -1,4 +1,4 @@
-_base_ = './rpn_attention-rpn_r50_c4_4xb2_coco_official-base-training.py'
+_base_ = './rpn_attention-rpn_r50_c4_4xb2_coco_official-10shot-fine-tuning.py'
 
 
 # for 2 gpu setting (2*2)

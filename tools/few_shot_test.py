@@ -179,11 +179,12 @@ def main():
     # for meta-learning methods which require support template dataset
     # for model initialization.
     if cfg.data.get('model_init', None) is not None:
-        cfg.data.model_init.pop('copy_from_train_dataset')
+        origin_copy_from_train_dataset = cfg.data.model_init.pop('copy_from_train_dataset')
         model_init_samples_per_gpu = cfg.data.model_init.pop(
             'samples_per_gpu', 1)
         model_init_workers_per_gpu = cfg.data.model_init.pop(
             'workers_per_gpu', 1)
+        # try to load the ann_cfg from the checkpoint
         if cfg.data.model_init.get('ann_cfg', None) is None:
             assert checkpoint['meta'].get('model_init_ann_cfg',
                                           None) is not None
@@ -191,6 +192,40 @@ def main():
                 get_copy_dataset_type(cfg.data.model_init.type)
             cfg.data.model_init.ann_cfg = \
                 checkpoint['meta']['model_init_ann_cfg']
+        # if the check point in the model does not contain the "data_infos"
+        # usually it's the checkpoint before finetuneing
+        # we should get hte ann_cfg from the training data
+        ## check the data_infos
+        mark_contain_data_infos = True
+        if isinstance(cfg.data.model_init.ann_cfg, dict):
+            if cfg.data.model_init.ann_cfg.get('data_infos', None) is None:
+                mark_contain_data_infos = False
+        elif isinstance(cfg.data.model_init.ann_cfg, list):
+            for ann_cfg_ in cfg.data.model_init.ann_cfg:
+                if ann_cfg_.get('data_infos', None) is None:
+                    mark_contain_data_infos = False
+                    break
+        
+        # update the ann_cfg if data_infos not in data_infos:
+        if not mark_contain_data_infos:
+            if origin_copy_from_train_dataset:
+                if cfg.data.model_init.ann_cfg is not None:
+                    warnings.warn(
+                        'model_init dataset will copy support '
+                        'dataset used for training and original '
+                        'ann_cfg will be discarded', UserWarning)
+                train_dataset = build_dataset(cfg.data.train)
+                # 200 annotation for novel cates, 10 anno for each cate
+                # cfg.data.model_init.ann_cfg [{'data_infos': [{'id': 386164, 'filename': 'train2017/000000386164.jpg', 
+                # 'width': 480, 'height': 640, 'ann': {'bboxes': array([[  7.19,  35.96, 478.92, 624.18]], dtype=float32), 
+                # 'labels': array([18])}}, {'id': 51191, 'filename': 'train2017/000000051191.jpg', 
+                # 'width': 628, 'height': 640, 'ann': {'bboxes': array([[373.06, 129.63, 481.23, 340.27]], 
+                # dtype=float32), 'labels': array([17])}}, ···
+                
+                cfg.data.model_init.ann_cfg = [
+                    dict(data_infos=train_dataset.get_support_data_infos())
+                ]
+                
         model_init_dataset = build_dataset(cfg.data.model_init)
         # disable dist to make all rank get same data
         model_init_dataloader = build_dataloader(
