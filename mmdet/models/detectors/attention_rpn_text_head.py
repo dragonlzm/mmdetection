@@ -335,8 +335,15 @@ class AttentionRPNTextHead(RPNHead):
         query_feat = query_feats[0]
         query_feat = self.map_to_clip_dim(query_feat)
         
+        if self.normalize_img_feat:
+            query_feat = [(ele / ele.norm(dim=0, keepdim=True)).unsqueeze(0) for ele in query_feat]
+            #print(query_feat_input[0].shape, torch.norm(query_feat_input[0][0,:,0,0]))
+        else:
+            query_feat = [ele.unsqueeze(0) for ele in query_feat]
+
+        # default test batch size is 1
         feats = self.aggregation_layer(
-            query_feat=query_feat, support_feat=self.load_value[class_id].unsqueeze(dim=0))
+            query_feat=query_feat[0], support_feat=self.load_value[class_id].unsqueeze(dim=0))
         proposal_list = self.simple_test_rpn(feats, query_img_metas)
         if rescale:
             for proposals, meta in zip(proposal_list, query_img_metas):
