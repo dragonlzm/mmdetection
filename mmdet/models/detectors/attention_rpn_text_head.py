@@ -160,8 +160,8 @@ class AttentionRPNTextHead(RPNHead):
         # select the needed text embedding
         # for the image i the cate_idx should be query_gt_labels[i][0]
         if self.normalize_img_feat:
-            query_feat_input = [ele.unsqueeze(0) for ele in query_feat]
-            print(query_feat_input[0].shape)
+            query_feat_input = [(ele / ele.norm(dim=0, keepdim=True)).unsqueeze(0) for ele in query_feat]
+            #print(query_feat_input[0].shape, torch.norm(query_feat_input[0][0,:,0,0]))
         else:
             query_feat_input = [ele.unsqueeze(0) for ele in query_feat]
         
