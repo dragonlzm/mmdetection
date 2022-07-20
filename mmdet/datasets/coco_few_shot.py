@@ -661,6 +661,12 @@ class FewShotCocoDefaultDataset(FewShotCocoDataset):
                     type='ann_file',
                     ann_file='data/few_shot_ann/coco/attention_rpn_10shot/'
                     'official_10_shot_from_instances_train2017.json')
+            ],
+            'Novel17_10SHOT': [
+                dict(
+                    type='ann_file',
+                    ann_file='data/few_shot_ann/coco/attention_rpn_10shot/'
+                    'novel17_10_shot_from_instances_train2017.json')
             ]
         },
         MPSR=coco_benchmark,
