@@ -29,24 +29,24 @@ BASE_CONFIG_FILE="configs/attention-rpn/attention-rpn_r50_c4_2xb2_coco_official-
 # FINETUNE_CONFIG_FILE="configs/attention-rpn/attention-rpn_r50_c4_coco_official-10shot-fine-tuning.py"
 # BASE_CONFIG_FILE="configs/attention-rpn/attention-rpn_r50_c4_2xb4_coco_official-base-training.py"
 
-RPN_NOVEL_CONFIG="rpn_attention-rpn_r50_c4_coco_official-10shot-fine-tuning.py"
+RPN_NOVEL_CONFIG="configs/attention-rpn/rpn_attention-rpn_r50_c4_coco_official-10shot-fine-tuning.py"
 # it doesn't matter which rpn config to test the more here, since the model structures are the same.
-RPN_BASE_CONFIG="rpn_attention-rpn_r50_c4_2xb2_coco_official-base-training.py"
+RPN_BASE_CONFIG="configs/attention-rpn/rpn_attention-rpn_r50_c4_2xb2_coco_official-base-training.py"
 
 # test the model on novel before the finetuning (here we get the novel ap)
-# bash tools/dist_fewshot_test.sh ${FINETUNE_CONFIG_FILE} \
-# ${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval proposal_fast \
-# --eval-options jsonfile_prefix=${WORK_DIR}/test_novel
+bash tools/dist_fewshot_test.sh ${FINETUNE_CONFIG_FILE} \
+${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox \
+--eval-options jsonfile_prefix=${WORK_DIR}/test_novel
 
 # finetune the model and get the performance after finetuning (here we get the novel ap)
-# bash tools/new_dist_fewshot_train.sh ${FINETUNE_CONFIG_FILE} 2 \
-# ${WORK_DIR}/finetuning /project/nevatia_174/zhuoming/detection --cfg-options \
-# load_from=${WORK_DIR}/${CHECKPOINT_NAME}
+bash tools/new_dist_fewshot_train.sh ${FINETUNE_CONFIG_FILE} 2 \
+${WORK_DIR}/finetuning /project/nevatia_174/zhuoming/detection --cfg-options \
+load_from=${WORK_DIR}/${CHECKPOINT_NAME}
 
 # test the model on base after the finetuning (here we get the novel ap)
-# bash tools/dist_fewshot_test.sh ${BASE_CONFIG_FILE} \
-# ${WORK_DIR}/finetuning/latest.pth 2 --eval proposal_fast \
-# --eval-options jsonfile_prefix=${WORK_DIR}/finetuning/rpn_base_finetuned
+bash tools/dist_fewshot_test.sh ${BASE_CONFIG_FILE} \
+${WORK_DIR}/finetuning/latest.pth 2 --eval bbox \
+--eval-options jsonfile_prefix=${WORK_DIR}/finetuning/rpn_base_finetuned
 
 
 # test the RPN on novel before finetune 
