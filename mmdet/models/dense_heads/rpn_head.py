@@ -187,6 +187,12 @@ class RPNHead(AnchorHead):
             ]
             img_shape = img_metas[img_id]['img_shape']
             scale_factor = img_metas[img_id]['scale_factor']
+            
+            # cls_score_list 1 cls_score_list[0] torch.Size([15, 38, 50])
+            # for fake conf score
+            # fake_score = [torch.rand(cls_score_list[0].shape).cuda()]
+            # cls_score_list = fake_score
+            
             proposals = self._get_bboxes_single(cls_score_list, bbox_pred_list,
                                                 mlvl_anchors, img_shape,
                                                 scale_factor, cfg, rescale)
