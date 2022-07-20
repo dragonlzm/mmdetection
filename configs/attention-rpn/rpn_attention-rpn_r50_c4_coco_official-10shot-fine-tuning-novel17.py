@@ -1,4 +1,4 @@
-_base_ = './rpn_attention-rpn_r50_c4_2xb4_coco_official-base-training.py'
+_base_ = './rpn_attention-rpn_r50_c4_coco_official-10shot-fine-tuning.py'
 
 zero_shot_split = dict(
     ALL_CLASSES=('person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 
@@ -27,8 +27,8 @@ zero_shot_split = dict(
 
 data = dict(
     train=dict(
-        dataset=dict(def_coco_split=zero_shot_split),
-                     ann_cfg=[dict(method='Attention_RPN', setting='Novel17_10SHOT')]),
+        dataset=dict(def_coco_split=zero_shot_split,
+                     ann_cfg=[dict(method='Attention_RPN', setting='Novel17_10SHOT')])),
     val=dict(def_coco_split=zero_shot_split),
     test=dict(def_coco_split=zero_shot_split),
     # random sample 10 shot base instance to evaluate training
