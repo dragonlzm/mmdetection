@@ -48,6 +48,7 @@ class AttentionRPNTextHead(RPNHead):
                  fg_vec_cfg=None,
                  num_classes=80,
                  normalize_img_feat=False,
+                 normalize_text_feat=False,
                  linear_mapping=None,
                  **kwargs) -> None:
         super().__init__(**kwargs)
@@ -83,6 +84,7 @@ class AttentionRPNTextHead(RPNHead):
         #print('in init, self.load_value.require_grad', self.load_value.require_grad)
         self.num_classes = num_classes
         self.normalize_img_feat = normalize_img_feat
+        self.normalize_text_feat = normalize_text_feat
 
     def extract_roi_feat(self, feats: List[Tensor], rois: Tensor) -> Tensor:
         """Forward function.
@@ -355,7 +357,8 @@ class AttentionRPNTextHead(RPNHead):
             #print('support feat shape', support_feat_input.shape)
 
         # normalize the support feat
-        support_feat_input = support_feat_input / support_feat_input.norm(dim=-1, keepdim=True)
+        if self.normalize_text_feat:
+            support_feat_input = support_feat_input / support_feat_input.norm(dim=-1, keepdim=True)
         # reshape the text embedding
         support_feat_input = support_feat_input.unsqueeze(dim=-1).unsqueeze(dim=-1)
         
