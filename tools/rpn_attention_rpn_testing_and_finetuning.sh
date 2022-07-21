@@ -29,6 +29,12 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 # BASE_CONFIG_FILE="configs/attention-rpn/rpn_attention-rpn_r50_c4_2xb4_coco_official-base-training.py"
 # CHECKPOINT_NAME="iter_120000.pth"
 
+WORK_DIR="/project/nevatia_174/zhuoming/detection/meta_learning/rpn_attention-rpn_r50_c4_2xb4_coco_official-base48-training"
+CONFIG_FILE="configs/attention-rpn/rpn_attention-rpn_r50_c4_coco_official-10shot-fine-tuning-novel17.py"
+BASE_CONFIG_FILE="configs/attention-rpn/rpn_attention-rpn_r50_c4_2xb4_coco_official-base48-training.py"
+CHECKPOINT_NAME="iter_120000.pth"
+
+
 # for text zeroshot
 # WORK_DIR="/project/nevatia_174/zhuoming/detection/meta_learning/rpn_attention_text_rpn_r50_c4_2xb2_coco_official-base-training"
 # CONFIG_FILE="configs/attention-rpn/rpn_attention_text_rpn_r50_c4_coco_official-10shot-fine-tuning.py"
@@ -39,6 +45,11 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 # CONFIG_FILE="configs/attention-rpn/rpn_attention_text_rpn_r50_c4_coco_official-10shot-fine-tuning.py"
 # BASE_CONFIG_FILE="configs/attention-rpn/rpn_attention_text_rpn_r50_c4_2xb4_coco_official-base-training.py"
 # CHECKPOINT_NAME="iter_120000.pth"
+
+WORK_DIR="/project/nevatia_174/zhuoming/detection/meta_learning/rpn_attention_text_rpn_r50_c4_2xb4_coco_official-base48-training"
+CONFIG_FILE="configs/attention-rpn/rpn_attention_text_rpn_r50_c4_coco_official-10shot-fine-tuning-novel17.py"
+BASE_CONFIG_FILE="configs/attention-rpn/rpn_attention_text_rpn_r50_c4_2xb4_coco_official-base48-training.py"
+CHECKPOINT_NAME="iter_120000.pth"
 
 
 # test the model on novel before the finetuning
