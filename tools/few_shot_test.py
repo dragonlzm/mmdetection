@@ -113,10 +113,11 @@ def main():
         raise ValueError('The output file must be a pkl file.')
 
     cfg = Config.fromfile(args.config)
-    cfg = compat_cfg(cfg)
-
+    
     if args.cfg_options is not None:
         cfg.merge_from_dict(args.cfg_options)
+        
+    cfg = compat_cfg(cfg)
 
     # import modules from string list.
     if cfg.get('custom_imports', None):
