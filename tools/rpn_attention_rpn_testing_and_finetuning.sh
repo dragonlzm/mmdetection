@@ -100,9 +100,9 @@ ${EXTRA_CONFIG}
 
 # finetune the model and get the performance after finetuning
 bash tools/new_dist_fewshot_train.sh ${CONFIG_FILE} 2 \
-${WORK_DIR}/finetuning /project/nevatia_174/zhuoming/detection --cfg-options \
-load_from=${WORK_DIR}/${CHECKPOINT_NAME} \
-${EXTRA_CONFIG}
+${WORK_DIR}/finetuning /project/nevatia_174/zhuoming/detection \
+${EXTRA_CONFIG} \
+load_from=${WORK_DIR}/${CHECKPOINT_NAME}
 
 # test the model on base after the finetuning
 bash tools/dist_fewshot_test.sh ${BASE_CONFIG_FILE} \
