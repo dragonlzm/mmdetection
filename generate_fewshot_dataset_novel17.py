@@ -38,7 +38,7 @@ from random import sample
 # for the novel categories for each image just sample one instance
 train_file = "/data/zhuoming/detection/coco/annotations/instances_train2017.json"
 train_content = json.load(open(train_file))
-num_of_shot = 10
+num_of_shot = 50
 
 # obtain the novel cate ids
 novel17_cate_name = ['airplane', 'bus', 'cat', 'dog', 'cow', 
@@ -67,9 +67,14 @@ for cate_id in novel17_cate_id:
     for anno in all_anno_for_cate:
         image_id = anno['image_id']
         #iscrowd = anno['iscrowd']
+        bbox = anno['bbox']
+        area = (bbox[2] - bbox[0]) * (bbox[3] - bbox[1])
+        if area < 1025:
+            continue
         # if the image has been selected, skip this image
         if image_id in sample_images:
             continue
+        print(area, anno)
         sample_images.append(image_id)
         sample_anno.append(anno)
         sampled_anno_count += 1
