@@ -15,3 +15,4 @@ data = dict(
     workers_per_gpu=4)
 
 checkpoint_config = dict(interval=10000)
+evaluation = dict(interval=10000)

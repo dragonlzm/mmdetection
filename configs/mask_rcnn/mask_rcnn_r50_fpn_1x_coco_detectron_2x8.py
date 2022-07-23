@@ -30,3 +30,10 @@ log_level = 'INFO'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]
+
+
+data = dict(
+    samples_per_gpu=8,
+    workers_per_gpu=4)
+
+evaluation = dict(interval=5000)
