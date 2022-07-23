@@ -5,7 +5,7 @@ _base_ = [
 ]
 
 
-# set for 2 gpu training
+# set for 2 gpu training (the lr is match with vild paper setting)
 optimizer = dict(lr=0.005)
 model = dict(
     backbone=dict(
