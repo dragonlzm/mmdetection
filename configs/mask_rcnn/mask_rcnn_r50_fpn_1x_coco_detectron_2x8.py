@@ -18,3 +18,12 @@ runner = dict(type='IterBasedRunner', max_iters=90000)
 data = dict(
     samples_per_gpu=8,
     workers_per_gpu=4)
+
+checkpoint_config = dict(interval=5000)
+# yapf:disable
+log_config = dict(
+    interval=50,
+    hooks=[
+        dict(type='TextLoggerHook'),
+        dict(type='TensorboardLoggerHook')
+    ])
