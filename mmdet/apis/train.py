@@ -66,12 +66,12 @@ def train_detector(model,
     data_loaders = [
         build_dataloader(
             ds,
-            cfg.data.samples_per_gpu,
-            cfg.data.workers_per_gpu,
+            cfg.data.samples_per_gpu if ds_idx == 0 else 2,
+            cfg.data.workers_per_gpu if ds_idx == 0 else 2,
             # cfg.gpus will be ignored if distributed
             len(cfg.gpu_ids),
             dist=distributed,
-            seed=cfg.seed) for ds in dataset
+            seed=cfg.seed) for ds_idx, ds in enumerate(dataset)
     ]
 
     # put model on gpus
