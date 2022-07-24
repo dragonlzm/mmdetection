@@ -9,18 +9,9 @@ albu_train_transforms = [
     dict(
         type='OneOf',
         transforms=[
-            dict(
-                type='OneOf',
-                transforms=[
-                    dict(type='GaussianBlur', blur_limit=3, p=1.0),
-                    dict(type='MedianBlur', blur_limit=3, p=1.0),
-                    dict(type='Blur', blur_limit=3, p=1.0),
-                ],
-                p=1.0),
-            dict(
-                type='IAAAdditiveGaussianNoise',
-                loc=0, scale=(0.0, 0.05 * 255), p=1),
-        ],
+            dict(type='GaussianBlur', blur_limit=3, p=1.0),
+            dict(type='MedianBlur', blur_limit=3, p=1.0),
+            dict(type='Blur', blur_limit=3, p=1.0)],
         p=0.2),
     dict(
         type='OneOf',
