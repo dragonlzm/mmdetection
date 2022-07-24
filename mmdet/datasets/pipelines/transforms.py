@@ -1649,6 +1649,12 @@ class Albu:
         return updated_dict
 
     def __call__(self, results):
+        before_tran_gt = torch.Tensor(results['gt_bboxes'])
+        before_tran_rand = torch.Tensor(results['rand_bboxes'])
+        before_tran_img = torch.Tensor(results['img'])
+        #print('before transfer', 'gt_bboxes', len(results['gt_bboxes']), results['gt_bboxes'],
+        #      "rand_bboxes", len(results['rand_bboxes']), results['rand_bboxes'][:10], 'image',
+        #      results['img'][0][0])
         # dict to albumentations format
         results = self.mapper(results, self.keymap_to_albu)
         # TODO: add bbox_fields
@@ -1707,7 +1713,19 @@ class Albu:
         # update final shape
         if self.update_pad_shape:
             results['pad_shape'] = results['img'].shape
-
+        # print('after transfer', 'gt_bboxes', len(results['gt_bboxes']), results['gt_bboxes'],
+        #       "rand_bboxes", len(results['rand_bboxes']), results['rand_bboxes'][:10], 'image',
+        #       results['img'][0][0])
+        after_tran_gt = torch.Tensor(results['gt_bboxes'])
+        after_tran_rand = torch.Tensor(results['rand_bboxes'])
+        after_tran_img = torch.Tensor(results['img'])
+        print('after transfer', "gt_bboxes", False in (before_tran_gt == after_tran_gt), 
+              "rand_bboxes", False in (before_tran_rand == after_tran_rand), 
+              'image', False in (before_tran_img == after_tran_img) )
+        #if False in (before_tran_gt == after_tran_gt):
+        #    print('before transfer gt', before_tran_gt, 'after transfer', after_tran_gt)
+        #    print('before transfer random', before_tran_rand[:10], 'after transfer', after_tran_rand[:10])
+            
         return results
 
     def __repr__(self):

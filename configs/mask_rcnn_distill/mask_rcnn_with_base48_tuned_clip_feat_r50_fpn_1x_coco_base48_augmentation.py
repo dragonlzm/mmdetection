@@ -1,17 +1,26 @@
 _base_ = './mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_200clip_pro_reg_with_embedding.py'
 
+
+# training and testing settings
 albu_train_transforms = [
     dict(
-        type='ShiftScaleRotate',
-        shift_limit=0.0625,
-        scale_limit=0.0,
-        rotate_limit=30,
-        interpolation=1,
-        p=0.5),
+        type='Cutout',
+        num_holes=2, max_h_size=20, max_w_size=20, fill_value=0, p=0.5),
     dict(
-        type='RandomBrightnessContrast',
-        brightness_limit=[0.1, 0.3],
-        contrast_limit=[0.1, 0.3],
+        type='OneOf',
+        transforms=[
+            dict(
+                type='OneOf',
+                transforms=[
+                    dict(type='GaussianBlur', blur_limit=3, p=1.0),
+                    dict(type='MedianBlur', blur_limit=3, p=1.0),
+                    dict(type='Blur', blur_limit=3, p=1.0),
+                ],
+                p=1.0),
+            dict(
+                type='IAAAdditiveGaussianNoise',
+                loc=0, scale=(0.0, 0.05 * 255), p=1),
+        ],
         p=0.2),
     dict(
         type='OneOf',
@@ -27,16 +36,17 @@ albu_train_transforms = [
                 hue_shift_limit=20,
                 sat_shift_limit=30,
                 val_shift_limit=20,
-                p=1.0)
-        ],
-        p=0.1),
-    dict(type='JpegCompression', quality_lower=85, quality_upper=95, p=0.2),
-    dict(type='ChannelShuffle', p=0.1),
-    dict(
-        type='OneOf',
-        transforms=[
-            dict(type='Blur', blur_limit=3, p=1.0),
-            dict(type='MedianBlur', blur_limit=3, p=1.0)
+                p=1.0),
+            dict(
+                type='IAASharpen',
+                alpha=(0, 1.0), lightness=(0.75, 1.5), p=1),            
+            dict(
+                type='InvertImg',
+                p=1.0),
+            dict(
+                type='RandomBrightnessContrast',
+                brightness_limit=[-0.1, 0.1], contrast_limit=[0.5, 2.0], p=1.0),
+            
         ],
         p=0.1),
 ]
@@ -51,6 +61,7 @@ train_pipeline = [
     dict(type='LoadCLIPFeat', file_path_prefix='data/coco/clip_proposal_feat/base48_finetuned',
          num_of_rand_bbox=200, select_fixed_subset=200),
     dict(type='Pad', size_divisor=32),
+    dict(type='RandomFlip', flip_ratio=0.5),
     dict(type='Albu',
         transforms=albu_train_transforms,
         bbox_params=dict(
