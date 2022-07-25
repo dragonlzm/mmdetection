@@ -2,7 +2,7 @@ _base_ = './mask_rcnn_with_clip_feat_r50_fpn_1x_coco.py'
 
 # model settings
 model = dict(
-    init_cfg=dict(type='Pretrained', checkpoint="data/test/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_5/epoch_12.pth"),
+    #init_cfg=dict(type='Pretrained', checkpoint="/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_gn_10_200clipproposal/epoch_12.pth"),
     roi_head=dict(
         type='StandardRoIHeadCLIPCls',
         extra_backbone=dict(
