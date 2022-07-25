@@ -1649,9 +1649,9 @@ class Albu:
         return updated_dict
 
     def __call__(self, results):
-        before_tran_gt = torch.Tensor(results['gt_bboxes'])
-        before_tran_rand = torch.Tensor(results['rand_bboxes'])
-        before_tran_img = torch.Tensor(results['img'])
+        # before_tran_gt = torch.Tensor(results['gt_bboxes'])
+        # before_tran_rand = torch.Tensor(results['rand_bboxes'])
+        #before_tran_img = torch.from_numpy(results['img'])
         #print('before transfer', 'gt_bboxes', len(results['gt_bboxes']), results['gt_bboxes'],
         #      "rand_bboxes", len(results['rand_bboxes']), results['rand_bboxes'][:10], 'image',
         #      results['img'][0][0])
@@ -1716,12 +1716,11 @@ class Albu:
         # print('after transfer', 'gt_bboxes', len(results['gt_bboxes']), results['gt_bboxes'],
         #       "rand_bboxes", len(results['rand_bboxes']), results['rand_bboxes'][:10], 'image',
         #       results['img'][0][0])
-        after_tran_gt = torch.Tensor(results['gt_bboxes'])
-        after_tran_rand = torch.Tensor(results['rand_bboxes'])
-        after_tran_img = torch.Tensor(results['img'])
-        print('after transfer', "gt_bboxes", False in (before_tran_gt == after_tran_gt), 
-              "rand_bboxes", False in (before_tran_rand == after_tran_rand), 
-              'image', False in (before_tran_img == after_tran_img) )
+        # after_tran_gt = torch.Tensor(results['gt_bboxes'])
+        # after_tran_rand = torch.Tensor(results['rand_bboxes'])
+        # #fter_tran_img = torch.from_numpy(results['img'])
+        # print('after transfer', "gt_bboxes", False in (before_tran_gt == after_tran_gt), 
+        #       "rand_bboxes", False in (before_tran_rand == after_tran_rand))
         #if False in (before_tran_gt == after_tran_gt):
         #    print('before transfer gt', before_tran_gt, 'after transfer', after_tran_gt)
         #    print('before transfer random', before_tran_rand[:10], 'after transfer', after_tran_rand[:10])
