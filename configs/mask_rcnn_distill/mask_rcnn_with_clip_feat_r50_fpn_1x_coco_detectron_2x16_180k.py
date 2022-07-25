@@ -15,7 +15,7 @@ runner = dict(type='IterBasedRunner', max_iters=180000)
 
 data = dict(
     samples_per_gpu=16,
-    workers_per_gpu=16)
+    workers_per_gpu=8)
 
 checkpoint_config = dict(interval=5000)
 evaluation = dict(interval=5000)
