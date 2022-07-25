@@ -281,7 +281,7 @@ class StandardRoIHeadCLIPCls(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         clip_cls_score = self.bbox_head.fc_cls_fg(clip_bbox_feat)
         
         # add one extra demension for the bg
-        additional_bg_score = torch.zeros(clip_cls_score.shape[0], 1).cuda()
+        additional_bg_score = torch.zeros(clip_cls_score.shape[0], -float('inf')).cuda()
         clip_cls_score = torch.cat([clip_cls_score, additional_bg_score], dim=-1)
         
         # replace the classification score with the clip score
