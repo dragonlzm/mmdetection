@@ -6,6 +6,7 @@ import warnings
 import torch
 from PIL import Image
 import cv2
+import os
 import mmcv
 import numpy as np
 from numpy import random
@@ -883,6 +884,11 @@ class Normalize:
             dict: Normalized results, 'img_norm_cfg' key is added into
                 result dict.
         """
+        # test for nomalization
+        image_before_norm = torch.from_numpy(results['img'])
+        save_path = os.path.join("/project/nevatia_174/zhuoming/code/new_rpn/mmdetection/data/mask_rcnn_clip_classifier/", (results['filename'] + '.pt'))
+        torch.save(image_before_norm, save_path)
+        
         for key in results.get('img_fields', ['img']):
             if self.divide_255 == True:
                 #print('before', results[key])

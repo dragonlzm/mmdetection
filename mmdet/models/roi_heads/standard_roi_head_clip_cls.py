@@ -8,6 +8,7 @@ from .test_mixins import BBoxTestMixin, MaskTestMixin
 import math
 import random
 import numpy as np
+import os
 from PIL import Image
 from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normalize
 try:
@@ -213,6 +214,12 @@ class StandardRoIHeadCLIPCls(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         img = img.permute([0,2,3,1])
         img = img * img_std + img_mean
         img = img.permute([0,3,1,2])
+        
+        # test for normalization
+        file_path = os.path.join("/project/nevatia_174/zhuoming/code/new_rpn/mmdetection/data/mask_rcnn_clip_classifier/", (img_metas['filename'] + '.pt'))
+        image_before_norm = torch.load(file_path)
+        print('img', img.shape, 'image_before_norm', image_before_norm.shape)
+        
         
         if cropped_patches == None:
             cropped_patches_list = self.crop_img_to_patches(img.cpu(), gt_bboxes, img_metas)
