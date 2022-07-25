@@ -289,7 +289,7 @@ class StandardRoIHeadCLIPCls(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         cls_score=clip_cls_score
         
         bbox_results = dict(
-                cls_score=cls_score, bbox_pred=bbox_pred, bbox_feats=bbox_feats)
+                cls_score=cls_score, bbox_pred=bbox_pred, bbox_feats=bbox_feats, clip_infer_bbox=reshaped_bbox_pred)
         return bbox_results
 
     def _bbox_forward_train(self, x, sampling_results, gt_bboxes, gt_labels,

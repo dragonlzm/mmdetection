@@ -341,7 +341,8 @@ class BBoxHead(BaseModule):
                    rescale=False,
                    cfg=None,
                    img_metas=None,
-                   bbox_save_path_root=None):
+                   bbox_save_path_root=None,
+                   clip_infer_bbox=None):
         """Transform network output for a batch into bbox predictions.
 
         Args:
@@ -456,6 +457,9 @@ class BBoxHead(BaseModule):
                     file.write(json.dumps(result_json))
                     file.close()
 
+            if clip_infer_bbox != None:
+                print('clip_infer_bbox', clip_infer_bbox.shape, 'bboxes', bboxes.shape,
+                      'compare result', (False in (clip_infer_bbox == bboxes)))
             det_bboxes, det_labels = multiclass_nms(bboxes, scores,
                                                     cfg.score_thr, cfg.nms,
                                                     cfg.max_per_img)
