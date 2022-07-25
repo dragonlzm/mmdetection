@@ -234,7 +234,7 @@ class StandardRoIHeadCLIPCls(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
 
     
     def _bbox_forward(self, x, rois, img=None, img_metas=None):
-        """Box head forward function used in both training and testing."""  
+        """this is for test forward only, since bbox_pred.split(num_proposals_per_img, 0) is not fit for hte train forward."""  
         # is the number of feat map layer
         #if distilled_feat != None and gt_rand_rois != None:
             # gt and random bbox feat from backbone_to
@@ -264,7 +264,7 @@ class StandardRoIHeadCLIPCls(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         ## the input img in this function is also a scaled, torch.Size([1, 3, 800, 1216])
         
         # send the predict bbox to the CLIP backbone, obtained the feat
-        num_proposals_per_img = tuple(1000 for i in range(img.shape[0]))
+        num_proposals_per_img = tuple(bbox_pred.shape[0] for i in range(img.shape[0]))
         splited_rois = rois.split(num_proposals_per_img, 0)
         splited_bbox_pred = bbox_pred.split(num_proposals_per_img, 0)
         
@@ -281,7 +281,7 @@ class StandardRoIHeadCLIPCls(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         clip_cls_score = self.bbox_head.fc_cls_fg(clip_bbox_feat)
         
         # add one extra demension for the bg
-        additional_bg_score = torch.zeros(clip_cls_score.shape[0], -float('inf')).cuda()
+        additional_bg_score = torch.full([clip_cls_score.shape[0], 1], -float('inf')).cuda()
         clip_cls_score = torch.cat([clip_cls_score, additional_bg_score], dim=-1)
         
         # replace the classification score with the clip score
