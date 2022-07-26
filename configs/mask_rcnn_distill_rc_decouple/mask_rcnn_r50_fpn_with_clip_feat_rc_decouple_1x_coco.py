@@ -12,6 +12,7 @@ model = dict(
             reg_with_cls_embedding=True,
             fg_vec_cfg=dict(load_path='data/embeddings/base_finetuned_80cates.pt'))))
 
+optimizer_config = dict(_delete_=True, grad_clip=dict(max_norm=10, norm_type=2))
 
 # directly use the setting, with finetuned feature, with flipping, with text embedding for augmentation
 dataset_type = 'CocoDataset'
