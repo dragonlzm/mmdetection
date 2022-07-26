@@ -14,7 +14,8 @@ from PIL import Image
 #file_path = '/data/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_2x_coco_2gpu_base48/base_results.bbox.json'
 #file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_200clip_pro_repro/base_and_novel.bbox.json'
 #file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_200clip_pro_repro/base_and_novel_e18.bbox.json'
-file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_gn_10_200clipproposal/base_results.bbox.json'
+#file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_gn_10_200clipproposal/base_results.bbox.json'
+file_path = '/data/zhuoming/detection/mask_rcnn_clip_classifier/results_base48.bbox.json'
 
 pred_content = json.load(open(file_path))
 # aggregate the predition base on the image
@@ -79,7 +80,9 @@ for info in gt_content['images']:
 #save_root = '/home/zhuoming/mcnn_baseline_2x_top50_prediction'
 #save_root = '/home/zhuoming/mcnn_2x_e24_top50_prediction'
 #save_root = '/home/zhuoming/mcnn_2x_e18_top50_prediction'
-save_root = '/home/zhuoming/mcnn_1x_e12_top50_prediction_base48'
+#save_root = '/home/zhuoming/mcnn_1x_e12_top50_prediction_base48'
+#save_root = '/home/zhuoming/mcnn_1x_e12_top20_prediction_base48'
+save_root = '/home/zhuoming/clip_classifer_top20_prediction_base48'
 
 for i, image_id in enumerate(from_image_id_to_annotation):
     if i > 50:
@@ -111,7 +114,7 @@ for i, image_id in enumerate(from_image_id_to_annotation):
     # print the prediction
     all_prediction = from_image_id_to_prediction[image_id]['bboxes']
     # select top 50    
-    all_prediction = all_prediction[:50]
+    all_prediction = all_prediction[:20]
 
     for box in all_prediction:
         rect = patches.Rectangle((box[0], box[1]),box[2],box[3],linewidth=1,edgecolor='r',facecolor='none')
