@@ -884,10 +884,13 @@ class Normalize:
             dict: Normalized results, 'img_norm_cfg' key is added into
                 result dict.
         """
-        # test for nomalization
-        image_before_norm = torch.from_numpy(results['img'])
-        save_path = os.path.join("/project/nevatia_174/zhuoming/code/new_rpn/mmdetection/data/mask_rcnn_clip_classifier/", (results['filename'] + '.pt'))
-        torch.save(image_before_norm, save_path)
+        # # test for nomalization
+        # image_before_norm = torch.from_numpy(results['img'])
+        # #/project/nevatia_174/zhuoming/code/new_rpn/mmdetection/data/mask_rcnn_clip_classifier/ data/coco/train2017/000000393826.jpg.pt
+        # real_image_name = results['filename'].split('/')[-1]
+        # save_path = os.path.join("/project/nevatia_174/zhuoming/code/new_rpn/mmdetection/data/mask_rcnn_clip_classifier/", (real_image_name + '.pt'))
+        # print(save_path)
+        # torch.save(image_before_norm, save_path)
         
         for key in results.get('img_fields', ['img']):
             if self.divide_255 == True:

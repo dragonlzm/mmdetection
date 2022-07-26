@@ -300,6 +300,10 @@ class ClsFinetuner(BaseDetector):
         return now_patch
       
     def crop_img_to_patches(self, imgs, gt_bboxes, img_metas):
+        # # for testing
+        # real_image_name = img_metas[0]['filename'].split('/')[-1]
+        # file_path = os.path.join("/project/nevatia_174/zhuoming/code/new_rpn/mmdetection/data/mask_rcnn_clip_classifier/", (real_image_name + 'origin.pt'))
+        # torch.save(imgs.cpu(), file_path)
         # handle the test config
         if self.training: 
             crop_size_modi_ratio = self.train_crop_size_modi_ratio

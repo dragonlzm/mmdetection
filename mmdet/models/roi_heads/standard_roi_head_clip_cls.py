@@ -8,6 +8,7 @@ from .test_mixins import BBoxTestMixin, MaskTestMixin
 import math
 import random
 import numpy as np
+import mmcv
 import os
 from PIL import Image
 from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normalize
@@ -209,16 +210,29 @@ class StandardRoIHeadCLIPCls(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         
         # denormalize the image
         #'img_norm_cfg': {'mean': array([123.675, 116.28 , 103.53 ], dtype=float32), 'std': array([58.395, 57.12 , 57.375], dtype=float32)
-        img_mean = torch.from_numpy(img_metas[0]['img_norm_cfg']['mean']).cuda()
-        img_std = torch.from_numpy(img_metas[0]['img_norm_cfg']['std']).cuda()
-        img = img.permute([0,2,3,1])
-        img = img * img_std + img_mean
-        img = img.permute([0,3,1,2])
+        #img_mean = torch.from_numpy(img_metas[0]['img_norm_cfg']['mean']).cuda()
+        #img_std = torch.from_numpy(img_metas[0]['img_norm_cfg']['std']).cuda()
+        img_mean = img_metas[0]['img_norm_cfg']['mean']
+        img_std = img_metas[0]['img_norm_cfg']['std']
         
-        # test for normalization
-        file_path = os.path.join("/project/nevatia_174/zhuoming/code/new_rpn/mmdetection/data/mask_rcnn_clip_classifier/", (img_metas['filename'] + '.pt'))
-        image_before_norm = torch.load(file_path)
-        print('img', img.shape, 'image_before_norm', image_before_norm.shape)
+        img = img.permute([0,2,3,1])[0].cpu().numpy() 
+        #img = img * img_std + img_mean
+        img = mmcv.imdenormalize(img, img_mean, img_std, to_bgr=False)
+        img = torch.from_numpy(img).permute([2,0,1]).unsqueeze(dim=0).cuda()
+        
+        # # # test for normalization
+        # real_image_name = img_metas[0]['filename'].split('/')[-1]
+        # file_path = os.path.join("/project/nevatia_174/zhuoming/code/new_rpn/mmdetection/data/mask_rcnn_clip_classifier/", (real_image_name + 'now.pt'))
+        # torch.save(img.cpu(), file_path)
+        
+        
+        # #/project/nevatia_174/zhuoming/code/new_rpn/mmdetection/data/mask_rcnn_clip_classifier/data/coco/train2017/000000531244.jpg.pt
+        
+        # image_before_norm = torch.load(file_path)
+        # #img torch.Size([1, 3, 800, 1088]) image_before_norm torch.Size([800, 1067, 3])
+        # image_before_norm = image_before_norm.permute(2,0,1).cuda()
+        # test_image = img[0][:image_before_norm.shape[0], :image_before_norm.shape[1], :image_before_norm.shape[2]]
+        # print('not match:', (False in (test_image == image_before_norm)), torch.sum((test_image == image_before_norm)), test_image.shape[0]*test_image.shape[1]*test_image.shape[2])
         
         
         if cropped_patches == None:

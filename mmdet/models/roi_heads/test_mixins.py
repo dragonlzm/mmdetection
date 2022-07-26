@@ -194,7 +194,7 @@ class BBoxTestMixin:
                     cfg=rcnn_test_cfg,
                     img_metas=img_metas,
                     bbox_save_path_root=self.bbox_save_path_root,
-                    clip_infer_bbox=bbox_results['clip_infer_bbox'][0])
+                    clip_infer_bbox = bbox_results['clip_infer_bbox'][0] if 'clip_infer_bbox' in bbox_results else None)
             det_bboxes.append(det_bbox)
             det_labels.append(det_label)
         return det_bboxes, det_labels
