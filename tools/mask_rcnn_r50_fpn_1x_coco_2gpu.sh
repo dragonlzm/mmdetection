@@ -18,20 +18,43 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #rm -rf ./data
 #ln -sf /project/nevatia_174/zhuoming/detection ./data
 
+
+# all 80 baseline
 # PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
 # python -m torch.distributed.launch --nproc_per_node=2 \
 #     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
 #     configs/mask_rcnn/mask_rcnn_r50_fpn_1x_coco_2gpu.py --launcher pytorch \
 #     --work-dir=/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_2gpu_correct_lr \
-#     #--resume-from=/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_2gpu_reg_class_agno/epoch_7.pth
+#     #--resume-from=/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_2gpu_correct_lr/latest.pth
 
-# for 1x training
+# base 48 baseline
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#    configs/mask_rcnn/mask_rcnn_r50_fpn_1x_coco_2gpu_base48.py --launcher pytorch \
+#    --work-dir=/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_2gpu_base48
+#    #--resume-from=/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_2gpu_base48/latest.pth
+
+# all 80 baseline(class specific)
+# path modification
 PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
-   /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
-   configs/mask_rcnn/mask_rcnn_r50_fpn_1x_coco_2gpu_base48.py --launcher pytorch \
-   --work-dir=/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_2gpu_base48
-   #--resume-from=/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_2gpu_base48/latest.pth
+    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+    configs/mask_rcnn/mask_rcnn_r50_fpn_1x_coco_2gpu.py --launcher pytorch \
+    --work-dir=/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_2gpu_reg_class_spec \
+    --cfg-options model.roi_head.bbox_head.reg_class_agnostic=False \
+    #--resume-from=/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_2gpu_reg_class_spec/latest.pth
+
+# base 48 baseline(class specific)
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#    configs/mask_rcnn/mask_rcnn_r50_fpn_1x_coco_2gpu_base48.py --launcher pytorch \
+#    --work-dir=/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_2gpu_base48_reg_class_spec \
+#    --cfg-options model.roi_head.bbox_head.reg_class_agnostic=False \
+#    #--resume-from=/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_2gpu_base48_reg_class_spec/latest.pth
+
+
 
 # for 2x training first stage
 #PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
