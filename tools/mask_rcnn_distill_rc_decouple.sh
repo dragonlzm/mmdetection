@@ -74,14 +74,14 @@ ${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox segm \
 --eval-options jsonfile_prefix=${WORK_DIR}/base_results \
 --cfg-options data.test.eval_filter_empty_gt=False data.test.ann_file=data/coco/annotations/instances_val2017_65cates.json \
 model.roi_head.bbox_head.combine_reg_and_cls_embedding=${COMBINE_METHOD} \
-data.val.proposal_file=${TEST_PROPOSAL_FILE}
+data.test.proposal_file=${TEST_PROPOSAL_FILE}
 
 bash tools/dist_test.sh configs/mask_rcnn_distill_rc_decouple/mask_rcnn_r50_fpn_with_clip_feat_rc_decouple_1x_coco_novel17.py \
 ${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox segm \
 --eval-options jsonfile_prefix=${WORK_DIR}/novel_results \
 --cfg-options data.test.eval_filter_empty_gt=False data.test.ann_file=data/coco/annotations/instances_val2017_65cates.json \
 model.roi_head.bbox_head.combine_reg_and_cls_embedding=${COMBINE_METHOD} \
-data.val.proposal_file=${TEST_PROPOSAL_FILE}
+data.test.proposal_file=${TEST_PROPOSAL_FILE}
 
 bash tools/dist_test.sh configs/mask_rcnn_distill_rc_decouple/mask_rcnn_r50_fpn_with_clip_feat_rc_decouple_1x_coco_novel17.py \
 ${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox segm \
@@ -89,11 +89,11 @@ ${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox segm \
 --cfg-options model.roi_head.bbox_head.filter_base_cate=data/embeddings/base_finetuned_48cates.pt data.test.eval_filter_empty_gt=False \
 data.test.ann_file=data/coco/annotations/instances_val2017_65cates.json \
 model.roi_head.bbox_head.combine_reg_and_cls_embedding=${COMBINE_METHOD} \
-data.val.proposal_file=${TEST_PROPOSAL_FILE}
+data.test.proposal_file=${TEST_PROPOSAL_FILE}
 
 bash tools/dist_test.sh configs/mask_rcnn_distill_rc_decouple/mask_rcnn_r50_fpn_with_clip_feat_rc_decouple_1x_coco_bn65.py \
 ${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox segm \
 --eval-options jsonfile_prefix=${WORK_DIR}/base_and_novel \
 --cfg-options data.test.eval_filter_empty_gt=False data.test.ann_file=data/coco/annotations/instances_val2017_65cates.json \
 model.roi_head.bbox_head.combine_reg_and_cls_embedding=${COMBINE_METHOD} \
-data.val.proposal_file=${TEST_PROPOSAL_FILE}
+data.test.proposal_file=${TEST_PROPOSAL_FILE}
