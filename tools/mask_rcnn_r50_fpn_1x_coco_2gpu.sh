@@ -35,15 +35,23 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #    --work-dir=/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_2gpu_base48
 #    #--resume-from=/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_2gpu_base48/latest.pth
 
-# all 80 baseline(class specific)
-# path modification
+# novel 17 baseline
 PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
-    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
-    configs/mask_rcnn/mask_rcnn_r50_fpn_1x_coco_2gpu.py --launcher pytorch \
-    --work-dir=/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_2gpu_reg_class_spec \
-    --cfg-options model.roi_head.bbox_head.reg_class_agnostic=False \
-    #--resume-from=/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_2gpu_reg_class_spec/latest.pth
+   /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+   configs/mask_rcnn/mask_rcnn_r50_fpn_1x_coco_2gpu_novel17.py --launcher pytorch \
+   --work-dir=/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_2gpu_novel17_reg_class_agno
+   #--resume-from=/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_2gpu_novel17_reg_class_agno/latest.pth
+
+
+# all 80 baseline(class specific)
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#     configs/mask_rcnn/mask_rcnn_r50_fpn_1x_coco_2gpu.py --launcher pytorch \
+#     --work-dir=/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_2gpu_reg_class_spec \
+#     --cfg-options model.roi_head.bbox_head.reg_class_agnostic=False \
+#     #--resume-from=/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_2gpu_reg_class_spec/latest.pth
 
 # base 48 baseline(class specific)
 # PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
