@@ -12,8 +12,9 @@ from PIL import Image
 # load the prediction file
 #file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_gn_10_200clipproposal/base_and_novel.bbox.json'
 #file_path = '/data/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_2x_coco_2gpu_base48/base_results.bbox.json'
-file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_200clip_pro_repro/base_and_novel.bbox.json'
+#file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_200clip_pro_repro/base_and_novel.bbox.json'
 #file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_200clip_pro_repro/base_and_novel_e18.bbox.json'
+file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_gn_10_200clipproposal/base_results.bbox.json'
 
 pred_content = json.load(open(file_path))
 # aggregate the predition base on the image
@@ -76,11 +77,9 @@ for info in gt_content['images']:
     from_image_id_to_image_info[image_id] = info
     
 #save_root = '/home/zhuoming/mcnn_baseline_2x_top50_prediction'
-save_root = '/home/zhuoming/mcnn_2x_e24_top50_prediction'
+#save_root = '/home/zhuoming/mcnn_2x_e24_top50_prediction'
 #save_root = '/home/zhuoming/mcnn_2x_e18_top50_prediction'
-#proposal_path_root = 'data/coco/clip_proposal/32_32_512'
-proposal_path_root = 'data/coco/bn65_val_prediction'
-
+save_root = '/home/zhuoming/mcnn_1x_e12_top50_prediction_base48'
 
 for i, image_id in enumerate(from_image_id_to_annotation):
     if i > 50:
