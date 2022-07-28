@@ -1,8 +1,7 @@
 #!/bin/bash
 
 #SBATCH --partition=gpu 
-#SBATCH --gres=gpu:2
-#SBATCH --constrain="xeon-2640v4&xeon-6130"
+#SBATCH --gres=gpu:p100:2
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=40GB
