@@ -102,7 +102,7 @@ class StandardRoIHeadCLIPCls(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         #    crop_size_modi_ratio = self.train_crop_size_modi_ratio
         #    crop_loca_modi_ratio = self.train_crop_loca_modi_ratio
         #else:
-        crop_size_modi_ratio = 1.2
+        crop_size_modi_ratio = 1.5
         crop_loca_modi_ratio = 0
         
         bs, c, _, _ = imgs.shape
