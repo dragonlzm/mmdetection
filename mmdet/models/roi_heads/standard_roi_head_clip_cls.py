@@ -252,8 +252,8 @@ class StandardRoIHeadCLIPCls(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             result_list.append(x)
         # convert the feature [bs*64, 512] to [bs, 64, 512]
         #x = x.view(bs, -1, x.shape[-1])
-        for param_name in self.clip_backbone.state_dict():
-            print(param_name, self.clip_backbone.state_dict()[param_name])
+        # for param_name in self.clip_backbone.state_dict():
+        #     print(param_name, self.clip_backbone.state_dict()[param_name])
             
         return result_list
 
