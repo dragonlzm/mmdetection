@@ -10,6 +10,7 @@ import random
 import numpy as np
 import mmcv
 import os
+import json
 from PIL import Image
 from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normalize
 try:
@@ -166,8 +167,8 @@ class StandardRoIHeadCLIPCls(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                         empty_patch[y_start: y_end] = now_patch
                     now_patch = empty_patch
                 
-                #data = Image.fromarray(np.uint8(now_patch))
-                #data.save('/data2/lwll/zhuoming/detection/test/cls_finetuner_clip_base_100shots_train/patch_visualize/' + img_metas[img_idx]['ori_filename'] + '_' + str(box_i) + '.png')
+                # data = Image.fromarray(np.uint8(now_patch))
+                # data.save('data/mask_rcnn_clip_classifier/' + img_metas[img_idx]['ori_filename'] + '_' + str(box_i) + '.png')
                 #new_patch, w_scale, h_scale = mmcv.imresize(now_patch, (224, 224), return_scale=True)
                 # convert the numpy to PIL image
                 PIL_image = Image.fromarray(np.uint8(now_patch))
@@ -251,6 +252,9 @@ class StandardRoIHeadCLIPCls(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             result_list.append(x)
         # convert the feature [bs*64, 512] to [bs, 64, 512]
         #x = x.view(bs, -1, x.shape[-1])
+        for param_name in self.clip_backbone.state_dict():
+            print(param_name, self.clip_backbone.state_dict()[param_name])
+            
         return result_list
 
     
@@ -308,6 +312,17 @@ class StandardRoIHeadCLIPCls(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         # replace the classification score with the clip score
         # cls_score = torch.Size([1000, 18])
         cls_score=clip_cls_score
+        
+        # calculate the cosine similarity
+        cos_result = {'our_cos_score': cls_score.detach().cpu().tolist(), 
+                      'clip_cos_score':clip_cls_score.detach().cpu().tolist(), 
+                      'our_clip_score':torch.sum(bbox_feats * clip_bbox_feat, dim=-1).detach().cpu().tolist()}
+        print(cos_result)
+
+        file_name = os.path.join('data/mask_rcnn_clip_classifier/base/', '.'.join(img_metas[0]['ori_filename'].split('.')[:-1]) + '.json')
+        file = open(file_name, 'w')
+        file.write(json.dumps(cos_result))
+        file.close()
         
         bbox_results = dict(
                 cls_score=cls_score, bbox_pred=bbox_pred, bbox_feats=bbox_feats, clip_infer_bbox=reshaped_bbox_pred)
