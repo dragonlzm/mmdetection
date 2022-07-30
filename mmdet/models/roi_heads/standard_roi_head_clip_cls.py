@@ -284,7 +284,7 @@ class StandardRoIHeadCLIPCls(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             bbox_feats = self.shared_head(bbox_feats)
             gt_and_rand_bbox_feat = self.shared_head(gt_and_rand_bbox_feat)
         
-        cls_score, bbox_pred, _ = self.bbox_head(bbox_feats)
+        cls_score, bbox_pred, return_bbox_feats = self.bbox_head(bbox_feats)
         ## bbox_pred is the prediction result on the scaled image, bbox_pred torch.Size([1000, 4])
         ## the input img in this function is also a scaled, torch.Size([1, 3, 800, 1216])
         
@@ -301,6 +301,10 @@ class StandardRoIHeadCLIPCls(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         clip_bbox_feat = self.extract_feat(img, reshaped_bbox_pred, img_metas=img_metas)
         #print(type(clip_bbox_feat), len(clip_bbox_feat), clip_bbox_feat[0].shape)
         clip_bbox_feat = torch.cat(clip_bbox_feat, dim=0)
+        clip_bbox_feat = clip_bbox_feat / clip_bbox_feat.norm(dim=-1, keepdim=True)
+        logit_scale = torch.ones([]) * np.log(1 / 0.07)
+        logit_scale = logit_scale.exp()
+        clip_bbox_feat = clip_bbox_feat * logit_scale
         
         # use the bbox head classifier to classifier the model
         clip_cls_score = self.bbox_head.fc_cls_fg(clip_bbox_feat)
@@ -311,18 +315,21 @@ class StandardRoIHeadCLIPCls(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         
         # replace the classification score with the clip score
         # cls_score = torch.Size([1000, 18])
-        cls_score=clip_cls_score
+        origin_cls_score = cls_score
+        
+        cls_score=clip_cls_score 
         
         # calculate the cosine similarity
-        cos_result = {'our_cos_score': cls_score.detach().cpu().tolist(), 
-                      'clip_cos_score':clip_cls_score.detach().cpu().tolist(), 
-                      'our_clip_score':torch.sum(bbox_feats * clip_bbox_feat, dim=-1).detach().cpu().tolist()}
-        print(cos_result)
+        # cos_result = {'our_cos_score': origin_cls_score.detach().cpu().tolist(), 
+        #               'clip_cos_score':clip_cls_score.detach().cpu().tolist(), 
+        #               'our_clip_score':torch.sum(return_bbox_feats * clip_bbox_feat, dim=-1).detach().cpu().tolist()}
+        # print('our_cos_score', torch.mean(origin_cls_score.max(dim=-1)[0]),
+        #       'clip_cos_score', torch.mean(clip_cls_score.max(dim=-1)[0]))
 
-        file_name = os.path.join('data/mask_rcnn_clip_classifier/base/', '.'.join(img_metas[0]['ori_filename'].split('.')[:-1]) + '.json')
-        file = open(file_name, 'w')
-        file.write(json.dumps(cos_result))
-        file.close()
+        # file_name = os.path.join('data/mask_rcnn_clip_classifier/base/', '.'.join(img_metas[0]['ori_filename'].split('.')[:-1]) + '.json')
+        # file = open(file_name, 'w')
+        # file.write(json.dumps(cos_result))
+        # file.close()
         
         bbox_results = dict(
                 cls_score=cls_score, bbox_pred=bbox_pred, bbox_feats=bbox_feats, clip_infer_bbox=reshaped_bbox_pred)
