@@ -11,7 +11,7 @@ classes = ('person', 'bicycle', 'car', 'motorcycle', 'train',
             'refrigerator', 'book', 'clock', 'vase', 'toothbrush')
 
 data = dict(
-    train=dict(classes=classes),
+    train=dict(dataset=dict(classes=classes)),
     val=dict(classes=classes),
     test=dict(classes=classes))
 
