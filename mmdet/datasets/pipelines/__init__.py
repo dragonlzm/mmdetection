@@ -14,7 +14,7 @@ from .transforms import (Albu, CutOut, Expand, MinIoURandomCrop, MixUp, Mosaic,
                          Normalize, Pad, PhotoMetricDistortion, RandomAffine,
                          RandomCenterCropPad, RandomCrop, RandomFlip,
                          RandomShift, Resize, SegRescale, GenerateCroppedPatches,
-                         CropResizeInstance)
+                         CropResizeInstance, CopyPaste)
 
 __all__ = [
     'Compose', 'to_tensor', 'ToTensor', 'ImageToTensor', 'ToDataContainer',
@@ -27,5 +27,5 @@ __all__ = [
     'Rotate', 'ColorTransform', 'EqualizeTransform', 'BrightnessTransform',
     'ContrastTransform', 'Translate', 'RandomShift', 'Mosaic', 'MixUp',
     'RandomAffine', 'GenerateCroppedPatches', 'LoadCLIPFeat', 'LoadCLIPBGProposal',
-    'LoadCLIPProposal', 'LoadCLIPProposalWithFeat', 'CropResizeInstance'
+    'LoadCLIPProposal', 'LoadCLIPProposalWithFeat', 'CropResizeInstance', 'CopyPaste'
 ]
