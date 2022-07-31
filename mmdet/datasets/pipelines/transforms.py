@@ -5,13 +5,16 @@ import math
 import warnings
 import torch
 from PIL import Image
+from warnings import warn
+from copy import deepcopy
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 import cv2
 import os
 import mmcv
 import numpy as np
 from numpy import random
 from typing import Dict, List, Tuple
-from mmdet.core import PolygonMasks
+from mmdet.core import BitmapMasks, PolygonMasks
 from mmdet.core.evaluation.bbox_overlaps import bbox_overlaps
 from ..builder import PIPELINES
 from skimage.filters import gaussian
@@ -3041,7 +3044,11 @@ class CopyPaste(albumentations.DualTransform):
         pct_objects_paste=0.1,
         max_paste_objects=None,
         p=0.5,
-        always_apply=False
+        always_apply=False,
+        bbox_params=None,
+        keymap=None,
+        update_pad_shape=False,
+        poly2mask=False
     ):
         super(CopyPaste, self).__init__(always_apply, p)
         self.blend = blend
@@ -3050,6 +3057,33 @@ class CopyPaste(albumentations.DualTransform):
         self.max_paste_objects = max_paste_objects
         self.p = p
         self.always_apply = always_apply
+        self.filter_lost_elements = False
+        self.update_pad_shape = update_pad_shape
+        self.poly2mask = poly2mask
+
+        # Args will be modified later, copying it will be safer
+        if bbox_params is not None:
+            bbox_params = copy.deepcopy(bbox_params)
+        if keymap is not None:
+            keymap = copy.deepcopy(keymap)
+
+        # A simple workaround to remove masks without boxes
+        if (isinstance(bbox_params, dict) and 'label_fields' in bbox_params
+                and 'filter_lost_elements' in bbox_params):
+            self.filter_lost_elements = True
+            self.origin_label_fields = bbox_params['label_fields']
+            bbox_params['label_fields'] = ['idx_mapper']
+            del bbox_params['filter_lost_elements']
+
+        if not keymap:
+            self.keymap_to_albu = {
+                'img': 'image',
+                'gt_masks': 'masks',
+                'gt_bboxes': 'bboxes'
+            }
+        else:
+            self.keymap_to_albu = keymap
+        self.keymap_back = {v: k for k, v in self.keymap_to_albu.items()}        
 
     @staticmethod
     def get_class_fullname():
@@ -3274,3 +3308,163 @@ class CopyPaste(albumentations.DualTransform):
             "pct_objects_paste",
             "max_paste_objects"
         )
+        
+    def ori_call(self, *args, force_apply: bool = False, **kwargs) -> Dict[str, Any]:
+        if args:
+            raise KeyError("You have to pass data to augmentations as named arguments, for example: aug(image=image)")
+        if self.replay_mode:
+            if self.applied_in_replay:
+                return self.apply_with_params(self.params, **kwargs)
+
+            return kwargs
+
+        if (random.random() < self.p) or self.always_apply or force_apply:
+            params = self.get_params()
+            
+            # if enter this section means we need to conduct copy and paste, 
+            # at this time we will load another image, bbox and mask
+            #print('kwargs', [key for key in kwargs])
+            #['img_info', 'ann_info', 'cp_img_info', 'cp_ann_info', 'img_prefix', 
+            # 'seg_prefix', 'proposal_file', 'bbox_fields', 'mask_fields', 'seg_fields', 
+            # 'filename', 'ori_filename', 'image', 'img_shape', 'ori_shape', 'img_fields', 
+            # 'bboxes', 'gt_bboxes_ignore', 'gt_labels', 'masks', 'scale', 'scale_idx', 
+            # 'pad_shape', 'scale_factor', 'keep_ratio', 'flip', 'flip_direction']
+            # load the image
+            self.file_client = mmcv.FileClient(**self.file_client_args)
+
+            if kwargs['img_prefix'] is not None:
+                filename = os.path.join(kwargs['img_prefix'],
+                                    kwargs['paste_img_info']['filename'])
+            else:
+                filename = kwargs['paste_img_info']['filename']
+
+            img_bytes = self.file_client.get(filename)
+            # maintain the color order as LoadImageFromFile
+            paste_img = mmcv.imfrombytes(img_bytes, flag=self.color_type)
+
+
+            kwargs['paste_filename'] = filename
+            kwargs['paste_ori_filename'] = kwargs['paste_img_info']['filename']
+            kwargs['paste_image'] = paste_img
+            kwargs['paste_img_shape'] = paste_img.shape
+            kwargs['paste_ori_shape'] = paste_img.shape
+            #results['img_fields'] = ['img']            
+            
+            # load the gtlabel
+            kwargs['paste_gt_labels'] = kwargs['paste_ann_info']['labels'].copy()
+            
+            # load the bboxes
+            kwargs['paste_bboxes'] = kwargs['paste_ann_info']['bboxes'].copy()
+            
+            # load the mask
+            h, w = kwargs['paste_img_info']['height'], kwargs['paste_img_info']['width']
+            gt_masks = kwargs['paste_ann_info']['masks']
+            if self.poly2mask:
+                gt_masks = BitmapMasks(
+                    [self._poly2mask(mask, h, w) for mask in gt_masks], h, w)
+            else:
+                gt_masks = PolygonMasks(
+                    [self.process_polygons(polygons) for polygons in gt_masks], h,
+                    w)
+            kwargs['paste_masks'] = gt_masks
+            # merge the gtlabel into the bboxes?
+            
+
+            if self.targets_as_params:
+                assert all(key in kwargs for key in self.targets_as_params), "{} requires {}".format(
+                    self.__class__.__name__, self.targets_as_params
+                )
+                targets_as_params = {k: kwargs[k] for k in self.targets_as_params}
+                params_dependent_on_targets = self.get_params_dependent_on_targets(targets_as_params)
+                params.update(params_dependent_on_targets)
+            if self.deterministic:
+                if self.targets_as_params:
+                    warn(
+                        self.get_class_fullname() + " could work incorrectly in ReplayMode for other input data"
+                        " because its' params depend on targets."
+                    )
+                kwargs[self.save_key][id(self)] = deepcopy(params)
+            return self.apply_with_params(params, **kwargs)
+        
+            # split the label from the bboxes?
+
+        return kwargs     
+
+    @staticmethod
+    def mapper(d, keymap):
+        """Dictionary mapper. Renames keys according to keymap provided.
+
+        Args:
+            d (dict): old dict
+            keymap (dict): {'old_key':'new_key'}
+        Returns:
+            dict: new dict.
+        """
+
+        updated_dict = {}
+        for k, v in zip(d.keys(), d.values()):
+            new_k = keymap.get(k, k)
+            updated_dict[new_k] = d[k]
+        return updated_dict
+
+    def __call__(self, results):
+        
+        results = self.mapper(results, self.keymap_to_albu)
+        # TODO: add bbox_fields
+        if 'bboxes' in results:
+            # to list of boxes
+            if isinstance(results['bboxes'], np.ndarray):
+                results['bboxes'] = [x for x in results['bboxes']]
+            # add pseudo-field for filtration
+            if self.filter_lost_elements:
+                results['idx_mapper'] = np.arange(len(results['bboxes']))
+
+        # TODO: Support mask structure in albu
+        if 'masks' in results:
+            if isinstance(results['masks'], PolygonMasks):
+                raise NotImplementedError(
+                    'Albu only supports BitMap masks now')
+            ori_masks = results['masks']
+            if albumentations.__version__ < '0.5':
+                results['masks'] = results['masks'].masks
+            else:
+                results['masks'] = [mask for mask in results['masks'].masks]
+
+        results = self.ori_call(**results)
+
+        if 'bboxes' in results:
+            if isinstance(results['bboxes'], list):
+                results['bboxes'] = np.array(
+                    results['bboxes'], dtype=np.float32)
+            results['bboxes'] = results['bboxes'].reshape(-1, 4)
+
+            # filter label_fields
+            if self.filter_lost_elements:
+
+                for label in self.origin_label_fields:
+                    results[label] = np.array(
+                        [results[label][i] for i in results['idx_mapper']])
+                if 'masks' in results:
+                    results['masks'] = np.array(
+                        [results['masks'][i] for i in results['idx_mapper']])
+                    results['masks'] = ori_masks.__class__(
+                        results['masks'], results['image'].shape[0],
+                        results['image'].shape[1])
+
+                if (not len(results['idx_mapper'])
+                        and self.skip_img_without_anno):
+                    return None
+
+        if 'gt_labels' in results:
+            if isinstance(results['gt_labels'], list):
+                results['gt_labels'] = np.array(results['gt_labels'])
+            results['gt_labels'] = results['gt_labels'].astype(np.int64)
+
+        # back to the original format
+        results = self.mapper(results, self.keymap_back)
+
+        # update final shape
+        if self.update_pad_shape:
+            results['pad_shape'] = results['img'].shape
+            
+        return results

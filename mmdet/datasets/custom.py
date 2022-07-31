@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os.path as osp
+import re
 import warnings
 from collections import OrderedDict
 
@@ -68,7 +69,8 @@ class CustomDataset(Dataset):
                  filter_empty_gt=True,
                  patches_file=None,
                  eval_filter_empty_gt=False,
-                 visualization_path=None):
+                 visualization_path=None,
+                 copy_and_paste=False):
         self.ann_file = ann_file
         self.data_root = data_root
         self.img_prefix = img_prefix
@@ -79,6 +81,8 @@ class CustomDataset(Dataset):
         self.CLASSES = self.get_classes(classes)
         self.patches_file = patches_file
         self.visualization_path = visualization_path
+        self.copy_and_paste = copy_and_paste
+        
 
         # join paths if data_root is specified
         if self.data_root is not None:
@@ -235,6 +239,15 @@ class CustomDataset(Dataset):
         img_info = self.data_infos[idx]
         ann_info = self.get_ann_info(idx)
         results = dict(img_info=img_info, ann_info=ann_info)
+        # if we use the copy and paste, we need to 
+        # provide another image info
+        if self.copy_and_paste:
+            random_idx = np.random.choice([i for i in range(len(self))])
+            cp_img_info = self.data_infos[random_idx]
+            cp_ann_info = self.get_ann_info(random_idx)
+            results['paste_img_info'] = cp_img_info
+            results['paste_ann_info'] = cp_ann_info
+        
         if self.proposals is not None:
             results['proposals'] = self.proposals[idx]
         if self.patches_gt is not None:
