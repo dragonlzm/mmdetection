@@ -3187,7 +3187,7 @@ class CopyPaste(albumentations.DualTransform):
         for key, arg in kwargs.items():
             if arg is not None and key not in self.ignore_kwargs:
                 target_function = self._get_target_function(key)
-                print('key', key, 'target_function', target_function)
+                #print('key', key, 'target_function', target_function)
                 target_dependencies = {k: kwargs[k] for k in self.target_dependence.get(key, [])}
                 target_dependencies['key'] = key
                 res[key] = target_function(arg, **dict(params, **target_dependencies))
