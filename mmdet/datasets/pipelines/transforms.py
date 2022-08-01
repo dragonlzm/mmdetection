@@ -3196,6 +3196,7 @@ class CopyPaste(albumentations.DualTransform):
         return res
 
     def image_copy_paste(self, img, paste_img, alpha, blend=True, sigma=1):
+        #print('testing in the image_copy_paste')
         if alpha is not None:
             if blend:
                 alpha = gaussian(alpha, sigma=sigma, preserve_range=True)
@@ -3208,6 +3209,7 @@ class CopyPaste(albumentations.DualTransform):
         return img
 
     def masks_copy_paste(self, masks, paste_masks, alpha):
+        #print('testing in the masks_copy_paste')
         if alpha is not None:
             #eliminate pixels that will be pasted over
             masks = [
@@ -3360,15 +3362,20 @@ class CopyPaste(albumentations.DualTransform):
             
             # load the mask
             h, w = kwargs['paste_img_info']['height'], kwargs['paste_img_info']['width']
-            gt_masks = kwargs['paste_ann_info']['masks']
+            paste_gt_masks = kwargs['paste_ann_info']['masks']
             if self.poly2mask:
-                gt_masks = BitmapMasks(
-                    [self._poly2mask(mask, h, w) for mask in gt_masks], h, w)
+                paste_gt_masks = BitmapMasks(
+                    [self._poly2mask(mask, h, w) for mask in paste_gt_masks], h, w)
             else:
-                gt_masks = PolygonMasks(
-                    [self.process_polygons(polygons) for polygons in gt_masks], h,
+                paste_gt_masks = PolygonMasks(
+                    [self.process_polygons(polygons) for polygons in paste_gt_masks], h,
                     w)
-            kwargs['paste_masks'] = gt_masks
+            # convert the mask to the numpy format
+            if albumentations.__version__ < '0.5':
+                paste_gt_masks = paste_gt_masks.masks
+            else:
+                paste_gt_masks = [mask for mask in paste_gt_masks.masks]
+            kwargs['paste_masks'] = paste_gt_masks
             # merge the gtlabel into the bboxes
             # Bounding boxes passed to the CopyPaste augmentation must also 
             # include the index of the corresponding mask in the 'masks' list.?
@@ -3406,7 +3413,29 @@ class CopyPaste(albumentations.DualTransform):
             #             " because its' params depend on targets."
             #         )
             #     kwargs[self.save_key][id(self)] = deepcopy(params)
-            final_results = self.apply_with_params(params, **kwargs)
+            
+            # select the needed para to send in
+            # type(img_data["image"]) <class 'numpy.ndarray'> 
+            # type(img_data["masks"]) <class 'list'> <class 'numpy.ndarray'> 
+            # type(img_data["bboxes"]) <class 'list'> <class 'tuple'> (xywh)
+            # (54.368750000000006, 87.7825352112676, 56.429625000000016, 78.12657276995307, 25, 0)
+            
+            print('type(kwargs["image"])', type(kwargs['image']), 
+                  'type(kwargs["masks"])', type(kwargs['masks']), type(kwargs['masks'][0]),
+                  'type(kwargs["bboxes"])', type(kwargs['bboxes']), type(kwargs['bboxes'][0]), kwargs['bboxes'][0])
+            
+            print('type(kwargs["paste_image"])', type(kwargs['paste_image']), 
+                  'type(kwargs["paste_masks"])', type(kwargs['paste_masks']), type(kwargs['paste_masks'][0]),
+                  'type(kwargs["paste_bboxes"])', type(kwargs['paste_bboxes']), type(kwargs['paste_bboxes'][0]), kwargs['paste_bboxes'][0])            
+            
+            
+            selected_params = dict(image=kwargs['image'], masks=kwargs['masks'], bboxes=kwargs['bboxes'],
+                                    paste_image=kwargs['paste_image'], paste_masks=kwargs['paste_masks'], paste_bboxes=kwargs['paste_bboxes'])
+            
+            final_results = self.apply_with_params(params, **selected_params)
+            
+            # merge the result back to kwargs?
+            
             # print(final_results.keys())
             #dict_keys(['img_info', 'ann_info', 'paste_img_info', 'paste_ann_info', 'img_prefix', 'seg_prefix', 
             # 'proposal_file', 'bbox_fields', 'mask_fields', 'seg_fields', 'filename', 'ori_filename', 
