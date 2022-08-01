@@ -7,7 +7,7 @@ import torch
 from PIL import Image
 from warnings import warn
 from copy import deepcopy
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union, final
 import cv2
 import os
 import mmcv
@@ -18,6 +18,7 @@ from mmdet.core import BitmapMasks, PolygonMasks
 from mmdet.core.evaluation.bbox_overlaps import bbox_overlaps
 from ..builder import PIPELINES
 from skimage.filters import gaussian
+import pycocotools.mask as maskUtils
 
 try:
     from imagecorruptions import corrupt
@@ -3048,7 +3049,8 @@ class CopyPaste(albumentations.DualTransform):
         bbox_params=None,
         keymap=None,
         update_pad_shape=False,
-        poly2mask=False
+        poly2mask=True,
+        channel_order=None
     ):
         super(CopyPaste, self).__init__(always_apply, p)
         self.blend = blend
@@ -3060,6 +3062,7 @@ class CopyPaste(albumentations.DualTransform):
         self.filter_lost_elements = False
         self.update_pad_shape = update_pad_shape
         self.poly2mask = poly2mask
+        self.channel_order = channel_order
 
         # Args will be modified later, copying it will be safer
         if bbox_params is not None:
@@ -3184,6 +3187,7 @@ class CopyPaste(albumentations.DualTransform):
         for key, arg in kwargs.items():
             if arg is not None and key not in self.ignore_kwargs:
                 target_function = self._get_target_function(key)
+                print('key', key, 'target_function', target_function)
                 target_dependencies = {k: kwargs[k] for k in self.target_dependence.get(key, [])}
                 target_dependencies['key'] = key
                 res[key] = target_function(arg, **dict(params, **target_dependencies))
@@ -3203,9 +3207,6 @@ class CopyPaste(albumentations.DualTransform):
 
         return img
 
-    def mask_copy_paste(self, mask, paste_mask, alpha):
-        raise NotImplementedError
-    
     def masks_copy_paste(self, masks, paste_masks, alpha):
         if alpha is not None:
             #eliminate pixels that will be pasted over
@@ -3330,7 +3331,8 @@ class CopyPaste(albumentations.DualTransform):
             # 'bboxes', 'gt_bboxes_ignore', 'gt_labels', 'masks', 'scale', 'scale_idx', 
             # 'pad_shape', 'scale_factor', 'keep_ratio', 'flip', 'flip_direction']
             # load the image
-            self.file_client = mmcv.FileClient(**self.file_client_args)
+            file_client_args=dict(backend='disk')
+            self.file_client = mmcv.FileClient(**file_client_args)
 
             if kwargs['img_prefix'] is not None:
                 filename = os.path.join(kwargs['img_prefix'],
@@ -3340,7 +3342,7 @@ class CopyPaste(albumentations.DualTransform):
 
             img_bytes = self.file_client.get(filename)
             # maintain the color order as LoadImageFromFile
-            paste_img = mmcv.imfrombytes(img_bytes, flag=self.color_type)
+            paste_img = mmcv.imfrombytes(img_bytes, flag='color', channel_order=self.channel_order)
 
 
             kwargs['paste_filename'] = filename
@@ -3367,9 +3369,29 @@ class CopyPaste(albumentations.DualTransform):
                     [self.process_polygons(polygons) for polygons in gt_masks], h,
                     w)
             kwargs['paste_masks'] = gt_masks
-            # merge the gtlabel into the bboxes?
+            # merge the gtlabel into the bboxes
+            # Bounding boxes passed to the CopyPaste augmentation must also 
+            # include the index of the corresponding mask in the 'masks' list.?
+            # bboxes [array([297.64633, 105.73602, 518.20197, 276.15213], dtype=float32), array([304.82047, 240.0716 , 702.0997 , 719.73157], dtype=float32), ]
+            # gt_labels [62 56 59 67 66 64 73 73 73 73 73 73 73 73 73 73 73 73 73]
+            #print('img_info', kwargs['img_info'], 'bboxes', kwargs['bboxes'], 'gt_labels', kwargs['gt_labels'], 'masks', kwargs['masks'])
             
-
+            merged_bboxes = []
+            for i, (bbox, label) in enumerate(zip(kwargs['bboxes'], kwargs['gt_labels'])):
+                bbox = bbox.tolist()
+                bbox.extend([label, i])
+                merged_bboxes.append(bbox)
+            kwargs['bboxes'] = merged_bboxes
+            
+            merged_paste_bboxes = []
+            for i, (bbox, label) in enumerate(zip(kwargs['paste_bboxes'], kwargs['paste_gt_labels'])):
+                bbox = bbox.tolist()
+                bbox.extend([label, i])
+                merged_paste_bboxes.append(bbox)
+            kwargs['paste_bboxes'] = merged_paste_bboxes
+            #print('merged_paste_bboxes', merged_paste_bboxes)
+            #print('before convert', 'origin:', len(merged_bboxes), merged_bboxes, 'pasted:', len(merged_paste_bboxes), merged_paste_bboxes)
+            
             if self.targets_as_params:
                 assert all(key in kwargs for key in self.targets_as_params), "{} requires {}".format(
                     self.__class__.__name__, self.targets_as_params
@@ -3377,17 +3399,30 @@ class CopyPaste(albumentations.DualTransform):
                 targets_as_params = {k: kwargs[k] for k in self.targets_as_params}
                 params_dependent_on_targets = self.get_params_dependent_on_targets(targets_as_params)
                 params.update(params_dependent_on_targets)
-            if self.deterministic:
-                if self.targets_as_params:
-                    warn(
-                        self.get_class_fullname() + " could work incorrectly in ReplayMode for other input data"
-                        " because its' params depend on targets."
-                    )
-                kwargs[self.save_key][id(self)] = deepcopy(params)
-            return self.apply_with_params(params, **kwargs)
-        
+            # if self.deterministic:
+            #     if self.targets_as_params:
+            #         warn(
+            #             self.get_class_fullname() + " could work incorrectly in ReplayMode for other input data"
+            #             " because its' params depend on targets."
+            #         )
+            #     kwargs[self.save_key][id(self)] = deepcopy(params)
+            final_results = self.apply_with_params(params, **kwargs)
+            # print(final_results.keys())
+            #dict_keys(['img_info', 'ann_info', 'paste_img_info', 'paste_ann_info', 'img_prefix', 'seg_prefix', 
+            # 'proposal_file', 'bbox_fields', 'mask_fields', 'seg_fields', 'filename', 'ori_filename', 
+            # 'image', 'img_shape', 'ori_shape', 'img_fields', 'bboxes', 'gt_bboxes_ignore', 'gt_labels', 'masks', 
+            # 'scale', 'scale_idx', 'pad_shape', 'scale_factor', 'keep_ratio', 'flip', 'flip_direction', 
+            # 'paste_filename', 'paste_ori_filename', 'paste_image', 'paste_img_shape', 'paste_ori_shape', 
+            # 'paste_gt_labels', 'paste_bboxes', 'paste_masks'])
+            #print('after convert', 'origin:', len(final_results['bboxes']), final_results['bboxes'], 
+            #      'pasted:', len(final_results['paste_bboxes']), final_results['paste_bboxes'])
+            
             # split the label from the bboxes?
-
+            
+            
+            
+            return final_results
+    
         return kwargs     
 
     @staticmethod
@@ -3468,3 +3503,47 @@ class CopyPaste(albumentations.DualTransform):
             results['pad_shape'] = results['img'].shape
             
         return results
+    
+    def _poly2mask(self, mask_ann, img_h, img_w):
+        """Private function to convert masks represented with polygon to
+        bitmaps.
+
+        Args:
+            mask_ann (list | dict): Polygon mask annotation input.
+            img_h (int): The height of output mask.
+            img_w (int): The width of output mask.
+
+        Returns:
+            numpy.ndarray: The decode bitmap mask of shape (img_h, img_w).
+        """
+
+        if isinstance(mask_ann, list):
+            # polygon -- a single object might consist of multiple parts
+            # we merge all parts into one mask rle code
+            rles = maskUtils.frPyObjects(mask_ann, img_h, img_w)
+            rle = maskUtils.merge(rles)
+        elif isinstance(mask_ann['counts'], list):
+            # uncompressed RLE
+            rle = maskUtils.frPyObjects(mask_ann, img_h, img_w)
+        else:
+            # rle
+            rle = mask_ann
+        mask = maskUtils.decode(rle)
+        return mask
+
+    def process_polygons(self, polygons):
+        """Convert polygons to list of ndarray and filter invalid polygons.
+
+        Args:
+            polygons (list[list]): Polygons of one instance.
+
+        Returns:
+            list[numpy.ndarray]: Processed polygons.
+        """
+
+        polygons = [np.array(p) for p in polygons]
+        valid_polygons = []
+        for polygon in polygons:
+            if len(polygon) % 2 == 0 and len(polygon) >= 6:
+                valid_polygons.append(polygon)
+        return valid_polygons

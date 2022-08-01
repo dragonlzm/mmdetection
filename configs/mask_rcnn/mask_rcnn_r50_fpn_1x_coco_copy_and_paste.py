@@ -3,6 +3,7 @@ _base_ = './mask_rcnn_r50_fpn_1x_coco_2gpu.py'
 # dataset settings
 
 # if self.poly2mask = False in LoadAnnotations, please set self.poly2mask = False in CopyPaste
+# if channel_order is set in LoadImageFromFile, please set it in the CopyPaste
 
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
