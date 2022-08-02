@@ -18,6 +18,8 @@ from mmdet.core import BitmapMasks, PolygonMasks
 from mmdet.core.evaluation.bbox_overlaps import bbox_overlaps
 from ..builder import PIPELINES
 from skimage.filters import gaussian
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import pycocotools.mask as maskUtils
 
 try:
@@ -899,9 +901,7 @@ class Normalize:
         
         for key in results.get('img_fields', ['img']):
             if self.divide_255 == True:
-                #print('before', results[key])
                 results[key] = results[key] / 255
-                #print('after', results[key])
             results[key] = mmcv.imnormalize(results[key], self.mean, self.std,
                                             self.to_rgb)
         results['img_norm_cfg'] = dict(
@@ -3042,7 +3042,7 @@ class CopyPaste(albumentations.DualTransform):
         self,
         blend=True,
         sigma=3,
-        pct_objects_paste=0.1,
+        pct_objects_paste=False,
         max_paste_objects=None,
         p=0.5,
         always_apply=False,
@@ -3156,6 +3156,7 @@ class CopyPaste(albumentations.DualTransform):
         #create alpha by combining all the objects into
         #a single binary mask
         masks = [masks[idx] for idx in mask_indices]
+        #print([ele.shape for ele in masks])
 
         alpha = masks[0] > 0
         for mask in masks[1:]:
@@ -3187,7 +3188,6 @@ class CopyPaste(albumentations.DualTransform):
         for key, arg in kwargs.items():
             if arg is not None and key not in self.ignore_kwargs:
                 target_function = self._get_target_function(key)
-                #print('key', key, 'target_function', target_function)
                 target_dependencies = {k: kwargs[k] for k in self.target_dependence.get(key, [])}
                 target_dependencies['key'] = key
                 res[key] = target_function(arg, **dict(params, **target_dependencies))
@@ -3196,7 +3196,6 @@ class CopyPaste(albumentations.DualTransform):
         return res
 
     def image_copy_paste(self, img, paste_img, alpha, blend=True, sigma=1):
-        #print('testing in the image_copy_paste')
         if alpha is not None:
             if blend:
                 alpha = gaussian(alpha, sigma=sigma, preserve_range=True)
@@ -3209,7 +3208,6 @@ class CopyPaste(albumentations.DualTransform):
         return img
 
     def masks_copy_paste(self, masks, paste_masks, alpha):
-        #print('testing in the masks_copy_paste')
         if alpha is not None:
             #eliminate pixels that will be pasted over
             masks = [
@@ -3230,18 +3228,19 @@ class CopyPaste(albumentations.DualTransform):
             yindices = np.where(np.any(mask, axis=0))[0]
             xindices = np.where(np.any(mask, axis=1))[0]
             if yindices.shape[0]:
-                y1, y2 = yindices[[0, -1]]
-                x1, x2 = xindices[[0, -1]]
+                x1, x2 = yindices[[0, -1]]
+                y1, y2 = xindices[[0, -1]]
                 y2 += 1
                 x2 += 1
-                y1 /= w
-                y2 /= w
-                x1 /= h
-                x2 /= h
+                # y1 /= w
+                # y2 /= w
+                # x1 /= h
+                # x2 /= h
             else:
                 y1, x1, y2, x2 = 0, 0, 0, 0
 
-            bboxes.append((y1, x1, y2, x2))
+            #bboxes.append([y1, x1, y2, x2])
+            bboxes.append([x1, y1, x2, y2])
 
         return bboxes
 
@@ -3265,7 +3264,7 @@ class CopyPaste(albumentations.DualTransform):
                 max_mask_index = 0
 
             paste_mask_indices = [max_mask_index + ix for ix in range(len(paste_bboxes))]
-            paste_bboxes = [pbox[:-1] + (pmi,) for pbox, pmi in zip(paste_bboxes, paste_mask_indices)]
+            paste_bboxes = [pbox[:-1] + [pmi,] for pbox, pmi in zip(paste_bboxes, paste_mask_indices)]
             adjusted_paste_bboxes = self.extract_bboxes(paste_masks)
             adjusted_paste_bboxes = [apbox + tail[4:] for apbox, tail in zip(adjusted_paste_bboxes, paste_bboxes)]
 
@@ -3313,25 +3312,30 @@ class CopyPaste(albumentations.DualTransform):
         )
         
     def ori_call(self, *args, force_apply: bool = False, **kwargs) -> Dict[str, Any]:
+        '''
+            ['img_info', 'ann_info', 'cp_img_info', 'cp_ann_info', 'img_prefix', 
+            'seg_prefix', 'proposal_file', 'bbox_fields', 'mask_fields', 'seg_fields', 
+            'filename', 'ori_filename', 'image', 'img_shape', 'ori_shape', 'img_fields', 
+            'bboxes', 'gt_bboxes_ignore', 'gt_labels', 'masks', 'scale', 'scale_idx', 
+            'pad_shape', 'scale_factor', 'keep_ratio', 'flip', 'flip_direction']
+            type(kwargs["image"]): <class 'numpy.ndarray'> 
+            type(kwargs["masks"]): <class 'list'> <class 'numpy.ndarray'> 
+            type(kwargs["bboxes"]): <class 'list'> <class 'numpy.ndarray'> 
+            gt_labels [62 56 59 67 66 64 73 73 73 73 73 73 73 73 73 73 73 73 73]
+        '''
+        
         if args:
             raise KeyError("You have to pass data to augmentations as named arguments, for example: aug(image=image)")
         if self.replay_mode:
             if self.applied_in_replay:
                 return self.apply_with_params(self.params, **kwargs)
-
             return kwargs
 
         if (random.random() < self.p) or self.always_apply or force_apply:
             params = self.get_params()
-            
             # if enter this section means we need to conduct copy and paste, 
             # at this time we will load another image, bbox and mask
             #print('kwargs', [key for key in kwargs])
-            #['img_info', 'ann_info', 'cp_img_info', 'cp_ann_info', 'img_prefix', 
-            # 'seg_prefix', 'proposal_file', 'bbox_fields', 'mask_fields', 'seg_fields', 
-            # 'filename', 'ori_filename', 'image', 'img_shape', 'ori_shape', 'img_fields', 
-            # 'bboxes', 'gt_bboxes_ignore', 'gt_labels', 'masks', 'scale', 'scale_idx', 
-            # 'pad_shape', 'scale_factor', 'keep_ratio', 'flip', 'flip_direction']
             # load the image
             file_client_args=dict(backend='disk')
             self.file_client = mmcv.FileClient(**file_client_args)
@@ -3345,7 +3349,6 @@ class CopyPaste(albumentations.DualTransform):
             img_bytes = self.file_client.get(filename)
             # maintain the color order as LoadImageFromFile
             paste_img = mmcv.imfrombytes(img_bytes, flag='color', channel_order=self.channel_order)
-
 
             kwargs['paste_filename'] = filename
             kwargs['paste_ori_filename'] = kwargs['paste_img_info']['filename']
@@ -3376,13 +3379,9 @@ class CopyPaste(albumentations.DualTransform):
             else:
                 paste_gt_masks = [mask for mask in paste_gt_masks.masks]
             kwargs['paste_masks'] = paste_gt_masks
-            # merge the gtlabel into the bboxes
-            # Bounding boxes passed to the CopyPaste augmentation must also 
-            # include the index of the corresponding mask in the 'masks' list.?
-            # bboxes [array([297.64633, 105.73602, 518.20197, 276.15213], dtype=float32), array([304.82047, 240.0716 , 702.0997 , 719.73157], dtype=float32), ]
-            # gt_labels [62 56 59 67 66 64 73 73 73 73 73 73 73 73 73 73 73 73 73]
-            #print('img_info', kwargs['img_info'], 'bboxes', kwargs['bboxes'], 'gt_labels', kwargs['gt_labels'], 'masks', kwargs['masks'])
             
+            # merge the gtlabel into the bboxes
+            # Bounding boxes passed to the CopyPaste augmentation must also include the index of the corresponding mask in the 'masks' list.
             merged_bboxes = []
             for i, (bbox, label) in enumerate(zip(kwargs['bboxes'], kwargs['gt_labels'])):
                 bbox = bbox.tolist()
@@ -3396,8 +3395,26 @@ class CopyPaste(albumentations.DualTransform):
                 bbox.extend([label, i])
                 merged_paste_bboxes.append(bbox)
             kwargs['paste_bboxes'] = merged_paste_bboxes
-            #print('merged_paste_bboxes', merged_paste_bboxes)
-            #print('before convert', 'origin:', len(merged_bboxes), merged_bboxes, 'pasted:', len(merged_paste_bboxes), merged_paste_bboxes)
+            
+            # pad the pasted image as origin image
+            #print('testing image', kwargs['image'].shape)
+            padded_paste_image = np.zeros(kwargs['image'].shape)
+            smaller_y = min(kwargs['image'].shape[0], kwargs['paste_image'].shape[0])
+            smaller_x = min(kwargs['image'].shape[1], kwargs['paste_image'].shape[1])
+            padded_paste_image[:smaller_y,:smaller_x,:] = kwargs['paste_image'][:smaller_y,:smaller_x,:]
+            kwargs['paste_image'] = padded_paste_image
+            
+            # pad the pasted mask as origin image mask
+            padded_paste_masks = []
+            for ori_pasted_mask in kwargs['paste_masks']:
+                new_pasted_mask = np.zeros(kwargs['image'].shape[:2])
+                new_pasted_mask[:smaller_y,:smaller_x] = ori_pasted_mask[:smaller_y,:smaller_x]
+                padded_paste_masks.append(new_pasted_mask)
+            kwargs['paste_masks'] = padded_paste_masks
+            
+            # there could be some instance is no longer exist in the pasted image
+            # since the padding, pad or crop the pasted image into the shape of the ori imgae 
+            # it could introduce some empty mask ??
             
             if self.targets_as_params:
                 assert all(key in kwargs for key in self.targets_as_params), "{} requires {}".format(
@@ -3420,21 +3437,37 @@ class CopyPaste(albumentations.DualTransform):
             # type(img_data["bboxes"]) <class 'list'> <class 'tuple'> (xywh)
             # (54.368750000000006, 87.7825352112676, 56.429625000000016, 78.12657276995307, 25, 0)
             
-            print('type(kwargs["image"])', type(kwargs['image']), 
-                  'type(kwargs["masks"])', type(kwargs['masks']), type(kwargs['masks'][0]),
-                  'type(kwargs["bboxes"])', type(kwargs['bboxes']), type(kwargs['bboxes'][0]), kwargs['bboxes'][0])
+            # print('type(kwargs["image"])', type(kwargs['image']), 
+            #       'type(kwargs["masks"])', type(kwargs['masks']), type(kwargs['masks'][0]),
+            #       'type(kwargs["bboxes"])', type(kwargs['bboxes']), type(kwargs['bboxes'][0]), kwargs['bboxes'][0])
             
-            print('type(kwargs["paste_image"])', type(kwargs['paste_image']), 
-                  'type(kwargs["paste_masks"])', type(kwargs['paste_masks']), type(kwargs['paste_masks'][0]),
-                  'type(kwargs["paste_bboxes"])', type(kwargs['paste_bboxes']), type(kwargs['paste_bboxes'][0]), kwargs['paste_bboxes'][0])            
-            
+            # print('type(kwargs["paste_image"])', type(kwargs['paste_image']), 
+            #       'type(kwargs["paste_masks"])', type(kwargs['paste_masks']), type(kwargs['paste_masks'][0]),
+            #       'type(kwargs["paste_bboxes"])', type(kwargs['paste_bboxes']), type(kwargs['paste_bboxes'][0]), kwargs['paste_bboxes'][0])            
+            # print('before convert', 'origin:', len(kwargs['bboxes']), kwargs['bboxes'], 
+            #      'pasted:', len(kwargs['paste_bboxes']), kwargs['paste_bboxes'])        
             
             selected_params = dict(image=kwargs['image'], masks=kwargs['masks'], bboxes=kwargs['bboxes'],
                                     paste_image=kwargs['paste_image'], paste_masks=kwargs['paste_masks'], paste_bboxes=kwargs['paste_bboxes'])
             
             final_results = self.apply_with_params(params, **selected_params)
             
-            # merge the result back to kwargs?
+            # merge the result back to kwargs
+            kwargs['image'] = final_results['image']
+            # split the label from the bboxes
+            all_labels = []
+            all_mask_idxes = []
+            clean_bboxes = []
+            for bbox in final_results['bboxes']:
+                clean_bboxes.append(bbox[:4])
+                all_labels.append(bbox[4])
+                all_mask_idxes.append(bbox[5])
+                
+            # resort the mask
+            final_masks = [final_results['masks'][idx] for idx in all_mask_idxes]
+            kwargs['masks'] = final_masks
+            kwargs['bboxes'] = clean_bboxes
+            kwargs['gt_labels'] = all_labels
             
             # print(final_results.keys())
             #dict_keys(['img_info', 'ann_info', 'paste_img_info', 'paste_ann_info', 'img_prefix', 'seg_prefix', 
@@ -3443,14 +3476,36 @@ class CopyPaste(albumentations.DualTransform):
             # 'scale', 'scale_idx', 'pad_shape', 'scale_factor', 'keep_ratio', 'flip', 'flip_direction', 
             # 'paste_filename', 'paste_ori_filename', 'paste_image', 'paste_img_shape', 'paste_ori_shape', 
             # 'paste_gt_labels', 'paste_bboxes', 'paste_masks'])
-            #print('after convert', 'origin:', len(final_results['bboxes']), final_results['bboxes'], 
+            # print('after convert', 'origin:', len(final_results['bboxes']), final_results['bboxes'], 
             #      'pasted:', len(final_results['paste_bboxes']), final_results['paste_bboxes'])
+        
+            # data = Image.fromarray(np.uint8(kwargs['image']))
+            # data.save('/data/zhuoming/detection/test/test2/visualization/' + kwargs['ori_filename'] + '_copy_and_paste.png')
             
-            # split the label from the bboxes?
+            # fig,ax = plt.subplots(1)
+            # # Display the image
+            # #ax.imshow(kwargs['image'])
             
+            # # add mask to the image
+            # before_paste_mask_image = kwargs['image']
+            # for mask in final_masks:
+            #     #print('before_paste_mask_image.shape', before_paste_mask_image.shape, 'mask.shape', mask.shape, mask[mask!=0])
+            #     before_paste_mask_image[mask!=0, :] = 0
             
-            
-            return final_results
+            # ax.imshow(before_paste_mask_image)
+
+            # # print the base
+            # for box in kwargs['bboxes']:
+            #     rect = patches.Rectangle((box[0], box[1]),box[2]-box[0],box[3]-box[1],linewidth=1,edgecolor='g',facecolor='none')
+            #     ax.add_patch(rect)
+
+            # print_path = '/data/zhuoming/detection/test/test2/visualization/'
+            # if not os.path.exists(print_path):
+            #     os.makedirs(print_path)
+
+            # plt.savefig(os.path.join(print_path, (kwargs['ori_filename'] + '_copy_and_paste_with_mask.png')))
+            # plt.close()
+            return kwargs
     
         return kwargs     
 
@@ -3504,20 +3559,21 @@ class CopyPaste(albumentations.DualTransform):
 
             # filter label_fields
             if self.filter_lost_elements:
-
                 for label in self.origin_label_fields:
                     results[label] = np.array(
                         [results[label][i] for i in results['idx_mapper']])
-                if 'masks' in results:
-                    results['masks'] = np.array(
-                        [results['masks'][i] for i in results['idx_mapper']])
-                    results['masks'] = ori_masks.__class__(
-                        results['masks'], results['image'].shape[0],
-                        results['image'].shape[1])
-
                 if (not len(results['idx_mapper'])
                         and self.skip_img_without_anno):
-                    return None
+                    return None                    
+                             
+        if 'masks' in results:
+            if self.filter_lost_elements:
+                results['masks'] = np.array(
+                    [results['masks'][i] for i in results['idx_mapper']])
+            #print('ori_masks.__class__', ori_masks.__class__)
+            results['masks'] = ori_masks.__class__(
+                results['masks'], results['image'].shape[0],
+                results['image'].shape[1])
 
         if 'gt_labels' in results:
             if isinstance(results['gt_labels'], list):
