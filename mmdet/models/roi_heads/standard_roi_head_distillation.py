@@ -242,15 +242,14 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             gt_rand_rois = [torch.cat([gt_bbox[:original_gt_num, :], random_bbox], dim=0) for gt_bbox, random_bbox, original_gt_num in zip(gt_bboxes, rand_bboxes, original_gt_nums)]
             if cp_mark is not None:
                 distill_ele_weight = []
-                for gt_bbox, random_bbox, mark in zip(gt_bboxes, rand_bboxes, cp_mark):
+                for original_gt_num, random_bbox, mark in zip(original_gt_nums, rand_bboxes, cp_mark):
                     if mark == True:
-                        weight_per_img = torch.cat([torch.ones(gt_bbox.shape[0]), torch.zeros(random_bbox.shape[0])], dim=0)
+                        weight_per_img = torch.cat([torch.ones(original_gt_num), torch.zeros(random_bbox.shape[0])], dim=0)
                     else:
-                        weight_per_img = torch.ones(gt_bbox.shape[0] + random_bbox.shape[0])
+                        weight_per_img = torch.ones(original_gt_num + random_bbox.shape[0])
                     distill_ele_weight.append(weight_per_img)
-                print(cp_mark, [ele.shape for ele in gt_rand_rois], [ele.shape for ele in weight_per_img], [ele for ele in weight_per_img],
-                      [ele.shape for ele in gt_bboxes], [ele.shape for ele in rand_bboxes], [ele.shape for ele in distilled_feat])
-                     
+                # print(cp_mark, [ele.shape for ele in gt_rand_rois], [ele.shape for ele in distill_ele_weight], [ele for ele in distill_ele_weight],
+                #       [ele.shape for ele in gt_bboxes], [ele.shape for ele in rand_bboxes], [ele.shape for ele in distilled_feat])     
             else:
                 distill_ele_weight = None
         
