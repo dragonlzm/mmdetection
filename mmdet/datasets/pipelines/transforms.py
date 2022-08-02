@@ -3469,6 +3469,9 @@ class CopyPaste(albumentations.DualTransform):
             kwargs['bboxes'] = clean_bboxes
             kwargs['gt_labels'] = all_labels
             
+            # add the mark for processing 
+            kwargs['cp_mark'] = True
+            
             # print(final_results.keys())
             #dict_keys(['img_info', 'ann_info', 'paste_img_info', 'paste_ann_info', 'img_prefix', 'seg_prefix', 
             # 'proposal_file', 'bbox_fields', 'mask_fields', 'seg_fields', 'filename', 'ori_filename', 
@@ -3506,6 +3509,7 @@ class CopyPaste(albumentations.DualTransform):
             # plt.savefig(os.path.join(print_path, (kwargs['ori_filename'] + '_copy_and_paste_with_mask.png')))
             # plt.close()
             return kwargs
+        kwargs['cp_mark'] = False
     
         return kwargs     
 

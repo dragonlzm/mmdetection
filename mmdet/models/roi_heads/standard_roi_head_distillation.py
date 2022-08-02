@@ -72,6 +72,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                       rand_bboxes=None,
                       bg_bboxes=None,
                       bg_feats=None,
+                      cp_mark=None,
                       **kwargs):
         """
         Args:
@@ -121,7 +122,8 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                                                     img_metas, distilled_feat,
                                                     rand_bboxes, 
                                                     bg_bboxes=bg_bboxes,
-                                                    bg_feats=bg_feats)
+                                                    bg_feats=bg_feats,
+                                                    cp_mark=cp_mark)
             losses.update(bbox_results['loss_bbox'])
             losses.update(bbox_results['distill_loss_value'])
 
@@ -134,7 +136,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
 
         return losses
 
-    def _bbox_forward(self, x, rois, distilled_feat=None, gt_rand_rois=None, gt_labels=None, img_metas=None):
+    def _bbox_forward(self, x, rois, distilled_feat=None, gt_rand_rois=None, gt_labels=None, img_metas=None, distill_ele_weight=None):
         """Box head forward function used in both training and testing."""  
         # is the number of feat map layer
         if distilled_feat != None and gt_rand_rois != None:
@@ -181,7 +183,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             # normalize the distilled feat
             cat_distilled_feat = torch.cat(distilled_feat, dim=0)
             cat_distilled_feat = cat_distilled_feat / cat_distilled_feat.norm(dim=-1, keepdim=True)
-            distill_loss_value = self.distillation_loss(pred_feats, cat_distilled_feat)
+            distill_loss_value = self.distillation_loss(pred_feats, cat_distilled_feat, distill_ele_weight)
             #distill_loss_value *= (self.bbox_head.clip_dim * 0.5)
             distill_loss_value *= (self.bbox_head.clip_dim * self.distill_loss_factor)
             
@@ -220,7 +222,8 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                             img_metas, distilled_feat, 
                             rand_bboxes,
                             bg_bboxes=None,
-                            bg_feats=None):
+                            bg_feats=None,
+                            cp_mark=None):
         """Run forward function and calculate loss for box head in training."""
         """the gt_bboxes and rand_bboxes are in the format of xyxy """
         
@@ -235,7 +238,21 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         elif self.use_only_gt_pro_for_distill:
             gt_rand_rois = gt_bboxes
         else:
-            gt_rand_rois = [torch.cat([gt_bbox, random_bbox], dim=0) for gt_bbox, random_bbox in zip(gt_bboxes, rand_bboxes)]
+            original_gt_nums = [dist_feat.shape[0] - rand_bbox.shape[0] for dist_feat, rand_bbox in zip(distilled_feat, rand_bboxes)]
+            gt_rand_rois = [torch.cat([gt_bbox[:original_gt_num, :], random_bbox], dim=0) for gt_bbox, random_bbox, original_gt_num in zip(gt_bboxes, rand_bboxes, original_gt_nums)]
+            if cp_mark is not None:
+                distill_ele_weight = []
+                for gt_bbox, random_bbox, mark in zip(gt_bboxes, rand_bboxes, cp_mark):
+                    if mark == True:
+                        weight_per_img = torch.cat([torch.ones(gt_bbox.shape[0]), torch.zeros(random_bbox.shape[0])], dim=0)
+                    else:
+                        weight_per_img = torch.ones(gt_bbox.shape[0] + random_bbox.shape[0])
+                    distill_ele_weight.append(weight_per_img)
+                print(cp_mark, [ele.shape for ele in gt_rand_rois], [ele.shape for ele in weight_per_img], [ele for ele in weight_per_img],
+                      [ele.shape for ele in gt_bboxes], [ele.shape for ele in rand_bboxes], [ele.shape for ele in distilled_feat])
+                     
+            else:
+                distill_ele_weight = None
         
         # add pertrubation
         if self.add_distill_pertrub:
@@ -271,7 +288,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             gt_rand_rois = perturbed_result
     
         gt_rand_rois = bbox2roi(gt_rand_rois)  
-        bbox_results = self._bbox_forward(x, rois, distilled_feat, gt_rand_rois, gt_labels)
+        bbox_results = self._bbox_forward(x, rois, distilled_feat, gt_rand_rois, gt_labels, distill_ele_weight=distill_ele_weight)
         
         if self.use_bg_pro_as_ns:
             bbox_targets_ori = self.bbox_head.get_targets(sampling_results, gt_bboxes,

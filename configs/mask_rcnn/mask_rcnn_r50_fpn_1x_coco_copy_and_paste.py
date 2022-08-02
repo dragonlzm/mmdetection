@@ -16,10 +16,11 @@ train_pipeline = [
     dict(type='Normalize', **img_norm_cfg),
     dict(type='Pad', size_divisor=32),
     dict(type='DefaultFormatBundle'),
-    dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels', 'gt_masks']),
+    dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels', 'gt_masks', 'cp_mark']),
 ]
 
 optimizer_config = dict(_delete_=True, grad_clip=dict(max_norm=10, norm_type=2))
 
-data = dict(train=dict(pipeline=train_pipeline, copy_and_paste=True))
+data = dict(
+    train=dict(pipeline=train_pipeline, copy_and_paste=True))
 evaluation = dict(metric=['bbox', 'segm'])
