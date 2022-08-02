@@ -3195,7 +3195,7 @@ class CopyPaste(albumentations.DualTransform):
                 res[key] = None
         return res
 
-    def image_copy_paste(self, img, paste_img, alpha, blend=True, sigma=1):
+    def image_copy_paste(self, img, paste_img, alpha, blend=False, sigma=1):
         if alpha is not None:
             if blend:
                 alpha = gaussian(alpha, sigma=sigma, preserve_range=True)
