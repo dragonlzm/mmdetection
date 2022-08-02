@@ -182,6 +182,8 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             _, _, pred_feats = self.bbox_head(gt_and_rand_bbox_feat)
             # normalize the distilled feat
             cat_distilled_feat = torch.cat(distilled_feat, dim=0)
+            if distill_ele_weight:
+                distill_ele_weight = torch.cat(distill_ele_weight, dim=0)
             cat_distilled_feat = cat_distilled_feat / cat_distilled_feat.norm(dim=-1, keepdim=True)
             distill_loss_value = self.distillation_loss(pred_feats, cat_distilled_feat, distill_ele_weight)
             #distill_loss_value *= (self.bbox_head.clip_dim * 0.5)
@@ -241,12 +243,13 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             original_gt_nums = [dist_feat.shape[0] - rand_bbox.shape[0] for dist_feat, rand_bbox in zip(distilled_feat, rand_bboxes)]
             gt_rand_rois = [torch.cat([gt_bbox[:original_gt_num, :], random_bbox], dim=0) for gt_bbox, random_bbox, original_gt_num in zip(gt_bboxes, rand_bboxes, original_gt_nums)]
             if cp_mark is not None:
+                feat_dim = distilled_feat[0].shape[-1]
                 distill_ele_weight = []
                 for original_gt_num, random_bbox, mark in zip(original_gt_nums, rand_bboxes, cp_mark):
                     if mark == True:
-                        weight_per_img = torch.cat([torch.ones(original_gt_num), torch.zeros(random_bbox.shape[0])], dim=0)
+                        weight_per_img = torch.cat([torch.ones(original_gt_num, feat_dim), torch.zeros(random_bbox.shape[0], feat_dim)], dim=0).cuda()
                     else:
-                        weight_per_img = torch.ones(original_gt_num + random_bbox.shape[0])
+                        weight_per_img = torch.ones(original_gt_num + random_bbox.shape[0], feat_dim).cuda()
                     distill_ele_weight.append(weight_per_img)
                 # print(cp_mark, [ele.shape for ele in gt_rand_rois], [ele.shape for ele in distill_ele_weight], [ele for ele in distill_ele_weight],
                 #       [ele.shape for ele in gt_bboxes], [ele.shape for ele in rand_bboxes], [ele.shape for ele in distilled_feat])     
