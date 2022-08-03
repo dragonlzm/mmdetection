@@ -96,6 +96,9 @@ class AnchorHead(BaseDenseHead, BBoxTestMixin):
         # except SSD detectors
         self.num_anchors = self.anchor_generator.num_base_anchors[0]
         self._init_layers()
+        self.accumulate_pos_sample = 0
+        self.accumulate_neg_sample = 0
+        self.total_iteration = 0
 
     def _init_layers(self):
         """Initialize layers of the head."""
@@ -367,6 +370,13 @@ class AnchorHead(BaseDenseHead, BBoxTestMixin):
                                              num_level_anchors)
         res = (labels_list, label_weights_list, bbox_targets_list,
                bbox_weights_list, num_total_pos, num_total_neg)
+        #print("in the RPN head:", 'num_total_pos', num_total_pos, 'num_total_neg', num_total_neg)
+        self.accumulate_pos_sample += num_total_pos
+        self.accumulate_neg_sample += num_total_neg
+        self.total_iteration += 1
+        if self.total_iteration % 100 == 0:
+            print('rpn pos ratio:', self.accumulate_pos_sample / (512 * self.total_iteration))
+        
         if return_sampling_results:
             res = res + (sampling_results_list, )
         for i, r in enumerate(rest_results):  # user-added return values
