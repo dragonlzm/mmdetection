@@ -71,6 +71,17 @@ python -m torch.distributed.launch --nproc_per_node=2 \
    --cfg-options model.roi_head.bbox_head.reg_class_agnostic=False \
    #--resume-from=/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_2gpu_novel17_reg_class_spec/latest.pth
 
+# for 2*2 novel17 (should be delete in this script)
+TRAIN_CONFIG="configs/mask_rcnn/mask_rcnn_r50_fpn_1x_coco_detectron_2x2_novel17.py"
+WORK_DIR="/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_detectron_2x2_novel17_reg_class_spec"
+PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+python -m torch.distributed.launch --nproc_per_node=2 \
+    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+    ${TRAIN_CONFIG} --launcher pytorch \
+    --work-dir=${WORK_DIR} \
+    --cfg-options model.roi_head.bbox_head.reg_class_agnostic=False \
+    #--resume-from=${WORK_DIR}/latest.pth  
+
 # for 2*2 novel17 class agno (should be delete in this script)
 TRAIN_CONFIG="configs/mask_rcnn/mask_rcnn_r50_fpn_1x_coco_detectron_2x2_novel17.py"
 WORK_DIR="/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_detectron_2x2_novel17_reg_class_agno"
@@ -82,16 +93,6 @@ python -m torch.distributed.launch --nproc_per_node=2 \
     --cfg-options model.roi_head.bbox_head.reg_class_agnostic=True \
     --resume-from=${WORK_DIR}/latest.pth  
 
-# for 2*2 novel17 (should be delete in this script)
-TRAIN_CONFIG="configs/mask_rcnn/mask_rcnn_r50_fpn_1x_coco_detectron_2x2_novel17.py"
-WORK_DIR="/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_detectron_2x2_novel17_reg_class_spec"
-PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
-python -m torch.distributed.launch --nproc_per_node=2 \
-    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
-    ${TRAIN_CONFIG} --launcher pytorch \
-    --work-dir=${WORK_DIR} \
-    --cfg-options model.roi_head.bbox_head.reg_class_agnostic=False \
-    #--resume-from=${WORK_DIR}/latest.pth  
 
 # for 2x training first stage
 #PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
