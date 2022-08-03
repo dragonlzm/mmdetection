@@ -4,6 +4,8 @@
 import json
 from pickletools import read_uint1
 import torch
+import sys
+sys.path.append('../mmdetection')
 from mmdet.core.bbox.iou_calculators.iou2d_calculator import BboxOverlaps2D
 
 # aggregate the gt on each image base on the categoires
@@ -38,7 +40,11 @@ for anno in gt_anno_2['annotations']:
     from_image_id_to_gtbboxes[image_id][category_id].append(bbox)
 
 # we aggregate the prediction on each image base on the categories
-pred_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_gn_10_200clipproposal/novel_results_65cates.bbox.json'
+#pred_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_gn_10_200clipproposal/novel_results_65cates.bbox.json'
+
+#pred_path = '/data/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_detectron_2x8_base48/base_results.bbox.json'
+pred_path = '/data/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_detectron_2x8/base_results.bbox.json'
+
 pred_res = json.load(open(pred_path))
 
 from_image_id_to_prediction = {}
@@ -119,4 +125,4 @@ for image_id in from_image_id_to_prediction:
         all_interclass_mis_cls += mis_cls_num.item()
         all_bbox += torch.sum(miss_indx).item()
 
-print('all_bbox', all_bbox, 'all_interclass_mis_cls', all_interclass_mis_cls, 'precentage', all_bbox / all_interclass_mis_cls)
+print('all_bbox', all_bbox, 'all_interclass_mis_cls', all_interclass_mis_cls, 'precentage', all_interclass_mis_cls / all_bbox)
