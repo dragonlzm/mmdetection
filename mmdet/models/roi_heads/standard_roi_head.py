@@ -34,6 +34,11 @@ class StandardRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             self.share_roi_extractor = True
             self.mask_roi_extractor = self.bbox_roi_extractor
         self.mask_head = build_head(mask_head)
+        
+        # testing for pos/neg ratio
+        self.pos_total_num = 0
+        self.neg_total_num = 0
+        self.total_iter = 0
 
     def forward_dummy(self, x, proposals):
         """Dummy forward function."""
@@ -97,6 +102,14 @@ class StandardRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                     gt_labels[i],
                     feats=[lvl_feat[i][None] for lvl_feat in x])
                 sampling_results.append(sampling_result)
+
+            pos_bboxes_num = [res.pos_bboxes.size(0) for res in sampling_results]
+            neg_bboxes_num = [res.neg_bboxes.size(0) for res in sampling_results]
+            self.pos_total_num += sum(pos_bboxes_num)
+            self.neg_total_num += sum(neg_bboxes_num)
+            self.total_iter += 1
+            if self.total_iter % 100 == 0:
+                print('pos_ratio', self.pos_total_num / (512 * 2 * self.total_iter))
 
         losses = dict()
         # bbox head forward and loss
