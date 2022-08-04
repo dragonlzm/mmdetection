@@ -55,8 +55,16 @@ python -m torch.distributed.launch --nproc_per_node=2 \
     --work-dir=${WORK_DIR} \
     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
     model.roi_head.bbox_head.combine_reg_and_cls_embedding=${COMBINE_METHOD} \
-    --resume-from=${START_FROM}/epoch_16.pth   
-    #--resume-from=${WORK_DIR}/latest.pth
+    --resume-from=${WORK_DIR}/latest.pth
+    #--resume-from=${START_FROM}/epoch_16.pth
+
+# mask_rcnn_r50_fpn_1x_coco_copy_and_paste (should be delete, added here temperary)
+PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+python -m torch.distributed.launch --nproc_per_node=2 \
+   /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+   configs/mask_rcnn/mask_rcnn_r50_fpn_1x_coco_copy_and_paste.py --launcher pytorch \
+   --work-dir=/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_copy_and_paste \
+   --resume-from=/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_copy_and_paste/latest.pth
 
 
 # 2*2 360k
