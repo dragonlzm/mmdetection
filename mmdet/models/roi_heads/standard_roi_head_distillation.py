@@ -31,6 +31,8 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         self.distillation_loss_config = dict(type='L1Loss', loss_weight=1.0)
         self.distillation_loss = build_loss(self.distillation_loss_config)
         self.distill_loss_factor = self.train_cfg.get('distill_loss_factor', 1) if self.train_cfg is not None else 1
+        self.use_contrast_distill = self.train_cfg.get('use_contrast_distill', False) if self.train_cfg is not None else False
+        self.contrastive_weight = self.train_cfg.get('contrastive_weight', 0.5) if self.train_cfg is not None else 0.5
         self.match_count = 0
         self.total = 0
 
@@ -136,7 +138,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
 
         return losses
 
-    def _bbox_forward(self, x, rois, distilled_feat=None, gt_rand_rois=None, gt_labels=None, img_metas=None, distill_ele_weight=None):
+    def _bbox_forward(self, x, rois, distilled_feat=None, gt_rand_rois=None, gt_labels=None, img_metas=None, distill_ele_weight=None, gt_bbox_and_clip_proposal_num=None):
         """Box head forward function used in both training and testing."""  
         # is the number of feat map layer
         if distilled_feat != None and gt_rand_rois != None:
@@ -186,6 +188,58 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                 distill_ele_weight = torch.cat(distill_ele_weight, dim=0)
             cat_distilled_feat = cat_distilled_feat / cat_distilled_feat.norm(dim=-1, keepdim=True)
             distill_loss_value = self.distillation_loss(pred_feats, cat_distilled_feat, distill_ele_weight)
+            if self.use_contrast_distill:
+                # aggregate the gt bboxes rn feature
+                # aggregate the clip proposal rn feature                
+                start_at = 0
+                all_gt_bboxes_rn_feat = []
+                all_clip_proposal_rn_feat = []
+                for gt_bbox_num, clip_proposal_num in gt_bbox_and_clip_proposal_num:
+                    gt_bbox_rn_feat = pred_feats[start_at:start_at+gt_bbox_num, :]
+                    all_gt_bboxes_rn_feat.append(gt_bbox_rn_feat)
+                    start_at += gt_bbox_num
+                    clip_proposal_rn_feat = pred_feats[start_at:start_at+clip_proposal_num, :]
+                    all_clip_proposal_rn_feat.append(clip_proposal_rn_feat)
+                    start_at += clip_proposal_num
+
+                # aggregate the gt bboxes clip feature                
+                # aggregate the clip proposal clip feature
+                start_at = 0
+                all_gt_bboxes_clip_feat = []
+                all_clip_proposal_clip_feat = []
+                for gt_bbox_num, clip_proposal_num in gt_bbox_and_clip_proposal_num:
+                    gt_bbox_rn_feat = cat_distilled_feat[start_at:start_at+gt_bbox_num, :]
+                    all_gt_bboxes_clip_feat.append(gt_bbox_rn_feat)
+                    start_at += gt_bbox_num
+                    clip_proposal_rn_feat = cat_distilled_feat[start_at:start_at+clip_proposal_num, :]
+                    all_clip_proposal_clip_feat.append(clip_proposal_rn_feat)
+                    start_at += clip_proposal_num                
+                
+                # print('all_gt_bboxes_rn_feat', [ele.shape for ele in all_gt_bboxes_rn_feat],
+                #       'all_clip_proposal_rn_feat', [ele.shape for ele in all_clip_proposal_rn_feat],
+                #       'all_gt_bboxes_clip_feat', [ele.shape for ele in all_gt_bboxes_clip_feat],
+                #       'all_clip_proposal_clip_feat', [ele.shape for ele in all_clip_proposal_clip_feat])
+                
+                # concat all the feature
+                all_gt_bboxes_rn_feat = torch.cat(all_gt_bboxes_rn_feat, dim=0)
+                all_clip_proposal_rn_feat = torch.cat(all_clip_proposal_rn_feat, dim=0)
+                all_gt_bboxes_clip_feat = torch.cat(all_gt_bboxes_clip_feat, dim=0)
+                all_clip_proposal_clip_feat = torch.cat(all_clip_proposal_clip_feat, dim=0)
+                
+                num_gt_bbox = all_gt_bboxes_rn_feat.shape[0]
+                num_clip_proposal = all_clip_proposal_rn_feat.shape[0]
+                # sample negative target for all_gt_bboxes_rn_feat
+                random_idx = torch.randint(low=0, high=num_clip_proposal, size=(num_gt_bbox, ))
+                negative_target_for_gt_bbox = all_clip_proposal_clip_feat[random_idx]
+                contrastive_loss_for_gt_bbox = -self.distillation_loss(all_gt_bboxes_rn_feat, negative_target_for_gt_bbox)
+                
+                # sample negative target for all_clip_proposal_rn_feat
+                random_idx = torch.randint(low=0, high=num_gt_bbox, size=(num_clip_proposal, ))
+                negative_target_for_clip_proposal = all_gt_bboxes_clip_feat[random_idx]
+                contrastive_loss_for_clip_proposal = -self.distillation_loss(all_clip_proposal_rn_feat, negative_target_for_clip_proposal)
+                
+                distill_loss_value = distill_loss_value + (contrastive_loss_for_gt_bbox + contrastive_loss_for_clip_proposal) * self.contrastive_weight
+                
             #distill_loss_value *= (self.bbox_head.clip_dim * 0.5)
             distill_loss_value *= (self.bbox_head.clip_dim * self.distill_loss_factor)
             
@@ -289,8 +343,9 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                 #print('after perturbation:', perturbed_bbox_per_img[:10])
             gt_rand_rois = perturbed_result
     
-        gt_rand_rois = bbox2roi(gt_rand_rois)  
-        bbox_results = self._bbox_forward(x, rois, distilled_feat, gt_rand_rois, gt_labels, distill_ele_weight=distill_ele_weight)
+        gt_rand_rois = bbox2roi(gt_rand_rois)
+        gt_bbox_and_clip_proposal_num = [(gt_bbox.shape[0], random_bbox.shape[0]) for gt_bbox, random_bbox in zip(gt_bboxes, rand_bboxes)]
+        bbox_results = self._bbox_forward(x, rois, distilled_feat, gt_rand_rois, gt_labels, distill_ele_weight=distill_ele_weight, gt_bbox_and_clip_proposal_num=gt_bbox_and_clip_proposal_num)
         
         if self.use_bg_pro_as_ns:
             bbox_targets_ori = self.bbox_head.get_targets(sampling_results, gt_bboxes,
