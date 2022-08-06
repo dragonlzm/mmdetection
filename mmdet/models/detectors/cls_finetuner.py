@@ -536,6 +536,8 @@ class ClsFinetuner(BaseDetector):
                 softmax = nn.Softmax(dim=1)
 
                 # select the needed feat
+                #print('testing x', len(x), x[0].shape)
+                # x 1 torch.Size([500, 512])
                 if len(x[0].shape) > 2 and self.rpn_head.selected_need_feat is not None:
                     x = [feat[:, self.rpn_head.selected_need_feat, :] for feat in x]
                     if x[0].shape[1] == 1:
@@ -544,16 +546,29 @@ class ClsFinetuner(BaseDetector):
                 # forward of this head requires img_metas
                 outs = self.rpn_head.forward(x, img_metas)
                 # get the classsification score
-                pred_after_softmax = softmax(outs)
+                #print('testing out', len(outs), outs[0].shape)
+                # out 1 torch.Size([500, 80])
+                pred_after_softmax = softmax(outs[0])
                 
                 # get the max confidence categories
                 max_val, pred_idx = torch.max(pred_after_softmax, dim=1)
                 
                 # get the idx which is not predicted as base categories
+                all_novel_idx = None
+                for base_cate_idx in self.base_cate_gt_idx:
+                    if all_novel_idx == None:
+                        all_novel_idx = (pred_idx != base_cate_idx)
+                    else:
+                        temp_idx = (pred_idx != base_cate_idx)
+                        torch.logical_and(all_novel_idx, temp_idx)
 
-                # filter the bboxes and feature
-                
+                # filter the bboxes and feature(assuming the batch size is 1)
+                x = [x[0][all_novel_idx]]
+                now_rand_bbox = now_rand_bbox[all_novel_idx]
                 # make the number of remaining bbox become self.num_of_rand_bboxes
+                x = [x[0][:200]]
+                now_rand_bbox = now_rand_bbox[:200]
+                #print('x', x[0].shape, 'now_rand_bbox', now_rand_bbox.shape)
             
             # save the rand_bbox and the feat, img_metas
             file = open(random_file_path, 'w')
