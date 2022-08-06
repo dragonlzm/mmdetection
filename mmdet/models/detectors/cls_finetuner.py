@@ -566,8 +566,8 @@ class ClsFinetuner(BaseDetector):
                 x = [x[0][all_novel_idx]]
                 now_rand_bbox = now_rand_bbox[all_novel_idx]
                 # make the number of remaining bbox become self.num_of_rand_bboxes
-                x = [x[0][:200]]
-                now_rand_bbox = now_rand_bbox[:200]
+                x = [x[0][:300]]
+                now_rand_bbox = now_rand_bbox[:300]
                 #print('x', x[0].shape, 'now_rand_bbox', now_rand_bbox.shape)
             
             # save the rand_bbox and the feat, img_metas
