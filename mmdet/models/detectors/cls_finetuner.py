@@ -12,6 +12,7 @@ from ..builder import DETECTORS, build_backbone, build_head, build_neck
 from .base import BaseDetector
 from PIL import Image
 import numpy as np
+import torch.nn as nn
 import math
 import random
 import os
@@ -91,6 +92,42 @@ class ClsFinetuner(BaseDetector):
         self.crop_with_extra_patches = self.test_cfg.get('crop_with_extra_patches', False) if self.test_cfg is not None else False
         self.target_patch_loca = self.test_cfg.get('target_patch_loca', 'center') if self.test_cfg is not None else 'center'
         self.extra_patches_num = self.test_cfg.get('extra_patches_num', 3) if self.test_cfg is not None else 3
+        # filter the clip proposal using the categories
+        self.filter_clip_proposal_base_on_cates = self.test_cfg.get('filter_clip_proposal_base_on_cates', False) if self.test_cfg is not None else False
+        self.from_gt_idx_to_coco_name = {0: 'person', 1: 'bicycle', 2: 'car', 3: 'motorcycle', 4: 'airplane', 5: 'bus', 6: 'train', 7: 'truck', 
+                                       8: 'boat', 9: 'traffic light', 10: 'fire hydrant', 11: 'stop sign', 12: 'parking meter', 13: 'bench', 
+                                       14: 'bird', 15: 'cat', 16: 'dog', 17: 'horse', 18: 'sheep', 19: 'cow', 20: 'elephant', 21: 'bear', 
+                                       22: 'zebra', 23: 'giraffe', 24: 'backpack', 25: 'umbrella', 26: 'handbag', 27: 'tie', 28: 'suitcase', 
+                                       29: 'frisbee', 30: 'skis', 31: 'snowboard', 32: 'sports ball', 33: 'kite', 34: 'baseball bat', 
+                                       35: 'baseball glove', 36: 'skateboard', 37: 'surfboard', 38: 'tennis racket', 39: 'bottle', 40: 'wine glass', 
+                                       41: 'cup', 42: 'fork', 43: 'knife', 44: 'spoon', 45: 'bowl', 46: 'banana', 47: 'apple', 48: 'sandwich', 
+                                       49: 'orange', 50: 'broccoli', 51: 'carrot', 52: 'hot dog', 53: 'pizza', 54: 'donut', 55: 'cake', 
+                                       56: 'chair', 57: 'couch', 58: 'potted plant', 59: 'bed', 60: 'dining table', 61: 'toilet', 62: 'tv', 
+                                       63: 'laptop', 64: 'mouse', 65: 'remote', 66: 'keyboard', 67: 'cell phone', 68: 'microwave', 69: 'oven', 
+                                       70: 'toaster', 71: 'sink', 72: 'refrigerator', 73: 'book', 74: 'clock', 75: 'vase', 76: 'scissors', 
+                                       77: 'teddy bear', 78: 'hair drier', 79: 'toothbrush'}
+        self.from_coco_name_to_gt_idx = {'person': 0, 'bicycle': 1, 'car': 2, 'motorcycle': 3, 'airplane': 4, 'bus': 5, 'train': 6, 'truck': 7, 
+                                         'boat': 8, 'traffic light': 9, 'fire hydrant': 10, 'stop sign': 11, 'parking meter': 12, 'bench': 13, 
+                                         'bird': 14, 'cat': 15, 'dog': 16, 'horse': 17, 'sheep': 18, 'cow': 19, 'elephant': 20, 'bear': 21, 
+                                         'zebra': 22, 'giraffe': 23, 'backpack': 24, 'umbrella': 25, 'handbag': 26, 'tie': 27, 'suitcase': 28, 
+                                         'frisbee': 29, 'skis': 30, 'snowboard': 31, 'sports ball': 32, 'kite': 33, 'baseball bat': 34, 'baseball glove': 35, 
+                                         'skateboard': 36, 'surfboard': 37, 'tennis racket': 38, 'bottle': 39, 'wine glass': 40, 'cup': 41, 'fork': 42, 
+                                         'knife': 43, 'spoon': 44, 'bowl': 45, 'banana': 46, 'apple': 47, 'sandwich': 48, 'orange': 49, 'broccoli': 50, 
+                                         'carrot': 51, 'hot dog': 52, 'pizza': 53, 'donut': 54, 'cake': 55, 'chair': 56, 'couch': 57, 'potted plant': 58, 
+                                         'bed': 59, 'dining table': 60, 'toilet': 61, 'tv': 62, 'laptop': 63, 'mouse': 64, 'remote': 65, 'keyboard': 66, 
+                                         'cell phone': 67, 'microwave': 68, 'oven': 69, 'toaster': 70, 'sink': 71, 'refrigerator': 72, 'book': 73, 'clock': 74, 
+                                         'vase': 75, 'scissors': 76, 'teddy bear': 77, 'hair drier': 78, 'toothbrush': 79}
+        self.base_cate_name = ('person', 'bicycle', 'car', 'motorcycle', 'train', 
+                                'truck', 'boat', 'bench', 'bird', 'horse', 'sheep', 
+                                'bear', 'zebra', 'giraffe', 'backpack', 'handbag', 
+                                'suitcase', 'frisbee', 'skis', 'kite', 'surfboard', 
+                                'bottle', 'fork', 'spoon', 'bowl', 'banana', 'apple', 
+                                'sandwich', 'orange', 'broccoli', 'carrot', 'pizza', 
+                                'donut', 'chair', 'bed', 'toilet', 'tv', 'laptop', 
+                                'mouse', 'remote', 'microwave', 'oven', 'toaster', 
+                                'refrigerator', 'book', 'clock', 'vase', 'toothbrush')
+        self.base_cate_gt_idx = [self.from_coco_name_to_gt_idx[name] for name in self.base_cate_name]
+
 
     def read_use_base_novel_clip(self, img_metas):
         pregenerate_prop_path = os.path.join(self.use_base_novel_clip, '.'.join(img_metas[0]['ori_filename'].split('.')[:-1]) + '.json')
@@ -492,8 +529,33 @@ class ClsFinetuner(BaseDetector):
                 # generate the random feat
                 now_rand_bbox = self.generate_rand_bboxes(img_metas, self.num_of_rand_bboxes)
             x = self.extract_feat(img, [now_rand_bbox], cropped_patches, img_metas=img_metas)
-            # save the rand_bbox and the feat, img_metas
             
+            # filter the clip proposal base on the categories
+            if self.filter_clip_proposal_base_on_cates:
+                # out list[tensor] tensor with shape [gt_per_img, channel]
+                softmax = nn.Softmax(dim=1)
+
+                # select the needed feat
+                if len(x[0].shape) > 2 and self.rpn_head.selected_need_feat is not None:
+                    x = [feat[:, self.rpn_head.selected_need_feat, :] for feat in x]
+                    if x[0].shape[1] == 1:
+                        x = [feat.squeeze(dim=1) for feat in x]
+
+                # forward of this head requires img_metas
+                outs = self.rpn_head.forward(x, img_metas)
+                # get the classsification score
+                pred_after_softmax = softmax(outs)
+                
+                # get the max confidence categories
+                max_val, pred_idx = torch.max(pred_after_softmax, dim=1)
+                
+                # get the idx which is not predicted as base categories
+
+                # filter the bboxes and feature
+                
+                # make the number of remaining bbox become self.num_of_rand_bboxes
+            
+            # save the rand_bbox and the feat, img_metas
             file = open(random_file_path, 'w')
             # handle the image metas
             my_img_meta = img_metas[0]
