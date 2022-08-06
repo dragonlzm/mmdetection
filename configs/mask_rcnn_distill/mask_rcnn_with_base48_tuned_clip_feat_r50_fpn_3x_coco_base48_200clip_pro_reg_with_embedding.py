@@ -21,8 +21,20 @@ train_pipeline = [
     dict(type='Normalize', **img_norm_cfg),
     dict(type='Pad', size_divisor=32),
     dict(type='DefaultFormatBundle'),
-    dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels', 'gt_masks']),
+    dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels', 'gt_masks', 'gt_feats',
+                               'rand_bboxes', 'rand_feats']),
 ]
+
+classes = ('person', 'bicycle', 'car', 'motorcycle', 'train', 
+            'truck', 'boat', 'bench', 'bird', 'horse', 'sheep', 
+            'bear', 'zebra', 'giraffe', 'backpack', 'handbag', 
+            'suitcase', 'frisbee', 'skis', 'kite', 'surfboard', 
+            'bottle', 'fork', 'spoon', 'bowl', 'banana', 'apple', 
+            'sandwich', 'orange', 'broccoli', 'carrot', 'pizza', 
+            'donut', 'chair', 'bed', 'toilet', 'tv', 'laptop', 
+            'mouse', 'remote', 'microwave', 'oven', 'toaster', 
+            'refrigerator', 'book', 'clock', 'vase', 'toothbrush')
+
 
 # Use RepeatDataset to speed up training
 data = dict(
@@ -36,7 +48,8 @@ data = dict(
             type=dataset_type,
             ann_file=data_root + 'annotations/instances_train2017.json',
             img_prefix=data_root + 'train2017/',
-            pipeline=train_pipeline)))
+            pipeline=train_pipeline,
+            classes=classes)))
 
 # learning policy
 # Experiments show that using step=[9, 11] has higher performance
