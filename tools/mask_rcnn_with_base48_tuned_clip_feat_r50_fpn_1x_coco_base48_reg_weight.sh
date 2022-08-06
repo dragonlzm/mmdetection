@@ -1,10 +1,10 @@
 #!/bin/bash
 
 #SBATCH --partition=gpu 
-#SBATCH --gres=gpu:p100:2
+#SBATCH --gres=gpu:v100:2
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=30GB
+#SBATCH --mem=40GB
 #SBATCH --time=48:00:00
 #SBATCH --account=nevatia_174
 
