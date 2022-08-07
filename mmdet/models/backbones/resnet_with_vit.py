@@ -1,0 +1,192 @@
+# Copyright (c) OpenMMLab. All rights reserved.
+import warnings
+
+import torch.nn as nn
+import torch.utils.checkpoint as cp
+from mmcv.cnn import build_conv_layer, build_norm_layer, build_plugin_layer
+from mmcv.runner import BaseModule
+from torch.nn.modules.batchnorm import _BatchNorm
+from ..builder import BACKBONES
+from ..utils import ResLayer
+from .resnet import BasicBlock, Bottleneck, ResNet
+
+import clip
+import numpy as np
+import torch
+import torch.nn.functional as F
+from torch import nn
+
+# setup device
+if(torch.cuda.is_available()):
+    device = torch.device('cuda')
+else:
+    device = torch.device('cpu')
+    
+CLIP_CKPT_DOWNLOAD_ROOT = 'models_ckpt'
+
+@BACKBONES.register_module()
+class ResNetWithVit(ResNet):
+    def __init__(self, 
+                 depth,
+                 in_channels=3,
+                 stem_channels=None,
+                 base_channels=64,
+                 num_stages=4,
+                 strides=(1, 2, 2, 2),
+                 dilations=(1, 1, 1, 1),
+                 out_indices=(0, 1, 2, 3),
+                 style='pytorch',
+                 deep_stem=False,
+                 avg_down=False,
+                 frozen_stages=-1,
+                 conv_cfg=None,
+                 norm_cfg=dict(type='BN', requires_grad=True),
+                 norm_eval=True,
+                 dcn=None,
+                 stage_with_dcn=(False, False, False, False),
+                 plugins=None,
+                 with_cp=False,
+                 zero_init_residual=True,
+                 pretrained=None,
+                 init_cfg=None,
+                 clip_architecture="ViT-L/14"):
+        super(ResNetWithVit, self).__init__(
+                 depth, in_channels, stem_channels, base_channels,
+                 num_stages, strides, dilations, out_indices,
+                 style, deep_stem, avg_down, frozen_stages, conv_cfg,
+                 norm_cfg, norm_eval, dcn, stage_with_dcn, plugins,
+                 with_cp, zero_init_residual, pretrained, init_cfg)
+        self.setup_clip_component(clip_architecture)
+        self.setup_clip_adapter()
+
+    def setup_clip_component(self, clip_architecture):
+        # setup number of layer in transformer
+        if(clip_architecture in ["ViT-L/14", "ViT-L/14@336px"]):
+            self.transformer_layer = 24
+        elif(clip_architecture in ["ViT-B/32","ViT-B/16"]):
+            self.transformer_layer = 12
+        else:
+            raise TypeError("wrong architecture choice!")     
+        # load model
+        clip_model, self.preprocess = clip.load(download_root=CLIP_CKPT_DOWNLOAD_ROOT, name=clip_architecture, device=device)
+        self.clip_visual_model = clip_model.visual
+        
+    def setup_clip_adapter(self):
+        # inject clip feature 4 times (4th time it is same dimension no need to adapt) 
+        self.adapt_mlp_1 = nn.Linear(1024, 64)
+        self.adapt_mlp_2 = nn.Linear(1024, 256)
+        self.adapt_mlp_3 = nn.Linear(1024, 512)
+        
+    def clip_pre_transformer(self, x):
+        # x = self.preprocess(x)
+        x = self.clip_visual_model.conv1(x)  # shape = [*, width, grid, grid]
+        x = x.reshape(x.shape[0], x.shape[1], -1)  # shape = [*, width, grid ** 2]
+        x = x.permute(0, 2, 1)  # shape = [*, grid ** 2, width]
+        x = torch.cat([self.clip_visual_model.class_embedding.to(x.dtype) + torch.zeros(x.shape[0], 1, x.shape[-1], dtype=x.dtype, device=x.device), x], dim=1)  # shape = [*, grid ** 2 + 1, width]
+        x = x + self.clip_visual_model.positional_embedding.to(x.dtype)
+        x = self.clip_visual_model.ln_pre(x)
+        return x
+                 
+    def clip_transfomer(self, x, layer):
+        x = x.permute(1, 0, 2)
+        x = self.clip_visual_model.transformer.resblocks[layer](x)
+        x = x.permute(1, 0, 2)
+        return x
+    
+    def clip_post_transformer(self, x):
+        x = self.clip_visual_model.ln_post(x[:, 0, :])
+        if self.clip_visual_model.proj is not None:
+            x = x @ self.clip_visual_model.proj
+        return x
+        
+    def clip_step_1(self, x):
+        with torch.no_grad():
+            x = self.clip_pre_transformer(x) # [bs, 257, 1024]
+        return x
+    
+    def clip_step_2(self, x):
+        with torch.no_grad():
+            # for layer [0-4] for small model, [0-8] for large model
+            for i in range(self.transformer_layer//3):
+                x = self.clip_transfomer(x, i)
+        return x
+    
+    def clip_step_3(self, x):
+        with torch.no_grad():
+            # for layer [4-8] for small model, [8-16] for large model
+            for i in range(self.transformer_layer//3, self.transformer_layer//3*2):
+                x = self.clip_transfomer(x, i)
+        return x
+    
+    def clip_step_4(self, x):
+        with torch.no_grad():
+            # for layer [8-12] for small model, [16-24] for large model
+            for i in range(self.transformer_layer//3*2, self.transformer_layer):
+                x = self.clip_transfomer(x, i)
+        return x
+    
+    def res_step_1(self, x):
+        # resnet stream
+        if(self.deep_stem):
+            x = self.stem(x)
+        else:
+            x = self.conv1(x) # first downsize
+            x = self.norm1(x)
+            x = self.relu(x)
+        x = self.maxpool(x) # second downsize
+        
+    def res_step_2(self, x):
+        x = self.res_layers[0](x)
+        return x
+    
+    def res_step_3(self, x):
+        x = self.res_layers[1](x)
+        return x
+    
+    def res_step_4(self, x):
+        x = self.res_layers[2](x)
+        return x
+    
+    def res_step_5(self, x):
+        x = self.res_layers[3](x)
+        return x
+    
+    def merge(self, clip_x, res_x, step_idx):
+        reshape_x = clip_x[:,1:,:] # [bs, 256, 1024]
+        if(step_idx == 1):
+            reshape_x = self.adapt_mlp_1(reshape_x.view(-1, clip_x.size(2))) # [bs * 256, 64]
+        elif(step_idx == 2):
+            reshape_x = self.adapt_mlp_2(reshape_x.view(-1, clip_x.size(2))) # [bs * 256, 256]
+        elif(step_idx == 3):
+            reshape_x = self.adapt_mlp_3(reshape_x.view(-1, clip_x.size(2))) # [bs * 256, 512]
+        elif(step_idx == 4):
+            reshape_x = reshape_x.view(-1, clip_x.size(2)) # [bs * 256, 1024]
+        
+        reshape_x = reshape_x.view(clip_x.size(0), 16, 16, reshape_x.size(2)) # [bs, 16, 16, -]
+        reshape_x = F.interpolate(reshape_x, size=(res_x.size(2), res_x.size(3)), mode='bicubic', align_corners=False) # [bs, 200, 304, 64]
+        reshape_x = reshape_x.permute(0, 2, 1) # [bs, 64, 200, 304]
+        merge_x = reshape_x + res_x
+        return merge_x
+    
+    def forward(self, res0, clip0):
+        # res0: regular resnet backbone input
+        # clip0: clip input with corresponding preprocessing
+        clip1 = self.clip_step_1(clip0)
+        res1 = self.res_step_1(res0)
+        merge1 = self.merge(clip1, res1, 1)
+        
+        clip2 = self.clip_step_2(clip1)
+        res2 = self.res_step_2(merge1)
+        merge2 = self.merge(clip2, res2, 2)
+        
+        clip3 = self.clip_step_3(clip2)
+        res3 = self.res_step_3(merge2)
+        merge3 = self.merge(clip3, res3, 3)
+        
+        clip4 = self.clip_step_4(clip3)
+        res4 = self.res_step_4(merge3)
+        merge4 = self.merge(clip4, res4, 4)
+        
+        res5 = self.res_step_5(merge4)
+        
+        return res5
