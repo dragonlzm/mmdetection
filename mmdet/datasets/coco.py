@@ -328,7 +328,7 @@ class CocoDataset(CustomDataset):
                 values are corresponding filenames.
         """
         result_files = dict()
-        if isinstance(results[0], np.ndarray) and (results[0].shape[0] == 5 or results[0].shape[0] == 2):
+        if isinstance(results[0], np.ndarray) and (results[0].shape[0] in [2, 5, 6]):
             json_results = self._gtacc2json(results)
             result_files['gt_acc'] = f'{outfile_prefix}.gt_acc.json'
             mmcv.dump(json_results, result_files['gt_acc'])

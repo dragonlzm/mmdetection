@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from cgi import test
+from email.mime import image
 import warnings
 
 import mmcv
@@ -338,9 +339,12 @@ class ClsFinetuner(BaseDetector):
       
     def crop_img_to_patches(self, imgs, gt_bboxes, img_metas):
         # # for testing
-        # real_image_name = img_metas[0]['filename'].split('/')[-1]
-        # file_path = os.path.join("/project/nevatia_174/zhuoming/code/new_rpn/mmdetection/data/mask_rcnn_clip_classifier/", (real_image_name + 'origin.pt'))
-        # torch.save(imgs.cpu(), file_path)
+        # now_patch = imgs.permute(0, 2, 3, 1)[0].numpy()
+        # if not os.path.exists('/home/zhuoming/square_image/'):
+        #     os.makedirs('/home/zhuoming/square_image/')
+        # data = Image.fromarray(np.uint8(now_patch))
+        # data.save('/home/zhuoming/square_image/' + img_metas[0]['ori_filename'] + '.png')
+
         # handle the test config
         if self.training: 
             crop_size_modi_ratio = self.train_crop_size_modi_ratio
@@ -375,10 +379,10 @@ class ClsFinetuner(BaseDetector):
                 else:
                     now_patch = self.default_zero_padding(now_patch)
                        
-                # if not os.path.exists('/home/zhuoming/br_5patch_visualize/'):
-                #     os.makedirs('/home/zhuoming/br_5patch_visualize/')
+                # if not os.path.exists('/home/zhuoming/square_image_patches/'):
+                #     os.makedirs('/home/zhuoming/square_image_patches/')
                 # data = Image.fromarray(np.uint8(now_patch))
-                # data.save('/home/zhuoming/br_5patch_visualize/' + img_metas[img_idx]['ori_filename'] + '_' + str(box_i) + '.png')
+                # data.save('/home/zhuoming/square_image_patches/' + img_metas[img_idx]['ori_filename'] + '_' + str(box_i) + '.png')
                 
                 # center_start_idx = np.array(now_patch.shape) // 7 * 6
                 # center_end_idx = np.array(now_patch.shape)
