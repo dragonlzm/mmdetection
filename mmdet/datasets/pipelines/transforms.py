@@ -287,7 +287,7 @@ class UnnormalizedImg:
                     return_scale=True,
                     backend=self.backend)
         results['ori_img'] = temp_image
-        print(results['ori_img'].shape, w_scale, h_scale)
+        #print(results['ori_img'].shape, w_scale, h_scale)
 
     def __call__(self, results):
         """Call function to resize images, bounding boxes, masks, semantic

@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+from hashlib import new
 import warnings
 import torch
 import torch.nn.functional as F
@@ -22,24 +23,24 @@ import clip
 import numpy as np
 
 # setup device
-if(torch.cuda.is_available()):
-    device = torch.device('cuda')
-else:
-    device = torch.device('cpu')
+# if(torch.cuda.is_available()):
+#     device = torch.device('cuda')
+# else:
+#     device = torch.device('cpu')
     
-CLIP_CKPT_DOWNLOAD_ROOT = 'models_ckpt'
+# CLIP_CKPT_DOWNLOAD_ROOT = 'models_ckpt'
 
-# def _convert_image_to_rgb(image):
-#     return image.convert("RGB")
+def _convert_image_to_rgb(image):
+    return image.convert("RGB")
 
-# def _transform(n_px):
-#     return Compose([
-#         Resize(n_px, interpolation=BICUBIC),
-#         CenterCrop(n_px),
-#         _convert_image_to_rgb,
-#         ToTensor(),
-#         Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
-#     ])
+def _transform(n_px):
+    return Compose([
+        Resize(n_px, interpolation=BICUBIC),
+        CenterCrop(n_px),
+        _convert_image_to_rgb,
+        ToTensor(),
+        Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
+    ])
 
 
 @BACKBONES.register_module()
@@ -67,35 +68,45 @@ class ResNetWithVit(ResNet):
                  zero_init_residual=True,
                  pretrained=None,
                  init_cfg=None,
-                 clip_architecture="ViT-L/14"):
+                 #clip_architecture="ViT-L/14"):
+                 vit_backbone=None):
         super(ResNetWithVit, self).__init__(
                  depth, in_channels, stem_channels, base_channels,
                  num_stages, strides, dilations, out_indices,
                  style, deep_stem, avg_down, frozen_stages, conv_cfg,
                  norm_cfg, norm_eval, dcn, stage_with_dcn, plugins,
                  with_cp, zero_init_residual, pretrained, init_cfg)
-        self.setup_clip_component(clip_architecture)
+        self.vit_backbone = vit_backbone
+        self.setup_clip_component()
         self.setup_clip_adapter()
-
-    def setup_clip_component(self, clip_architecture):
-        print('in the setup_clip_component')
+        
+        # for param in self.adapt_mlp_1.parameters():
+        #    param.requires_grad = False
+        
+        # for param in self.adapt_mlp_2.parameters():
+        #    param.requires_grad = False
+           
+        # for param in self.adapt_mlp_3.parameters():
+        #    param.requires_grad = False          
+        
+        # for para_name, param in zip(self.clip_visual_model.state_dict(), self.clip_visual_model.parameters()):
+        #         print(para_name, param.requires_grad, param.shape)
+        
+    def setup_clip_component(self):
         # setup number of layer in transformer
-        if(clip_architecture in ["ViT-L/14", "ViT-L/14@336px"]):
-            self.transformer_layer = 24
-        elif(clip_architecture in ["ViT-B/32","ViT-B/16"]):
-            self.transformer_layer = 12
-        else:
-            raise TypeError("wrong architecture choice!")     
+        # if (clip_architecture in ["ViT-L/14", "ViT-L/14@336px"]):
+        #     self.transformer_layer = 24
+        # elif (clip_architecture in ["ViT-B/32","ViT-B/16"]):
+        #     self.transformer_layer = 12
+        # else:
+        #     raise TypeError("wrong architecture choice!")     
         # load model
-        # self.preprocess = _transform(self.vit_backbone.input_resolution)
-        # self.clip_visual_model = build_backbone(vit_backbone)
+        self._preprocess = _transform(self.vit_backbone.input_resolution)
+        self.clip_visual_model = build_backbone(self.vit_backbone)
         
-        with torch.no_grad():
-           clip_model, self.preprocess = clip.load(download_root=CLIP_CKPT_DOWNLOAD_ROOT, name=clip_architecture, device=device)
-           self.clip_visual_model = clip_model.visual
-        
-        for param in self.clip_visual_model.parameters():
-           param.requires_grad = False
+        # with torch.no_grad():
+        #    clip_model, self.preprocess = clip.load(download_root=CLIP_CKPT_DOWNLOAD_ROOT, name=clip_architecture, device=device)
+        #    self.clip_visual_model = clip_model.visual      
         
     def setup_clip_adapter(self):
         # inject clip feature 4 times (4th time it is same dimension no need to adapt) 
@@ -178,6 +189,7 @@ class ResNetWithVit(ResNet):
         return x
     
     def merge(self, clip_x, res_x, step_idx):
+        #with torch.no_grad():
         reshape_x = clip_x[:,1:,:] # [bs, 256, 1024]
         if(step_idx == 1):
             reshape_x = self.adapt_mlp_1(reshape_x.view(-1, clip_x.size(2))) # [bs * 256, 64]
@@ -187,32 +199,52 @@ class ResNetWithVit(ResNet):
             reshape_x = self.adapt_mlp_3(reshape_x.view(-1, clip_x.size(2))) # [bs * 256, 512]
         elif(step_idx == 4):
             reshape_x = reshape_x.view(-1, clip_x.size(2)) # [bs * 256, 1024]
-        
+    
+    
         reshape_x = reshape_x.view(clip_x.size(0), 16, 16, reshape_x.size(2)) # [bs, 16, 16, -]
         reshape_x = F.interpolate(reshape_x, size=(res_x.size(2), res_x.size(3)), mode='bicubic', align_corners=False) # [bs, 200, 304, 64]
         reshape_x = reshape_x.permute(0, 2, 1) # [bs, 64, 200, 304]
         merge_x = reshape_x + res_x
         return merge_x
     
+    def preprocess(self, ori_images):
+        ori_images = ori_images.cpu().numpy()
+        all_images = []
+        for img in ori_images:
+            PIL_image = Image.fromarray(np.uint8(img))
+            # do the preprocessing
+            new_image = self._preprocess(PIL_image)
+            all_images.append(new_image.unsqueeze(dim=0))
+        
+        all_images = torch.cat(all_images, dim=0).cuda()
+        return all_images
+    
     def forward(self, img, ori_image):
-        ori_image = self.preprocess(ori_image)
+        #img torch.Size([2, 3, 1280, 800]) ori_image torch.Size([2, 1024, 1024, 3])
+        with torch.no_grad():
+            ori_image = self.preprocess(ori_image)
+            
         # res0: regular resnet backbone input
         # clip0: clip input with corresponding preprocessing
         clip1 = self.clip_step_1(ori_image)
         res1 = self.res_step_1(img)
         merge1 = self.merge(clip1, res1, 1)
+        #merge1 = res1
         
         clip2 = self.clip_step_2(clip1)
         res2 = self.res_step_2(merge1)
         merge2 = self.merge(clip2, res2, 2)
+        #merge2 = res2
         
         clip3 = self.clip_step_3(clip2)
         res3 = self.res_step_3(merge2)
         merge3 = self.merge(clip3, res3, 3)
+        #merge3 = res3
         
         clip4 = self.clip_step_4(clip3)
         res4 = self.res_step_4(merge3)
         merge4 = self.merge(clip4, res4, 4)
+        #merge4 = res4
         
         res5 = self.res_step_5(merge4)
         

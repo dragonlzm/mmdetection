@@ -22,8 +22,25 @@ data = dict(
         pipeline=train_pipeline))
 
 # model settings
+# model = dict(
+#     backbone=dict(
+#         type='ResNetWithVit',
+#         clip_architecture="ViT-B/32"))
+
 model = dict(
     backbone=dict(
         type='ResNetWithVit',
-        clip_architecture="ViT-B/32"))
+        vit_backbone=dict(
+            type='myVisionTransformer',
+            input_resolution=224,
+            patch_size=32,
+            width=768,
+            layers=12,
+            heads=12,
+            output_dim=512,
+            fixed_param=True,
+            init_cfg=dict(type='Pretrained', checkpoint="data/test/cls_finetuner_clip_base_all_train/epoch_12.pth", prefix='backbone.')
+        )))
+
+
 
