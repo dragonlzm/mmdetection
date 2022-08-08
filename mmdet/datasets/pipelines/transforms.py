@@ -281,11 +281,13 @@ class UnnormalizedImg:
 
     def _resize_img(self, results):
         """Resize images with ``results['scale']``."""
-        results['ori_img'], scale_factor = mmcv.imresize(
+        temp_image, w_scale, h_scale = mmcv.imresize(
                     results['img'],
-                    self.img_scale,
+                    self.img_scale[0],
                     return_scale=True,
                     backend=self.backend)
+        results['ori_img'] = temp_image
+        print(results['ori_img'].shape, w_scale, h_scale)
 
     def __call__(self, results):
         """Call function to resize images, bounding boxes, masks, semantic
