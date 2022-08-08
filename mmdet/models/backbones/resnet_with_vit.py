@@ -69,16 +69,17 @@ class ResNetWithVit(ResNet):
                  pretrained=None,
                  init_cfg=None,
                  #clip_architecture="ViT-L/14"):
-                 vit_backbone=None):
+                 vit_backbone_cfg=None):
         super(ResNetWithVit, self).__init__(
                  depth, in_channels, stem_channels, base_channels,
                  num_stages, strides, dilations, out_indices,
                  style, deep_stem, avg_down, frozen_stages, conv_cfg,
                  norm_cfg, norm_eval, dcn, stage_with_dcn, plugins,
                  with_cp, zero_init_residual, pretrained, init_cfg)
-        self.vit_backbone = vit_backbone
+        self.vit_backbone_cfg = vit_backbone_cfg
         self.setup_clip_component()
         self.setup_clip_adapter()
+        self.girds_num = int(self.vit_backbone_cfg.input_resolution / self.vit_backbone_cfg.patch_size)
         
         # for param in self.adapt_mlp_1.parameters():
         #    param.requires_grad = False
@@ -101,8 +102,8 @@ class ResNetWithVit(ResNet):
         # else:
         #     raise TypeError("wrong architecture choice!")     
         # load model
-        self._preprocess = _transform(self.vit_backbone.input_resolution)
-        self.clip_visual_model = build_backbone(self.vit_backbone)
+        self._preprocess = _transform(self.vit_backbone_cfg.input_resolution)
+        #self.clip_visual_model = build_backbone(self.vit_backbone_cfg)
         
         # with torch.no_grad():
         #    clip_model, self.preprocess = clip.load(download_root=CLIP_CKPT_DOWNLOAD_ROOT, name=clip_architecture, device=device)
@@ -110,9 +111,10 @@ class ResNetWithVit(ResNet):
         
     def setup_clip_adapter(self):
         # inject clip feature 4 times (4th time it is same dimension no need to adapt) 
-        self.adapt_mlp_1 = nn.Linear(1024, 64)
-        self.adapt_mlp_2 = nn.Linear(1024, 256)
-        self.adapt_mlp_3 = nn.Linear(1024, 512)
+        self.adapt_mlp_1 = nn.Linear(self.vit_backbone_cfg.width, 64)
+        self.adapt_mlp_2 = nn.Linear(self.vit_backbone_cfg.width, 256)
+        self.adapt_mlp_3 = nn.Linear(self.vit_backbone_cfg.width, 512)
+        self.adapt_mlp_4 = nn.Linear(self.vit_backbone_cfg.width, 1024)
         
     def clip_pre_transformer(self, x):
         # x = self.preprocess(x)
@@ -144,21 +146,21 @@ class ResNetWithVit(ResNet):
     def clip_step_2(self, x):
         with torch.no_grad():
             # for layer [0-4] for small model, [0-8] for large model
-            for i in range(self.transformer_layer//3):
+            for i in range(self.vit_backbone_cfg.layers // 3):
                 x = self.clip_transfomer(x, i)
         return x
     
     def clip_step_3(self, x):
         with torch.no_grad():
             # for layer [4-8] for small model, [8-16] for large model
-            for i in range(self.transformer_layer//3, self.transformer_layer//3*2):
+            for i in range(self.vit_backbone_cfg.layers // 3, self.vit_backbone_cfg.layers // 3 * 2):
                 x = self.clip_transfomer(x, i)
         return x
     
     def clip_step_4(self, x):
         with torch.no_grad():
             # for layer [8-12] for small model, [16-24] for large model
-            for i in range(self.transformer_layer//3*2, self.transformer_layer):
+            for i in range(self.vit_backbone_cfg.layers // 3 * 2, self.vit_backbone_cfg.layers):
                 x = self.clip_transfomer(x, i)
         return x
     
@@ -171,40 +173,38 @@ class ResNetWithVit(ResNet):
             x = self.norm1(x)
             x = self.relu(x)
         x = self.maxpool(x) # second downsize
+        return x
         
-    def res_step_2(self, x):
-        x = self.res_layers[0](x)
+    def res_step(self, x, res_layer_idx):
+        res_layer = getattr(self, self.res_layers[res_layer_idx])
+        x = res_layer(x)
         return x
-    
-    def res_step_3(self, x):
-        x = self.res_layers[1](x)
-        return x
-    
-    def res_step_4(self, x):
-        x = self.res_layers[2](x)
-        return x
-    
-    def res_step_5(self, x):
-        x = self.res_layers[3](x)
-        return x
-    
+
     def merge(self, clip_x, res_x, step_idx):
         #with torch.no_grad():
-        reshape_x = clip_x[:,1:,:] # [bs, 256, 1024]
+        reshape_x = clip_x[:,1:,:] # [bs, self.girds_num*self.girds_num, 1024] / [2, 49, 768]
+        #print('before convert:', reshape_x.shape)
         if(step_idx == 1):
-            reshape_x = self.adapt_mlp_1(reshape_x.view(-1, clip_x.size(2))) # [bs * 256, 64]
+            # [2, 49, 768] => [2 * 49, 64]
+            reshape_x = self.adapt_mlp_1(reshape_x.reshape(-1, clip_x.size(2))) # [bs * self.girds_num*self.girds_num, 64]
         elif(step_idx == 2):
-            reshape_x = self.adapt_mlp_2(reshape_x.view(-1, clip_x.size(2))) # [bs * 256, 256]
+            reshape_x = self.adapt_mlp_2(reshape_x.reshape(-1, clip_x.size(2))) # [bs * self.girds_num*self.girds_num, 256]
         elif(step_idx == 3):
-            reshape_x = self.adapt_mlp_3(reshape_x.view(-1, clip_x.size(2))) # [bs * 256, 512]
+            reshape_x = self.adapt_mlp_3(reshape_x.reshape(-1, clip_x.size(2))) # [bs * self.girds_num*self.girds_num, 512]
         elif(step_idx == 4):
-            reshape_x = reshape_x.view(-1, clip_x.size(2)) # [bs * 256, 1024]
+            reshape_x = self.adapt_mlp_4(reshape_x.reshape(-1, clip_x.size(2))) # [bs * self.girds_num*self.girds_num, 1024]
+        #print('after convert:', reshape_x.shape)
     
-    
-        reshape_x = reshape_x.view(clip_x.size(0), 16, 16, reshape_x.size(2)) # [bs, 16, 16, -]
+        reshape_x = reshape_x.reshape(clip_x.size(0), self.girds_num, self.girds_num, -1) # [bs, self.girds_num, self.girds_num, -]
+        reshape_x = reshape_x.permute(0, 3, 1, 2)
+        #print('after reshape:', reshape_x.shape)
+        
         reshape_x = F.interpolate(reshape_x, size=(res_x.size(2), res_x.size(3)), mode='bicubic', align_corners=False) # [bs, 200, 304, 64]
-        reshape_x = reshape_x.permute(0, 2, 1) # [bs, 64, 200, 304]
+        #print('after interpolate', reshape_x.shape)
+        #reshape_x = reshape_x.permute(0, 3, 1, 2) # [bs, 64, 200, 304]
+        #print('before merge:', reshape_x.shape, res_x.shape)
         merge_x = reshape_x + res_x
+        #print('after merge:', merge_x.shape, res_x.shape)
         return merge_x
     
     def preprocess(self, ori_images):
@@ -229,23 +229,24 @@ class ResNetWithVit(ResNet):
         clip1 = self.clip_step_1(ori_image)
         res1 = self.res_step_1(img)
         merge1 = self.merge(clip1, res1, 1)
-        #merge1 = res1
         
+        outs = []
         clip2 = self.clip_step_2(clip1)
-        res2 = self.res_step_2(merge1)
+        res2 = self.res_step(merge1, 0)
         merge2 = self.merge(clip2, res2, 2)
-        #merge2 = res2
+        outs.append(merge2)
         
         clip3 = self.clip_step_3(clip2)
-        res3 = self.res_step_3(merge2)
+        res3 = self.res_step(merge2, 1)
         merge3 = self.merge(clip3, res3, 3)
-        #merge3 = res3
+        outs.append(merge3)
         
         clip4 = self.clip_step_4(clip3)
-        res4 = self.res_step_4(merge3)
+        res4 = self.res_step(merge3, 2)
         merge4 = self.merge(clip4, res4, 4)
-        #merge4 = res4
+        outs.append(merge4)
         
-        res5 = self.res_step_5(merge4)
+        res5 = self.res_step(merge4, 3)
+        outs.append(res5)
         
-        return res5
+        return outs

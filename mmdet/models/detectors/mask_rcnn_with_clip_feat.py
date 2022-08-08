@@ -25,14 +25,23 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
                  train_cfg=None,
                  test_cfg=None,
                  pretrained=None,
-                 init_cfg=None):
+                 init_cfg=None,
+                 vit_backbone_cfg=None):
         super(MaskRCNNWithCLIPFeat, self).__init__(init_cfg)
         #if pretrained:
         #    warnings.warn('DeprecationWarning: pretrained is deprecated, '
         #                  'please use "init_cfg" instead')
         #    backbone.pretrained = pretrained
         #self.backbone_to = build_backbone(backbone_to)
+        if vit_backbone_cfg != None:
+            self.vit_backbone_cfg = vit_backbone_cfg
+            self.vit_backbone = build_backbone(vit_backbone_cfg)
+            backbone['vit_backbone_cfg'] = vit_backbone_cfg
+        
         self.backbone = build_backbone(backbone)
+        
+        if vit_backbone_cfg != None:
+            self.backbone.clip_visual_model = self.vit_backbone
 
         if neck is not None:
             self.neck = build_neck(neck)
