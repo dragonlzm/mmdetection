@@ -101,10 +101,13 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
         """bool: whether the detector has a RoI head"""
         return hasattr(self, 'roi_head') and self.roi_head is not None
 
-    def extract_feat(self, img):
+    def extract_feat(self, img, ori_img=None):
         """Directly extract features from the backbone+neck."""
         # prepare the feat from the backbone_to
-        x = self.backbone(img)
+        if self.backbone.__class__.__name__ == "ResNetWithVit":
+            x = self.backbone(img, ori_img)
+        else:
+            x = self.backbone(img)
         if self.with_neck:
             x = self.neck(x)
         # prepare the feat from the backbone_from
@@ -141,6 +144,7 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
                       bg_bboxes=None,
                       bg_feats=None,
                       proposals=None,
+                      ori_img=None,
                       **kwargs):
         """
         Args:
@@ -170,7 +174,7 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
         Returns:
             dict[str, Tensor]: a dictionary of loss components
         """
-        x = self.extract_feat(img)
+        x = self.extract_feat(img, ori_img)
         
         # remove the padded 0 bboxes
         # gt_feats = [patches[:len(gt_bbox)] 

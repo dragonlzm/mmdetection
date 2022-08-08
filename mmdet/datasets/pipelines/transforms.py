@@ -222,6 +222,95 @@ class CropResizeInstance:
                f' target_size={self.target_size})'
 
 
+@PIPELINES.register_module()
+class UnnormalizedImg:
+    """This tranformation aims to prepare the image for the vit backbone.
+    The image needed usually is the image which is unnormalized and a square
+    will deliver the image in result with the key "ori_img"
+
+    Args:
+        img_scale (tuple or list[tuple]): Images scales for resizing.
+        multiscale_mode (str): Either "range" or "value".
+        ratio_range (tuple[float]): (min_ratio, max_ratio)
+        keep_ratio (bool): Whether to keep the aspect ratio when resizing the
+            image.
+        bbox_clip_border (bool, optional): Whether clip the objects outside
+            the border of the image. Defaults to True.
+        backend (str): Image resize backend, choices are 'cv2' and 'pillow'.
+            These two backends generates slightly different results. Defaults
+            to 'cv2'.
+        override (bool, optional): Whether to override `scale` and
+            `scale_factor` so as to call resize twice. Default False. If True,
+            after the first resizing, the existed `scale` and `scale_factor`
+            will be ignored so the second resizing can be allowed.
+            This option is a work-around for multiple times of resize in DETR.
+            Defaults to False.
+    """
+
+    def __init__(self,
+                 img_scale=None,
+                 multiscale_mode='range',
+                 ratio_range=None,
+                 keep_ratio=False,
+                 bbox_clip_border=True,
+                 backend='cv2',
+                 override=False):
+        if img_scale is None:
+            self.img_scale = None
+        else:
+            if isinstance(img_scale, list):
+                self.img_scale = img_scale
+            else:
+                self.img_scale = [img_scale]
+            assert mmcv.is_list_of(self.img_scale, tuple)
+
+        if ratio_range is not None:
+            # mode 1: given a scale and a range of image ratio
+            assert len(self.img_scale) == 1
+        else:
+            # mode 2: given multiple scales or a range of scales
+            assert multiscale_mode in ['value', 'range']
+
+        self.backend = backend
+        self.multiscale_mode = multiscale_mode
+        self.ratio_range = ratio_range
+        self.keep_ratio = keep_ratio
+        # TODO: refactor the override option in Resize
+        self.override = override
+        self.bbox_clip_border = bbox_clip_border
+
+    def _resize_img(self, results):
+        """Resize images with ``results['scale']``."""
+        results['ori_img'], scale_factor = mmcv.imresize(
+                    results['img'],
+                    self.img_scale,
+                    return_scale=True,
+                    backend=self.backend)
+
+    def __call__(self, results):
+        """Call function to resize images, bounding boxes, masks, semantic
+        segmentation map.
+
+        Args:
+            results (dict): Result dict from loading pipeline.
+
+        Returns:
+            dict: Resized results, 'img_shape', 'pad_shape', 'scale_factor', \
+                'keep_ratio' keys are added into result dict.
+        """
+        self._resize_img(results)
+        return results
+
+    def __repr__(self):
+        repr_str = self.__class__.__name__
+        repr_str += f'(img_scale={self.img_scale}, '
+        repr_str += f'multiscale_mode={self.multiscale_mode}, '
+        repr_str += f'ratio_range={self.ratio_range}, '
+        repr_str += f'keep_ratio={self.keep_ratio}, '
+        repr_str += f'bbox_clip_border={self.bbox_clip_border})'
+        return repr_str
+
+
 
 @PIPELINES.register_module()
 class Resize:

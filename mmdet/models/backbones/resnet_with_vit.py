@@ -168,11 +168,12 @@ class ResNetWithVit(ResNet):
         merge_x = reshape_x + res_x
         return merge_x
     
-    def forward(self, res0, clip0):
+    def forward(self, img, ori_image):
+        ori_image = self.preprocess(ori_image)
         # res0: regular resnet backbone input
         # clip0: clip input with corresponding preprocessing
-        clip1 = self.clip_step_1(clip0)
-        res1 = self.res_step_1(res0)
+        clip1 = self.clip_step_1(ori_image)
+        res1 = self.res_step_1(img)
         merge1 = self.merge(clip1, res1, 1)
         
         clip2 = self.clip_step_2(clip1)
