@@ -328,14 +328,14 @@ class BBoxHead(BaseModule):
                     avg_factor=bbox_targets.size(0),
                     reduction_override=reduction_override)
                 
-                ## test the nan
-                all_pred = pos_bbox_pred
-                all_target = bbox_targets[pos_inds.type(torch.bool)]
-                for pred_bbox, target_bbox in zip(all_pred, all_target):
-                    loss_per_bbox = self.loss_bbox(pred_bbox, target_bbox)
-                    print(pred_bbox, target_bbox)
-                    if torch.isnan(loss_per_bbox):
-                        print(pred_bbox, target_bbox, loss_per_bbox)
+                # ## test the nan
+                # all_pred = pos_bbox_pred
+                # all_target = bbox_targets[pos_inds.type(torch.bool)]
+                # for pred_bbox, target_bbox in zip(all_pred, all_target):
+                #     loss_per_bbox = self.loss_bbox(pred_bbox, target_bbox)
+                #     print(pred_bbox, target_bbox)
+                #     if torch.isnan(loss_per_bbox):
+                #         print(pred_bbox, target_bbox, loss_per_bbox)
             else:
                 losses['loss_bbox'] = bbox_pred[pos_inds].sum()
         return losses
