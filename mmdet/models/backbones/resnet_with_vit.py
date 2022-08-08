@@ -1,7 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import warnings
-import torch
-import torch.nn.functional as F
+
 import torch.nn as nn
 import torch.utils.checkpoint as cp
 from mmcv.cnn import build_conv_layer, build_norm_layer, build_plugin_layer
@@ -10,16 +9,12 @@ from torch.nn.modules.batchnorm import _BatchNorm
 from ..builder import BACKBONES
 from ..utils import ResLayer
 from .resnet import BasicBlock, Bottleneck, ResNet
-from ..builder import build_backbone
-from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normalize
-from PIL import Image
-try:
-    from torchvision.transforms import InterpolationMode
-    BICUBIC = InterpolationMode.BICUBIC
-except ImportError:
-    BICUBIC = Image.BICUBIC
+
 import clip
 import numpy as np
+import torch
+import torch.nn.functional as F
+from torch import nn
 
 # setup device
 if(torch.cuda.is_available()):
@@ -28,19 +23,6 @@ else:
     device = torch.device('cpu')
     
 CLIP_CKPT_DOWNLOAD_ROOT = 'models_ckpt'
-
-# def _convert_image_to_rgb(image):
-#     return image.convert("RGB")
-
-# def _transform(n_px):
-#     return Compose([
-#         Resize(n_px, interpolation=BICUBIC),
-#         CenterCrop(n_px),
-#         _convert_image_to_rgb,
-#         ToTensor(),
-#         Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
-#     ])
-
 
 @BACKBONES.register_module()
 class ResNetWithVit(ResNet):
@@ -78,7 +60,6 @@ class ResNetWithVit(ResNet):
         self.setup_clip_adapter()
 
     def setup_clip_component(self, clip_architecture):
-        print('in the setup_clip_component')
         # setup number of layer in transformer
         if(clip_architecture in ["ViT-L/14", "ViT-L/14@336px"]):
             self.transformer_layer = 24
@@ -87,15 +68,8 @@ class ResNetWithVit(ResNet):
         else:
             raise TypeError("wrong architecture choice!")     
         # load model
-        # self.preprocess = _transform(self.vit_backbone.input_resolution)
-        # self.clip_visual_model = build_backbone(vit_backbone)
-        
-        with torch.no_grad():
-           clip_model, self.preprocess = clip.load(download_root=CLIP_CKPT_DOWNLOAD_ROOT, name=clip_architecture, device=device)
-           self.clip_visual_model = clip_model.visual
-        
-        for param in self.clip_visual_model.parameters():
-           param.requires_grad = False
+        clip_model, self.preprocess = clip.load(download_root=CLIP_CKPT_DOWNLOAD_ROOT, name=clip_architecture, device=device)
+        self.clip_visual_model = clip_model.visual
         
     def setup_clip_adapter(self):
         # inject clip feature 4 times (4th time it is same dimension no need to adapt) 
