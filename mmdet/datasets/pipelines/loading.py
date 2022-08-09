@@ -673,6 +673,13 @@ class LoadCLIPFeat:
         # obtain the random bbox
         rand_feat = np.array(rand_file_content['feat']).astype(np.float32)
         rand_bbox = np.array(rand_file_content['bbox']).astype(np.float32)
+        
+        # in some situtations there is no random bboxes
+        if rand_feat.shape[0] == 0:
+            results['rand_bboxes'] = rand_feat
+            results['rand_feats'] = rand_bbox
+            return results
+        
         # selecting the subset of the file
         if self.select_fixed_subset != None:
             rand_feat = rand_feat[:self.select_fixed_subset]

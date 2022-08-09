@@ -291,7 +291,10 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         # prepare the roi for the gt and the random bboxes
         if self.use_bg_pro_for_distill:
             gt_rand_rois = [torch.cat([gt_bbox, random_bbox, bg_bbox], dim=0) for gt_bbox, random_bbox, bg_bbox in zip(gt_bboxes, rand_bboxes, bg_bboxes)]
-        elif self.use_only_gt_pro_for_distill:
+        elif self.use_only_gt_pro_for_distill or rand_bboxes.shape[0] == 0:
+            #TODO: we need to handle the situation which using the copy and paste and 
+            # using the base filtered clip proposal at the same time
+            # in which the gt bboxes number is not the same as the number of gt feature
             gt_rand_rois = gt_bboxes
         else:
             original_gt_nums = [dist_feat.shape[0] - rand_bbox.shape[0] for dist_feat, rand_bbox in zip(distilled_feat, rand_bboxes)]
