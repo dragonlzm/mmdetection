@@ -296,7 +296,6 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         else:
             rand_bboxes = [rand_bbox[torch.abs(rand_bbox).sum(dim=1) > 0] 
                 for rand_bbox in rand_bboxes]
-            
             original_gt_nums = [dist_feat.shape[0] - rand_bbox.shape[0] for dist_feat, rand_bbox in zip(distilled_feat, rand_bboxes)]
             gt_rand_rois = [torch.cat([gt_bbox[:original_gt_num, :], random_bbox], dim=0) for gt_bbox, random_bbox, original_gt_num in zip(gt_bboxes, rand_bboxes, original_gt_nums)]
             if cp_mark is not None:
