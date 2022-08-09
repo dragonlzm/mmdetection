@@ -675,7 +675,7 @@ class LoadCLIPFeat:
         rand_bbox = np.array(rand_file_content['bbox']).astype(np.float32)
         
         # in some situtations there is no random bboxes
-        if rand_feat.shape[0] == 0:
+        if rand_feat.shape[0] == 0 or rand_bbox.shape[0] == 0:
             results['rand_bboxes'] = np.zeros((self.num_of_rand_bbox, 4))
             results['rand_feats'] = torch.zeros((self.num_of_rand_bbox, 512))
             return results

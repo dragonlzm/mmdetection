@@ -224,6 +224,7 @@ class ResNetWithVit(ResNet):
     
     def forward(self, img, ori_image):
         #img torch.Size([2, 3, 1280, 800]) ori_image torch.Size([2, 1024, 1024, 3])
+        # in testing the ori_image list[torch.Size([1, 3, 1024, 1024])]
         # for para_name, param in zip(self.clip_visual_model.state_dict(), self.clip_visual_model.parameters()):
         #     if para_name == 'ln_post.bias':
         #         print(para_name, param.requires_grad, param.shape, param)        
