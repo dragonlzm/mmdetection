@@ -676,8 +676,8 @@ class LoadCLIPFeat:
         
         # in some situtations there is no random bboxes
         if rand_feat.shape[0] == 0:
-            results['rand_bboxes'] = rand_feat
-            results['rand_feats'] = rand_bbox
+            results['rand_bboxes'] = torch.zeros((self.num_of_rand_bbox, 4))
+            results['rand_feats'] = torch.zeros((self.num_of_rand_bbox, 4))
             return results
         
         # selecting the subset of the file
