@@ -205,7 +205,13 @@ class ResNetWithVit(ResNet):
         return merge_x
     
     def preprocess(self, ori_images):
-        ori_images = ori_images.cpu().numpy()
+        ori_images = [ori_image for ori_image in ori_images]
+        if len(ori_images[0].shape) == 4:
+            ori_images = [ori_image.squeeze(dim=0) for ori_image in ori_images]
+        if ori_images[0].shape[0] == 3:
+            ori_images = [ori_image.permute(1,2,0) for ori_image in ori_images]
+        ori_images = [ori_image.cpu().numpy() for ori_image in ori_images]
+
         all_images = []
         for img in ori_images:
             PIL_image = Image.fromarray(np.uint8(img))

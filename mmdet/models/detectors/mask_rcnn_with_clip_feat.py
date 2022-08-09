@@ -304,11 +304,11 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
         return await self.roi_head.async_simple_test(
             x, proposal_list, img_meta, rescale=rescale)
 
-    def simple_test(self, img, img_metas, proposals=None, rescale=False):
+    def simple_test(self, img, img_metas, proposals=None, rescale=False, ori_img=None):
         """Test without augmentation."""
 
         assert self.with_bbox, 'Bbox head must be implemented.'
-        x = self.extract_feat(img)
+        x = self.extract_feat(img, ori_img)
         if proposals is None:
             if self.with_unknow_rpn:
                 if self.test_head_name == 'both':

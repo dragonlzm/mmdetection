@@ -16,10 +16,30 @@ train_pipeline = [
     dict(type='Collect', keys=['img', 'ori_img', 'gt_bboxes', 'gt_labels', 'gt_masks', 'gt_feats',
                                'rand_bboxes', 'rand_feats']),
 ]
+test_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(
+        type='MultiScaleFlipAug',
+        img_scale=(1333, 800),
+        flip=False,
+        transforms=[
+            dict(type='Resize', keep_ratio=True),
+            dict(type='Pad', size_divisor=32),
+            dict(type='RandomFlip'),
+            dict(type='UnnormalizedImg', img_scale=(1024, 1024)),
+            dict(type='Normalize', **img_norm_cfg),
+            dict(type='ImageToTensor', keys=['img', 'ori_img']),
+            dict(type='Collect', keys=['img', 'ori_img']),
+        ])
+]
 
 data = dict(
     train=dict(
-        pipeline=train_pipeline))
+        pipeline=train_pipeline),
+    val=dict(
+        pipeline=test_pipeline),
+    test=dict(
+        pipeline=test_pipeline))
 
 model = dict(
     vit_backbone_cfg=dict(
