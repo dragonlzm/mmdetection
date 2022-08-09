@@ -90,9 +90,6 @@ class ResNetWithVit(ResNet):
         # for param in self.adapt_mlp_3.parameters():
         #    param.requires_grad = False          
         
-        # for para_name, param in zip(self.clip_visual_model.state_dict(), self.clip_visual_model.parameters()):
-        #         print(para_name, param.requires_grad, param.shape)
-        
     def setup_clip_component(self):
         # setup number of layer in transformer
         # if (clip_architecture in ["ViT-L/14", "ViT-L/14@336px"]):
@@ -221,6 +218,10 @@ class ResNetWithVit(ResNet):
     
     def forward(self, img, ori_image):
         #img torch.Size([2, 3, 1280, 800]) ori_image torch.Size([2, 1024, 1024, 3])
+        # for para_name, param in zip(self.clip_visual_model.state_dict(), self.clip_visual_model.parameters()):
+        #     if para_name == 'ln_post.bias':
+        #         print(para_name, param.requires_grad, param.shape, param)        
+        
         with torch.no_grad():
             ori_image = self.preprocess(ori_image)
             

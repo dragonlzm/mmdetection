@@ -21,12 +21,6 @@ data = dict(
     train=dict(
         pipeline=train_pipeline))
 
-# model settings
-# model = dict(
-#     backbone=dict(
-#         type='ResNetWithVit',
-#         clip_architecture="ViT-B/32"))
-
 model = dict(
     vit_backbone_cfg=dict(
         type='myVisionTransformer',
