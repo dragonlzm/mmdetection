@@ -171,21 +171,24 @@ class ResNetWithVitV2(ResNet):
         return x
 
     def merge(self, clip_x, res_x, step_idx):
-        #with torch.no_grad():
-        reshape_x = clip_x[:,1:,:] # [bs, self.vit_girds_num*self.vit_girds_num, 1024] / [2, 49, 768]
+        h_patch_num, w_patch_num = self.image_grids_num
+        # clip1: torch.Size([128, 50, 768]) [bs * h_patch_num * w_patch_num, 
+        # self.vit_girds_num * self.vit_girds_num + 1, 224, 224]
+        reshape_x = clip_x[:,0,:].reshape(res_x.shape[0], h_patch_num, w_patch_num, clip_x.shape[-1])
+        # [bs, self.vit_girds_num*self.vit_girds_num, 1024] / [2, 49, 768]
         #print('before convert:', reshape_x.shape)
         if(step_idx == 1):
             # [2, 49, 768] => [2 * 49, 64]
-            reshape_x = self.adapt_mlp_1(reshape_x.reshape(-1, clip_x.size(2))) # [bs * self.vit_girds_num*self.vit_girds_num, 64]
+            reshape_x = self.adapt_mlp_1(reshape_x) # [bs * self.vit_girds_num*self.vit_girds_num, 64]
         elif(step_idx == 2):
-            reshape_x = self.adapt_mlp_2(reshape_x.reshape(-1, clip_x.size(2))) # [bs * self.vit_girds_num*self.vit_girds_num, 256]
+            reshape_x = self.adapt_mlp_2(reshape_x) # [bs * self.vit_girds_num*self.vit_girds_num, 256]
         elif(step_idx == 3):
-            reshape_x = self.adapt_mlp_3(reshape_x.reshape(-1, clip_x.size(2))) # [bs * self.vit_girds_num*self.vit_girds_num, 512]
+            reshape_x = self.adapt_mlp_3(reshape_x) # [bs * self.vit_girds_num*self.vit_girds_num, 512]
         elif(step_idx == 4):
-            reshape_x = self.adapt_mlp_4(reshape_x.reshape(-1, clip_x.size(2))) # [bs * self.vit_girds_num*self.vit_girds_num, 1024]
+            reshape_x = self.adapt_mlp_4(reshape_x) # [bs * self.vit_girds_num*self.vit_girds_num, 1024]
         #print('after convert:', reshape_x.shape)
     
-        reshape_x = reshape_x.reshape(clip_x.size(0), self.vit_girds_num, self.vit_girds_num, -1) # [bs, self.vit_girds_num, self.vit_girds_num, -]
+        #reshape_x = reshape_x.reshape(clip_x.size(0), self.vit_girds_num, self.vit_girds_num, -1) # [bs, self.vit_girds_num, self.vit_girds_num, -]
         reshape_x = reshape_x.permute(0, 3, 1, 2)
         #print('after reshape:', reshape_x.shape)
         
@@ -204,7 +207,7 @@ class ResNetWithVitV2(ResNet):
         if ori_images[0].shape[0] == 3:
             ori_images = [ori_image.permute(1,2,0) for ori_image in ori_images]
         ori_images = [ori_image.cpu().numpy() for ori_image in ori_images]
-        print('in preprocessing', [ele.shape for ele in ori_images])
+        #print('in preprocessing', [ele.shape for ele in ori_images])
         
         # list[tensor(800, 1216, 3), tensor(800, 1216, 3)](H, W, C)
 
@@ -248,14 +251,16 @@ class ResNetWithVitV2(ResNet):
         # in testing the ori_image list[torch.Size([1, 3, 1024, 1024])]
         # for para_name, param in zip(self.clip_visual_model.state_dict(), self.clip_visual_model.parameters()):
         #     if para_name == 'ln_post.bias':
-        #         print(para_name, param.requires_grad, param.shape, param)        
-        
+        #         print(para_name, param.requires_grad, param.shape, param)
         with torch.no_grad():
             ori_image_patches = self.preprocess(ori_image)
             
+        # ori_image_patches [128, 3, 224, 224] [bs * h_patch_num * w_patch_num, 3, 224, 224]
         # res0: regular resnet backbone input
         # clip0: clip input with corresponding preprocessing
         clip1 = self.clip_step_1(ori_image_patches)
+        # clip1: torch.Size([128, 50, 768]) [bs * h_patch_num * w_patch_num, 
+        # self.vit_girds_num * self.vit_girds_num + 1, 224, 224]
         res1 = self.res_step_1(img)
         merge1 = self.merge(clip1, res1, 1)
         
