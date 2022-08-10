@@ -33,6 +33,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         self.distill_loss_factor = self.train_cfg.get('distill_loss_factor', 1) if self.train_cfg is not None else 1
         self.use_contrast_distill = self.train_cfg.get('use_contrast_distill', False) if self.train_cfg is not None else False
         self.contrastive_weight = self.train_cfg.get('contrastive_weight', 0.5) if self.train_cfg is not None else 0.5
+        self.gt_bboxes_distill_weight = self.train_cfg.get('gt_bboxes_distill_weight', None) if self.train_cfg is not None else None
         self.match_count = 0
         self.total = 0
 
@@ -298,14 +299,20 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                 for rand_bbox in rand_bboxes]
             original_gt_nums = [dist_feat.shape[0] - rand_bbox.shape[0] for dist_feat, rand_bbox in zip(distilled_feat, rand_bboxes)]
             gt_rand_rois = [torch.cat([gt_bbox[:original_gt_num, :], random_bbox], dim=0).float() for gt_bbox, random_bbox, original_gt_num in zip(gt_bboxes, rand_bboxes, original_gt_nums)]
-            if cp_mark is not None:
+            
+            # prepare the distillation weight
+            if cp_mark is not None or self.gt_bboxes_distill_weight is not None:
+                gt_bbox_distill_weight = self.gt_bboxes_distill_weight if  self.gt_bboxes_distill_weight is not None else 1
                 feat_dim = distilled_feat[0].shape[-1]
                 distill_ele_weight = []
                 for original_gt_num, random_bbox, mark in zip(original_gt_nums, rand_bboxes, cp_mark):
                     if mark == True:
-                        weight_per_img = torch.cat([torch.ones(original_gt_num, feat_dim), torch.zeros(random_bbox.shape[0], feat_dim)], dim=0).cuda()
+                        # if we using the copy and paste we just simply ignore all the clip proposal bboxes(random_bbox), so the weight of random_bbox is 0
+                        weight_per_img = torch.cat([torch.full((original_gt_num, feat_dim), gt_bbox_distill_weight), torch.zeros(random_bbox.shape[0], feat_dim)], dim=0).cuda()
                     else:
-                        weight_per_img = torch.ones(original_gt_num + random_bbox.shape[0], feat_dim).cuda()
+                        # otherwise the weight of the random_bbox will be 1
+                        weight_per_img = torch.cat([torch.full((original_gt_num, feat_dim), gt_bbox_distill_weight), torch.ones(random_bbox.shape[0], feat_dim)], dim=0).cuda()
+                        #weight_per_img = torch.ones(original_gt_num + random_bbox.shape[0], feat_dim).cuda()
                     distill_ele_weight.append(weight_per_img)
                 # print(cp_mark, [ele.shape for ele in gt_rand_rois], [ele.shape for ele in distill_ele_weight], [ele for ele in distill_ele_weight],
                 #       [ele.shape for ele in gt_bboxes], [ele.shape for ele in rand_bboxes], [ele.shape for ele in distilled_feat])     
