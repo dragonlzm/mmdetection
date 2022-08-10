@@ -113,7 +113,7 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
     def extract_feat(self, img, ori_img=None):
         """Directly extract features from the backbone+neck."""
         # prepare the feat from the backbone_to
-        if self.backbone.__class__.__name__ == "ResNetWithVit":
+        if self.backbone.__class__.__name__.startswith("ResNetWithVit"):
             x = self.backbone(img, ori_img)
         else:
             x = self.backbone(img)

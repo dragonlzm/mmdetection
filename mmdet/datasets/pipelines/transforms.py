@@ -315,7 +315,6 @@ class UnnormalizedImg:
         return repr_str
 
 
-
 @PIPELINES.register_module()
 class Resize:
     """Resize images & bbox & mask.

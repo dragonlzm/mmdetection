@@ -69,7 +69,8 @@ class ResNetWithVitV2(ResNet):
                  pretrained=None,
                  init_cfg=None,
                  #clip_architecture="ViT-L/14"):
-                 vit_backbone_cfg=None):
+                 vit_backbone_cfg=None,
+                 image_grids_num=(8,8)):
         super(ResNetWithVitV2, self).__init__(
                  depth, in_channels, stem_channels, base_channels,
                  num_stages, strides, dilations, out_indices,
@@ -79,17 +80,9 @@ class ResNetWithVitV2(ResNet):
         self.vit_backbone_cfg = vit_backbone_cfg
         self.setup_clip_component()
         self.setup_clip_adapter()
-        self.girds_num = int(self.vit_backbone_cfg.input_resolution / self.vit_backbone_cfg.patch_size)
-        
-        # for param in self.adapt_mlp_1.parameters():
-        #    param.requires_grad = False
-        
-        # for param in self.adapt_mlp_2.parameters():
-        #    param.requires_grad = False
-           
-        # for param in self.adapt_mlp_3.parameters():
-        #    param.requires_grad = False          
-        
+        self.vit_girds_num = int(self.vit_backbone_cfg.input_resolution / self.vit_backbone_cfg.patch_size)
+        self.image_grids_num = image_grids_num
+
     def setup_clip_component(self):
         # setup number of layer in transformer
         # if (clip_architecture in ["ViT-L/14", "ViT-L/14@336px"]):
@@ -179,20 +172,20 @@ class ResNetWithVitV2(ResNet):
 
     def merge(self, clip_x, res_x, step_idx):
         #with torch.no_grad():
-        reshape_x = clip_x[:,1:,:] # [bs, self.girds_num*self.girds_num, 1024] / [2, 49, 768]
+        reshape_x = clip_x[:,1:,:] # [bs, self.vit_girds_num*self.vit_girds_num, 1024] / [2, 49, 768]
         #print('before convert:', reshape_x.shape)
         if(step_idx == 1):
             # [2, 49, 768] => [2 * 49, 64]
-            reshape_x = self.adapt_mlp_1(reshape_x.reshape(-1, clip_x.size(2))) # [bs * self.girds_num*self.girds_num, 64]
+            reshape_x = self.adapt_mlp_1(reshape_x.reshape(-1, clip_x.size(2))) # [bs * self.vit_girds_num*self.vit_girds_num, 64]
         elif(step_idx == 2):
-            reshape_x = self.adapt_mlp_2(reshape_x.reshape(-1, clip_x.size(2))) # [bs * self.girds_num*self.girds_num, 256]
+            reshape_x = self.adapt_mlp_2(reshape_x.reshape(-1, clip_x.size(2))) # [bs * self.vit_girds_num*self.vit_girds_num, 256]
         elif(step_idx == 3):
-            reshape_x = self.adapt_mlp_3(reshape_x.reshape(-1, clip_x.size(2))) # [bs * self.girds_num*self.girds_num, 512]
+            reshape_x = self.adapt_mlp_3(reshape_x.reshape(-1, clip_x.size(2))) # [bs * self.vit_girds_num*self.vit_girds_num, 512]
         elif(step_idx == 4):
-            reshape_x = self.adapt_mlp_4(reshape_x.reshape(-1, clip_x.size(2))) # [bs * self.girds_num*self.girds_num, 1024]
+            reshape_x = self.adapt_mlp_4(reshape_x.reshape(-1, clip_x.size(2))) # [bs * self.vit_girds_num*self.vit_girds_num, 1024]
         #print('after convert:', reshape_x.shape)
     
-        reshape_x = reshape_x.reshape(clip_x.size(0), self.girds_num, self.girds_num, -1) # [bs, self.girds_num, self.girds_num, -]
+        reshape_x = reshape_x.reshape(clip_x.size(0), self.vit_girds_num, self.vit_girds_num, -1) # [bs, self.vit_girds_num, self.vit_girds_num, -]
         reshape_x = reshape_x.permute(0, 3, 1, 2)
         #print('after reshape:', reshape_x.shape)
         
@@ -211,33 +204,58 @@ class ResNetWithVitV2(ResNet):
         if ori_images[0].shape[0] == 3:
             ori_images = [ori_image.permute(1,2,0) for ori_image in ori_images]
         ori_images = [ori_image.cpu().numpy() for ori_image in ori_images]
+        print('in preprocessing', [ele.shape for ele in ori_images])
         
-        # list[torch.Size([1024, 1024, 3]), torch.Size([1024, 1024, 3])]
+        # list[tensor(800, 1216, 3), tensor(800, 1216, 3)](H, W, C)
 
-        all_images = []
-        for img in ori_images:
-            PIL_image = Image.fromarray(np.uint8(img))
-            # do the preprocessing
-            new_image = self._preprocess(PIL_image)
-            all_images.append(new_image.unsqueeze(dim=0))
+        # all_images = []
+        # for img in ori_images:
+        #     PIL_image = Image.fromarray(np.uint8(img))
+        #     # do the preprocessing
+        #     new_image = self._preprocess(PIL_image)
+        #     all_images.append(new_image.unsqueeze(dim=0))
         
-        all_images = torch.cat(all_images, dim=0).cuda()
-        return all_images
+        # all_images = torch.cat(all_images, dim=0).cuda()
+        
+        result = []
+        h_patch_num, w_patch_num = self.image_grids_num
+        for img in ori_images:
+            H, W, channel = img.shape
+            patch_H, patch_W = H / h_patch_num, W / w_patch_num
+            h_pos = [int(patch_H) * i for i in range(h_patch_num + 1)]
+            w_pos = [int(patch_W) * i for i in range(w_patch_num + 1)]
+
+            for i in range(h_patch_num):
+                h_start_pos = h_pos[i]
+                h_end_pos = h_pos[i+1]
+                for j in range(w_patch_num):
+                    w_start_pos = w_pos[j]
+                    w_end_pos = w_pos[j+1]
+                    # cropping the img into the patches which size is (H/8) * (W/8)
+                    # use the numpy to crop the image
+                    # img shape: torch.Size([2, 3, 800, 1088])
+                    now_patch = img[h_start_pos: h_end_pos, w_start_pos: w_end_pos, :]
+                    PIL_image = Image.fromarray(np.uint8(now_patch))
+                    # do the preprocessing
+                    new_patch = self._preprocess(PIL_image)
+                    result.append(new_patch.unsqueeze(dim=0))        
+        result = torch.cat(result, dim=0).cuda()
+        return result
     
     def forward(self, img, ori_image):
         # in this version the ori_image should have the same size as the img
-        #img torch.Size([2, 3, 1280, 800]) ori_image torch.Size([2, 1024, 1024, 3])
+        # img and ori_image torch.Size([2, 3, 1280, 800]) (N, C, H, W)
         # in testing the ori_image list[torch.Size([1, 3, 1024, 1024])]
         # for para_name, param in zip(self.clip_visual_model.state_dict(), self.clip_visual_model.parameters()):
         #     if para_name == 'ln_post.bias':
         #         print(para_name, param.requires_grad, param.shape, param)        
         
         with torch.no_grad():
-            ori_image = self.preprocess(ori_image)
+            ori_image_patches = self.preprocess(ori_image)
             
         # res0: regular resnet backbone input
         # clip0: clip input with corresponding preprocessing
-        clip1 = self.clip_step_1(ori_image)
+        clip1 = self.clip_step_1(ori_image_patches)
         res1 = self.res_step_1(img)
         merge1 = self.merge(clip1, res1, 1)
         

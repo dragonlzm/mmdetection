@@ -12,7 +12,7 @@ train_pipeline = [
     dict(type='RandomFlip', flip_ratio=0.5),
     dict(type='UnnormalizedImg', img_scale=None),
     dict(type='Normalize', **img_norm_cfg),
-    dict(type='DefaultFormatBundle'),
+    dict(type='DefaultFormatBundle', convert_ori_img=True),
     dict(type='Collect', keys=['img', 'ori_img', 'gt_bboxes', 'gt_labels', 'gt_masks', 'gt_feats',
                                'rand_bboxes', 'rand_feats']),
 ]

@@ -188,6 +188,9 @@ class DefaultFormatBundle:
     - gt_semantic_seg: (1)unsqueeze dim-0 (2)to tensor, \
                        (3)to DataContainer (stack=True)
     """
+    def __init__(self,
+                 convert_ori_img=False):
+        self.convert_ori_img = convert_ori_img
 
     def __call__(self, results):
         """Call function to transform and format common fields in results.
@@ -208,6 +211,14 @@ class DefaultFormatBundle:
                 img = np.expand_dims(img, -1)
             img = np.ascontiguousarray(img.transpose(2, 0, 1))
             results['img'] = DC(to_tensor(img), stack=True)
+        if ('ori_img' in results) and self.convert_ori_img:
+            img = results['ori_img']
+            # add default meta keys
+            #results = self._add_default_meta_keys(results)
+            if len(img.shape) < 3:
+                img = np.expand_dims(img, -1)
+            img = np.ascontiguousarray(img.transpose(2, 0, 1))
+            results['ori_img'] = DC(to_tensor(img), stack=True)
         for key in ['proposals', 'gt_bboxes', 'gt_bboxes_ignore', 'gt_labels']:
             if key not in results:
                 continue
