@@ -206,16 +206,42 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #     #--resume-from=${WORK_DIR}/latest.pth
 
 # 200 clip proposal filpping(reg with class embedding, cat, with base filtered proposal, 3x)
+# COMBINE_METHOD='cat'
+# WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_3x_coco_base48_200clip_base_filtered_pro_reg_with_embedding"
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#     configs/mask_rcnn_distill/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_3x_coco_base48_200clip_base_filtered_pro_reg_with_embedding.py --launcher pytorch \
+#     --work-dir=${WORK_DIR} \
+#     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
+#     model.roi_head.bbox_head.combine_reg_and_cls_embedding=${COMBINE_METHOD} \
+#     #--resume-from=${WORK_DIR}/latest.pth
+
+# 200 clip proposal filpping(reg with class embedding, cat, with base filtered proposal, gt weight = 5)
 COMBINE_METHOD='cat'
-WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_3x_coco_base48_200clip_base_filtered_pro_reg_with_embedding"
+WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_200clip_base_filtered_pro_reg_with_embedding_gtw5"
 PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
-    configs/mask_rcnn_distill/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_3x_coco_base48_200clip_base_filtered_pro_reg_with_embedding.py --launcher pytorch \
+    configs/mask_rcnn_distill/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_200clip_base_filtered_pro_reg_with_embedding.py --launcher pytorch \
     --work-dir=${WORK_DIR} \
     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
     model.roi_head.bbox_head.combine_reg_and_cls_embedding=${COMBINE_METHOD} \
+    model.train_cfg.rcnn.gt_bboxes_distill_weight=5.0 \
     #--resume-from=${WORK_DIR}/latest.pth
+
+# 200 clip proposal filpping(reg with class embedding, cat, with base filtered proposal, gt weight = 5)
+# COMBINE_METHOD='cat'
+# WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_200clip_base_filtered_pro_reg_with_embedding_gtw10"
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#     configs/mask_rcnn_distill/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_200clip_base_filtered_pro_reg_with_embedding.py --launcher pytorch \
+#     --work-dir=${WORK_DIR} \
+#     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
+#     model.roi_head.bbox_head.combine_reg_and_cls_embedding=${COMBINE_METHOD} \
+#     model.train_cfg.rcnn.gt_bboxes_distill_weight=10.0 \
+#     #--resume-from=${WORK_DIR}/latest.pth
 
 
 # test the model
