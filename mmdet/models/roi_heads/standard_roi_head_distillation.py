@@ -302,7 +302,9 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             
             # prepare the distillation weight
             if cp_mark is not None or self.gt_bboxes_distill_weight is not None:
-                gt_bbox_distill_weight = self.gt_bboxes_distill_weight if  self.gt_bboxes_distill_weight is not None else 1
+                gt_bbox_distill_weight = self.gt_bboxes_distill_weight if self.gt_bboxes_distill_weight is not None else 1
+                if cp_mark == None:
+                    cp_mark = [False for ele in rand_bboxes]
                 feat_dim = distilled_feat[0].shape[-1]
                 distill_ele_weight = []
                 for original_gt_num, random_bbox, mark in zip(original_gt_nums, rand_bboxes, cp_mark):
