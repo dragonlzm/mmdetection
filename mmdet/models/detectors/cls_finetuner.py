@@ -118,6 +118,14 @@ class ClsFinetuner(BaseDetector):
                                          'bed': 59, 'dining table': 60, 'toilet': 61, 'tv': 62, 'laptop': 63, 'mouse': 64, 'remote': 65, 'keyboard': 66, 
                                          'cell phone': 67, 'microwave': 68, 'oven': 69, 'toaster': 70, 'sink': 71, 'refrigerator': 72, 'book': 73, 'clock': 74, 
                                          'vase': 75, 'scissors': 76, 'teddy bear': 77, 'hair drier': 78, 'toothbrush': 79}
+        self.from_gt_idx_to_coco_idx = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8, 8: 9, 9: 10, 10: 11, 11: 13, 12: 14, 
+                                        13: 15, 14: 16, 15: 17, 16: 18, 17: 19, 18: 20, 19: 21, 20: 22, 21: 23, 22: 24, 23: 25, 
+                                        24: 27, 25: 28, 26: 31, 27: 32, 28: 33, 29: 34, 30: 35, 31: 36, 32: 37, 33: 38, 34: 39, 
+                                        35: 40, 36: 41, 37: 42, 38: 43, 39: 44, 40: 46, 41: 47, 42: 48, 43: 49, 44: 50, 45: 51, 
+                                        46: 52, 47: 53, 48: 54, 49: 55, 50: 56, 51: 57, 52: 58, 53: 59, 54: 60, 55: 61, 56: 62, 
+                                        57: 63, 58: 64, 59: 65, 60: 67, 61: 70, 62: 72, 63: 73, 64: 74, 65: 75, 66: 76, 67: 77, 
+                                        68: 78, 69: 79, 70: 80, 71: 81, 72: 82, 73: 84, 74: 85, 75: 86, 76: 87, 77: 88, 78: 89, 
+                                        79: 90}
         self.base_cate_name = ('person', 'bicycle', 'car', 'motorcycle', 'train', 
                                 'truck', 'boat', 'bench', 'bird', 'horse', 'sheep', 
                                 'bear', 'zebra', 'giraffe', 'backpack', 'handbag', 
@@ -540,8 +548,6 @@ class ClsFinetuner(BaseDetector):
                 softmax = nn.Softmax(dim=1)
 
                 # select the needed feat
-                #print('testing x', len(x), x[0].shape)
-                # x 1 torch.Size([500, 512])
                 if len(x[0].shape) > 2 and self.rpn_head.selected_need_feat is not None:
                     x = [feat[:, self.rpn_head.selected_need_feat, :] for feat in x]
                     if x[0].shape[1] == 1:
@@ -550,8 +556,6 @@ class ClsFinetuner(BaseDetector):
                 # forward of this head requires img_metas
                 outs = self.rpn_head.forward(x, img_metas)
                 # get the classsification score
-                #print('testing out', len(outs), outs[0].shape)
-                # out 1 torch.Size([500, 80])
                 pred_after_softmax = softmax(outs[0])
                 
                 # get the max confidence categories
@@ -565,6 +569,17 @@ class ClsFinetuner(BaseDetector):
                     else:
                         temp_idx = (pred_idx != base_cate_idx)
                         torch.logical_and(all_novel_idx, temp_idx)
+                # add the confidence score (the score after softmax for the max confidence score) replace the original score
+                if now_rand_bbox.shape[1] == 4:
+                    now_rand_bbox[:, -1] = max_val
+                elif now_rand_bbox.shape[1] == 3:
+                    torch.cat([now_rand_bbox, max_val], dim=-1)
+                else:
+                    print('now_rand_bbox.shape[1] is not equal to 3 or 4')
+                
+                # add the max confidence coco cate id (convert from the gt idx to the coco id)
+                all_coco_idx = torch.tensor([self.from_gt_idx_to_coco_idx[ele] for ele in pred_idx]).cuda()
+                torch.cat([now_rand_bbox, all_coco_idx], dim=-1)
 
                 # filter the bboxes and feature(assuming the batch size is 1)
                 x = [x[0][all_novel_idx]]
@@ -572,7 +587,6 @@ class ClsFinetuner(BaseDetector):
                 # make the number of remaining bbox become self.num_of_rand_bboxes
                 x = [x[0][:300]]
                 now_rand_bbox = now_rand_bbox[:300]
-                #print('x', x[0].shape, 'now_rand_bbox', now_rand_bbox.shape)
             
             # save the rand_bbox and the feat, img_metas
             file = open(random_file_path, 'w')
