@@ -1,3 +1,5 @@
+# this script aims to generate dataset subset by randomly select some annotations and images.
+
 import json
 import random
 from select import select

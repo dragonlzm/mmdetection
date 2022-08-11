@@ -570,18 +570,19 @@ class ClsFinetuner(BaseDetector):
                         temp_idx = (pred_idx != base_cate_idx)
                         torch.logical_and(all_novel_idx, temp_idx)
                 # add the confidence score (the score after softmax for the max confidence score) replace the original score
-                if now_rand_bbox.shape[1] == 4:
+                if now_rand_bbox.shape[-1] == 5:
                     now_rand_bbox[:, -1] = max_val
-                elif now_rand_bbox.shape[1] == 3:
-                    torch.cat([now_rand_bbox, max_val], dim=-1)
+                elif now_rand_bbox.shape[-1] == 4:
+                    now_rand_bbox = torch.cat([now_rand_bbox, max_val.unsqueeze(dim=-1)], dim=-1)
                 else:
                     print('now_rand_bbox.shape[1] is not equal to 3 or 4')
                 
                 # add the max confidence coco cate id (convert from the gt idx to the coco id)
-                all_coco_idx = torch.tensor([self.from_gt_idx_to_coco_idx[ele] for ele in pred_idx]).cuda()
-                torch.cat([now_rand_bbox, all_coco_idx], dim=-1)
+                all_coco_idx = torch.tensor([self.from_gt_idx_to_coco_idx[ele.item()] for ele in pred_idx]).cuda()
+                now_rand_bbox = torch.cat([now_rand_bbox, all_coco_idx.unsqueeze(dim=-1)], dim=-1)
 
                 # filter the bboxes and feature(assuming the batch size is 1)
+                #print('now_rand_bbox', now_rand_bbox.shape, now_rand_bbox[:5])
                 x = [x[0][all_novel_idx]]
                 now_rand_bbox = now_rand_bbox[all_novel_idx]
                 # make the number of remaining bbox become self.num_of_rand_bboxes
