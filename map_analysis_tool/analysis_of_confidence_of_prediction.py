@@ -14,8 +14,8 @@ iou_calculator = BboxOverlaps2D()
 #prediction_path = '/data/zhuoming/detection/mask_rcnn_clip_classifier/results_novel17_12.bbox.json'
 
 #prediction_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_200clip_pro_reg_with_embedding/base_results.bbox.json'
-#prediction_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_200clip_pro_reg_with_embedding/novel_results_trick.bbox.json'
-prediction_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_200clip_pro_reg_with_embedding/novel_results.bbox.json'
+prediction_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_200clip_pro_reg_with_embedding/novel_results_trick.bbox.json'
+# prediction_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_200clip_pro_reg_with_embedding/novel_results.bbox.json'
 
 prediction_content = json.load(open(prediction_path))
 
@@ -57,9 +57,11 @@ for ele in gt_content['annotations']:
 valid_prediction_num = 0
 valid_prediction_conf = 0
 all_valid_confidence_score = []
+all_valid_iou_score = []
 invalid_prediction_num = 0
 invalid_prediction_conf = 0
 all_invalid_confidence_score = []
+all_invalid_iou_score = []
 
 for image_id in from_image_id_to_pred:
     # if the image does not have the gt bboxes, skip this image
@@ -81,27 +83,38 @@ for image_id in from_image_id_to_pred:
         #print('iou shape', iou.shape)
         max_iou_per_pred, max_iou_per_pred_idx = torch.max(iou, dim=-1)
         
-        valid_prediction = pred_for_this_cate[max_iou_per_pred >= 0.5]
-        invalid_prediction = pred_for_this_cate[max_iou_per_pred < 0.5] 
+        valid_idx = (max_iou_per_pred >= 0.5)
+        invalid_idx = (max_iou_per_pred < 0.5)
+        
+        valid_prediction = pred_for_this_cate[valid_idx]
+        invalid_prediction = pred_for_this_cate[invalid_idx] 
         if valid_prediction.shape[0] > 0:
             valid_prediction_num += valid_prediction.shape[0]
             valid_prediction_conf += torch.sum(valid_prediction[:, -1]).item()
             all_valid_confidence_score.append(valid_prediction[:, -1])
+            all_valid_iou_score.append(max_iou_per_pred[valid_idx])
         if invalid_prediction.shape[0] > 0:
             invalid_prediction_num += invalid_prediction.shape[0]
             invalid_prediction_conf += torch.sum(invalid_prediction[:, -1]).item()
             all_invalid_confidence_score.append(invalid_prediction[:, -1])
+            all_invalid_iou_score.append(max_iou_per_pred[invalid_idx])
 
 print(valid_prediction_num, valid_prediction_conf, valid_prediction_conf / valid_prediction_num)
 print(invalid_prediction_num, invalid_prediction_conf, invalid_prediction_conf / invalid_prediction_num)
 all_invalid_confidence_score = torch.cat(all_invalid_confidence_score, dim=0)
 all_valid_confidence_score = torch.cat(all_valid_confidence_score, dim=0)
+all_invalid_iou_score = torch.cat(all_invalid_iou_score, dim=0)
+all_valid_iou_score = torch.cat(all_valid_iou_score, dim=0)
+
 # torch.save(all_valid_confidence_score, 'base_predition_all_valid_confidence_score.pt')
 # torch.save(all_invalid_confidence_score, 'base_predition_all_invalid_confidence_score.pt')
-# torch.save(all_valid_confidence_score, 'novel_with_trick_predition_all_valid_confidence_score.pt')
-# torch.save(all_invalid_confidence_score, 'novel_with_trick_predition_all_invalid_confidence_score.pt')
-torch.save(all_valid_confidence_score, 'novel_predition_all_valid_confidence_score.pt')
-torch.save(all_invalid_confidence_score, 'novel_predition_all_invalid_confidence_score.pt')
+torch.save(all_valid_confidence_score, 'novel_with_trick_predition_all_valid_confidence_score.pt')
+torch.save(all_invalid_confidence_score, 'novel_with_trick_predition_all_invalid_confidence_score.pt')
+torch.save(all_valid_iou_score, 'novel_with_trick_predition_all_valid_iou_score.pt')
+torch.save(all_invalid_iou_score, 'novel_with_trick_predition_all_invalid_iou_score.pt')
+
+# torch.save(all_valid_confidence_score, 'novel_predition_all_valid_confidence_score.pt')
+# torch.save(all_invalid_confidence_score, 'novel_predition_all_invalid_confidence_score.pt')
 
 
 
