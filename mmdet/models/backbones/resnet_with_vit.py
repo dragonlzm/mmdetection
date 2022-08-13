@@ -77,11 +77,12 @@ class ResNetWithVit(ResNet):
                  style, deep_stem, avg_down, frozen_stages, conv_cfg,
                  norm_cfg, norm_eval, dcn, stage_with_dcn, plugins,
                  with_cp, zero_init_residual, pretrained, init_cfg)
+        self.merge_step = merge_step
         self.vit_backbone_cfg = vit_backbone_cfg
         self.setup_clip_component()
         self.setup_clip_adapter()
         self.girds_num = int(self.vit_backbone_cfg.input_resolution / self.vit_backbone_cfg.patch_size)
-        self.merge_step = merge_step      
+            
         
     def setup_clip_component(self):
         # setup number of layer in transformer

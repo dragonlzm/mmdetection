@@ -19,16 +19,64 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #ln -sf /project/nevatia_174/zhuoming/detection ./data
 
 # 200 clip proposal filpping(reg with class embedding, cat, with vit backbone)
-COMBINE_METHOD='cat'
-WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_with_vit_base48"
+# COMBINE_METHOD='cat'
+# WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_with_vit_base48"
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#     configs/mask_rcnn_distill/mask_rcnn_distillation_with_vit_base48.py --launcher pytorch \
+#     --work-dir=${WORK_DIR} \
+#     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
+#     model.roi_head.bbox_head.combine_reg_and_cls_embedding=${COMBINE_METHOD} \
+#     #--resume-from=${WORK_DIR}/latest.pth
+
+# 200 clip proposal filpping(reg with class embedding, cat, with vit backbone, merge4)
+ADDITIONAL_CONFIG="model.backbone.merge_step=['merge4']"
+WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_with_vit_base48_merge4"
 PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
     configs/mask_rcnn_distill/mask_rcnn_distillation_with_vit_base48.py --launcher pytorch \
     --work-dir=${WORK_DIR} \
     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
-    model.roi_head.bbox_head.combine_reg_and_cls_embedding=${COMBINE_METHOD} \
+    ${ADDITIONAL_CONFIG} \
     #--resume-from=${WORK_DIR}/latest.pth
+
+# 200 clip proposal filpping(reg with class embedding, cat, with vit backbone, merge3to4)
+# ADDITIONAL_CONFIG="model.backbone.merge_step=['merge3','merge4']"
+# WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_with_vit_base48_merge3to4"
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#     configs/mask_rcnn_distill/mask_rcnn_distillation_with_vit_base48.py --launcher pytorch \
+#     --work-dir=${WORK_DIR} \
+#     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
+#     ${ADDITIONAL_CONFIG} \
+#     #--resume-from=${WORK_DIR}/latest.pth
+
+# 200 clip proposal filpping(reg with class embedding, cat, with vit backbone, merge2to4)
+# ADDITIONAL_CONFIG="model.backbone.merge_step=['merge2','merge3','merge4']"
+# WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_with_vit_base48_merge2to4"
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#     configs/mask_rcnn_distill/mask_rcnn_distillation_with_vit_base48.py --launcher pytorch \
+#     --work-dir=${WORK_DIR} \
+#     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
+#     ${ADDITIONAL_CONFIG} \
+#     #--resume-from=${WORK_DIR}/latest.pth
+
+# 200 clip proposal filpping(reg with class embedding, cat, with vit backbone, merge3)
+# ADDITIONAL_CONFIG="model.backbone.merge_step=['merge3']"
+# WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_with_vit_base48_merge3"
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#     configs/mask_rcnn_distill/mask_rcnn_distillation_with_vit_base48.py --launcher pytorch \
+#     --work-dir=${WORK_DIR} \
+#     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
+#     ${ADDITIONAL_CONFIG} \
+#     #--resume-from=${WORK_DIR}/latest.pth
 
 # test the model
 #CHECKPOINT_NAME="epoch_12.pth"
@@ -39,27 +87,23 @@ bash tools/dist_test.sh configs/mask_rcnn_distill/mask_rcnn_distillation_with_vi
 ${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox segm \
 --eval-options jsonfile_prefix=${WORK_DIR}/base_results \
 --cfg-options data.test.eval_filter_empty_gt=False data.test.ann_file=data/coco/annotations/instances_val2017_65cates.json \
-#model.roi_head.bbox_head.combine_reg_and_cls_embedding=${COMBINE_METHOD} model.roi_head.bbox_head.reg_with_cls_embedding=True \
-#model.roi_head.bbox_head.reg_with_mlp=True
+${ADDITIONAL_CONFIG}
 
 bash tools/dist_test.sh configs/mask_rcnn_distill/mask_rcnn_distillation_with_vit_novel17.py \
 ${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox segm \
 --eval-options jsonfile_prefix=${WORK_DIR}/novel_results \
 --cfg-options data.test.eval_filter_empty_gt=False data.test.ann_file=data/coco/annotations/instances_val2017_65cates.json \
-#model.roi_head.bbox_head.combine_reg_and_cls_embedding=${COMBINE_METHOD} model.roi_head.bbox_head.reg_with_cls_embedding=True \
-#model.roi_head.bbox_head.reg_with_mlp=True
+${ADDITIONAL_CONFIG}
 
 bash tools/dist_test.sh configs/mask_rcnn_distill/mask_rcnn_distillation_with_vit_novel17.py \
 ${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox segm \
 --eval-options jsonfile_prefix=${WORK_DIR}/novel_results_trick \
 --cfg-options model.roi_head.bbox_head.filter_base_cate=data/embeddings/base_finetuned_48cates.pt data.test.eval_filter_empty_gt=False \
 data.test.ann_file=data/coco/annotations/instances_val2017_65cates.json \
-#model.roi_head.bbox_head.combine_reg_and_cls_embedding=${COMBINE_METHOD} model.roi_head.bbox_head.reg_with_cls_embedding=True \
-#model.roi_head.bbox_head.reg_with_mlp=True
+${ADDITIONAL_CONFIG}
 
 bash tools/dist_test.sh configs/mask_rcnn_distill/mask_rcnn_distillation_with_vit_bn65.py \
 ${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox segm \
 --eval-options jsonfile_prefix=${WORK_DIR}/base_and_novel \
 --cfg-options data.test.eval_filter_empty_gt=False data.test.ann_file=data/coco/annotations/instances_val2017_65cates.json \
-#model.roi_head.bbox_head.combine_reg_and_cls_embedding=${COMBINE_METHOD} model.roi_head.bbox_head.reg_with_cls_embedding=True \
-#model.roi_head.bbox_head.reg_with_mlp=True
+${ADDITIONAL_CONFIG}
