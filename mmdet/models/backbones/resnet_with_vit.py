@@ -69,7 +69,8 @@ class ResNetWithVit(ResNet):
                  pretrained=None,
                  init_cfg=None,
                  #clip_architecture="ViT-L/14"):
-                 vit_backbone_cfg=None):
+                 vit_backbone_cfg=None,
+                 merge_step=('merge1', 'merge2', 'merge3', 'merge4')):
         super(ResNetWithVit, self).__init__(
                  depth, in_channels, stem_channels, base_channels,
                  num_stages, strides, dilations, out_indices,
@@ -80,15 +81,7 @@ class ResNetWithVit(ResNet):
         self.setup_clip_component()
         self.setup_clip_adapter()
         self.girds_num = int(self.vit_backbone_cfg.input_resolution / self.vit_backbone_cfg.patch_size)
-        
-        # for param in self.adapt_mlp_1.parameters():
-        #    param.requires_grad = False
-        
-        # for param in self.adapt_mlp_2.parameters():
-        #    param.requires_grad = False
-           
-        # for param in self.adapt_mlp_3.parameters():
-        #    param.requires_grad = False          
+        self.merge_step = merge_step      
         
     def setup_clip_component(self):
         # setup number of layer in transformer
@@ -108,10 +101,14 @@ class ResNetWithVit(ResNet):
         
     def setup_clip_adapter(self):
         # inject clip feature 4 times (4th time it is same dimension no need to adapt) 
-        self.adapt_mlp_1 = nn.Linear(self.vit_backbone_cfg.width, 64)
-        self.adapt_mlp_2 = nn.Linear(self.vit_backbone_cfg.width, 256)
-        self.adapt_mlp_3 = nn.Linear(self.vit_backbone_cfg.width, 512)
-        self.adapt_mlp_4 = nn.Linear(self.vit_backbone_cfg.width, 1024)
+        if 'merge1' in self.merge_step:
+            self.adapt_mlp_1 = nn.Linear(self.vit_backbone_cfg.width, 64)
+        if 'merge2' in self.merge_step:
+            self.adapt_mlp_2 = nn.Linear(self.vit_backbone_cfg.width, 256)
+        if 'merge3' in self.merge_step:
+            self.adapt_mlp_3 = nn.Linear(self.vit_backbone_cfg.width, 512)
+        if 'merge4' in self.merge_step:
+            self.adapt_mlp_4 = nn.Linear(self.vit_backbone_cfg.width, 1024)
         
     def clip_pre_transformer(self, x):
         # x = self.preprocess(x)
@@ -236,22 +233,34 @@ class ResNetWithVit(ResNet):
         # clip0: clip input with corresponding preprocessing
         clip1 = self.clip_step_1(ori_image)
         res1 = self.res_step_1(img)
-        merge1 = self.merge(clip1, res1, 1)
+        if 'merge1' in self.merge_step:
+            merge1 = self.merge(clip1, res1, 1)
+        else:
+            merge1 = res1
         
         outs = []
         clip2 = self.clip_step_2(clip1)
         res2 = self.res_step(merge1, 0)
-        merge2 = self.merge(clip2, res2, 2)
+        if 'merge2' in self.merge_step:
+            merge2 = self.merge(clip2, res2, 2)
+        else:
+            merge2 = res2
         outs.append(merge2)
         
         clip3 = self.clip_step_3(clip2)
         res3 = self.res_step(merge2, 1)
-        merge3 = self.merge(clip3, res3, 3)
+        if 'merge3' in self.merge_step:
+            merge3 = self.merge(clip3, res3, 3)
+        else:
+            merge3 = res3
         outs.append(merge3)
         
         clip4 = self.clip_step_4(clip3)
         res4 = self.res_step(merge3, 2)
-        merge4 = self.merge(clip4, res4, 4)
+        if 'merge4' in self.merge_step:
+            merge4 = self.merge(clip4, res4, 4)
+        else:
+            merge4 = res4
         outs.append(merge4)
         
         res5 = self.res_step(merge4, 3)
