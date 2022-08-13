@@ -314,7 +314,13 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                     else:
                         # otherwise the weight of the random_bbox will be 1
                         weight_per_img = torch.cat([torch.full((original_gt_num, feat_dim), gt_bbox_distill_weight), torch.ones(random_bbox.shape[0], feat_dim)], dim=0).cuda()
-                        #weight_per_img = torch.ones(original_gt_num + random_bbox.shape[0], feat_dim).cuda()
+                    # normalize the weight
+                    # the factor should be: (num of gt bbox + num of random bbox) / (weight of all gt bbox + weight of the all random bboxes)
+                    
+                    normalize_factor = weight_per_img.shape[0] / torch.sum(weight_per_img[:, 0]).item()
+                    print(weight_per_img.shape[0], torch.sum(weight_per_img[:, 0]).item())
+                    weight_per_img *= normalize_factor
+                    
                     distill_ele_weight.append(weight_per_img)
                 # print(cp_mark, [ele.shape for ele in gt_rand_rois], [ele.shape for ele in distill_ele_weight], [ele for ele in distill_ele_weight],
                 #       [ele.shape for ele in gt_bboxes], [ele.shape for ele in rand_bboxes], [ele.shape for ele in distilled_feat])     
