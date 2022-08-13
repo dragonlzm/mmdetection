@@ -136,6 +136,8 @@ class ClsFinetuner(BaseDetector):
                                 'mouse', 'remote', 'microwave', 'oven', 'toaster', 
                                 'refrigerator', 'book', 'clock', 'vase', 'toothbrush')
         self.base_cate_gt_idx = [self.from_coco_name_to_gt_idx[name] for name in self.base_cate_name]
+        # save the predicted cate and confidence
+        self.save_cates_and_conf = self.test_cfg.get('save_cates_and_conf', False) if self.test_cfg is not None else False
 
 
     def read_use_base_novel_clip(self, img_metas):
@@ -543,7 +545,7 @@ class ClsFinetuner(BaseDetector):
             x = self.extract_feat(img, [now_rand_bbox], cropped_patches, img_metas=img_metas)
             
             # filter the clip proposal base on the categories
-            if self.filter_clip_proposal_base_on_cates:
+            if self.filter_clip_proposal_base_on_cates or self.save_cates_and_conf:
                 # out list[tensor] tensor with shape [gt_per_img, channel]
                 softmax = nn.Softmax(dim=1)
 
@@ -561,33 +563,35 @@ class ClsFinetuner(BaseDetector):
                 # get the max confidence categories
                 max_val, pred_idx = torch.max(pred_after_softmax, dim=1)
                 
-                # get the idx which is not predicted as base categories
-                all_novel_idx = None
-                for base_cate_idx in self.base_cate_gt_idx:
-                    if all_novel_idx == None:
-                        all_novel_idx = (pred_idx != base_cate_idx)
-                    else:
-                        temp_idx = (pred_idx != base_cate_idx)
-                        torch.logical_and(all_novel_idx, temp_idx)
                 # add the confidence score (the score after softmax for the max confidence score) replace the original score
                 if now_rand_bbox.shape[-1] == 5:
                     now_rand_bbox[:, -1] = max_val
                 elif now_rand_bbox.shape[-1] == 4:
                     now_rand_bbox = torch.cat([now_rand_bbox, max_val.unsqueeze(dim=-1)], dim=-1)
                 else:
-                    print('now_rand_bbox.shape[1] is not equal to 3 or 4')
+                    print('now_rand_bbox.shape[1] is not equal to 4 or 5')
                 
                 # add the max confidence coco cate id (convert from the gt idx to the coco id)
                 all_coco_idx = torch.tensor([self.from_gt_idx_to_coco_idx[ele.item()] for ele in pred_idx]).cuda()
                 now_rand_bbox = torch.cat([now_rand_bbox, all_coco_idx.unsqueeze(dim=-1)], dim=-1)
 
-                # filter the bboxes and feature(assuming the batch size is 1)
-                #print('now_rand_bbox', now_rand_bbox.shape, now_rand_bbox[:5])
-                x = [x[0][all_novel_idx]]
-                now_rand_bbox = now_rand_bbox[all_novel_idx]
-                # make the number of remaining bbox become self.num_of_rand_bboxes
-                x = [x[0][:300]]
-                now_rand_bbox = now_rand_bbox[:300]
+                if self.filter_clip_proposal_base_on_cates:
+                    # get the idx which is not predicted as base categories
+                    all_novel_idx = None
+                    for base_cate_idx in self.base_cate_gt_idx:
+                        if all_novel_idx == None:
+                            all_novel_idx = (pred_idx != base_cate_idx)
+                        else:
+                            temp_idx = (pred_idx != base_cate_idx)
+                            torch.logical_and(all_novel_idx, temp_idx)
+                    
+                    # filter the bboxes and feature(assuming the batch size is 1)
+                    #print('now_rand_bbox', now_rand_bbox.shape, now_rand_bbox[:5])
+                    x = [x[0][all_novel_idx]]
+                    now_rand_bbox = now_rand_bbox[all_novel_idx]
+                    # make the number of remaining bbox become self.num_of_rand_bboxes
+                    x = [x[0][:300]]
+                    now_rand_bbox = now_rand_bbox[:300]
             
             # save the rand_bbox and the feat, img_metas
             file = open(random_file_path, 'w')
