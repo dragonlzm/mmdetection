@@ -311,15 +311,15 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                     if mark == True:
                         # if we using the copy and paste we just simply ignore all the clip proposal bboxes(random_bbox), so the weight of random_bbox is 0
                         weight_per_img = torch.cat([torch.full((original_gt_num, feat_dim), gt_bbox_distill_weight), torch.zeros(random_bbox.shape[0], feat_dim)], dim=0).cuda()
+                        # if we using the copy and paste we do not normalize the weight, otherwise the weight for only gt bboxes will be too large
                     else:
                         # otherwise the weight of the random_bbox will be 1
                         weight_per_img = torch.cat([torch.full((original_gt_num, feat_dim), gt_bbox_distill_weight), torch.ones(random_bbox.shape[0], feat_dim)], dim=0).cuda()
-                    # normalize the weight
-                    # the factor should be: (num of gt bbox + num of random bbox) / (weight of all gt bbox + weight of the all random bboxes)
-                    
-                    normalize_factor = weight_per_img.shape[0] / torch.sum(weight_per_img[:, 0]).item()
-                    print(weight_per_img.shape[0], torch.sum(weight_per_img[:, 0]).item())
-                    weight_per_img *= normalize_factor
+                        # normalize the weight
+                        # the factor should be: (num of gt bbox + num of random bbox) / (weight of all gt bbox + weight of the all random bboxes)
+                        normalize_factor = weight_per_img.shape[0] / torch.sum(weight_per_img[:, 0]).item()
+                        weight_per_img *= normalize_factor
+                        #print(weight_per_img.shape[0], torch.sum(weight_per_img[:, 0]).item(), original_gt_num, random_bbox.shape[0], torch.sum(weight_per_img)/512)
                     
                     distill_ele_weight.append(weight_per_img)
                 # print(cp_mark, [ele.shape for ele in gt_rand_rois], [ele.shape for ele in distill_ele_weight], [ele for ele in distill_ele_weight],
