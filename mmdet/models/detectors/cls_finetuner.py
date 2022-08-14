@@ -589,6 +589,12 @@ class ClsFinetuner(BaseDetector):
                     #print('now_rand_bbox', now_rand_bbox.shape, now_rand_bbox[:5])
                     x = [x[0][all_novel_idx]]
                     now_rand_bbox = now_rand_bbox[all_novel_idx]
+                    
+                    #sort the feat base on the confidence score
+                    _, confi_indices = torch.sort(now_rand_bbox[:, -2], descending=True)
+                    x = [x[0][confi_indices]]
+                    now_rand_bbox = now_rand_bbox[confi_indices]
+                    
                     # make the number of remaining bbox become self.num_of_rand_bboxes
                     x = [x[0][:300]]
                     now_rand_bbox = now_rand_bbox[:300]
@@ -601,7 +607,7 @@ class ClsFinetuner(BaseDetector):
             my_img_meta['img_norm_cfg']['mean'] = my_img_meta['img_norm_cfg']['mean'].tolist()
             my_img_meta['img_norm_cfg']['std'] = my_img_meta['img_norm_cfg']['std'].tolist()
             
-            #print('random', x[0].shape, now_rand_bbox.shape)
+            #print('random', now_rand_bbox[:, -2])
             result_json = {'feat':x[0].cpu().tolist(), 'bbox':now_rand_bbox.cpu().tolist(), 'img_metas':my_img_meta}
             #print('testing random json', result_json)
             file.write(json.dumps(result_json))
