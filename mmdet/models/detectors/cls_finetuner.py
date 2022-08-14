@@ -347,7 +347,7 @@ class ClsFinetuner(BaseDetector):
         
         return now_patch
       
-    def crop_img_to_patches(self, imgs, gt_bboxes, img_metas):
+    def crop_img_to_patches(self, imgs, gt_bboxes, img_metas, remain_same_bbox_size=False):
         # # for testing
         # now_patch = imgs.permute(0, 2, 3, 1)[0].numpy()
         # if not os.path.exists('/home/zhuoming/square_image/'):
@@ -360,7 +360,7 @@ class ClsFinetuner(BaseDetector):
             crop_size_modi_ratio = self.train_crop_size_modi_ratio
             crop_loca_modi_ratio = self.train_crop_loca_modi_ratio
         else:
-            crop_size_modi_ratio = self.test_crop_size_modi_ratio
+            crop_size_modi_ratio = self.test_crop_size_modi_ratio if remain_same_bbox_size == False else 1.0
             crop_loca_modi_ratio = self.test_crop_loca_modi_ratio            
         
         bs, c, _, _ = imgs.shape
@@ -419,7 +419,7 @@ class ClsFinetuner(BaseDetector):
         #cropped_patches = torch.cat(result, dim=0).cuda()
         return all_results
 
-    def extract_feat(self, img, gt_bboxes, cropped_patches=None, img_metas=None):
+    def extract_feat(self, img, gt_bboxes, cropped_patches=None, img_metas=None, remain_same_bbox_size=False):
         """Extract features.
 
         Args:
@@ -440,7 +440,7 @@ class ClsFinetuner(BaseDetector):
         # (a function to convert the img)
         #cropped_patches_list:len = batch_size, list[tensor] each tensor shape [gt_num_of_image, 3, 224, 224]
         if cropped_patches == None:
-            cropped_patches_list = self.crop_img_to_patches(img.cpu(), gt_bboxes, img_metas)
+            cropped_patches_list = self.crop_img_to_patches(img.cpu(), gt_bboxes, img_metas, remain_same_bbox_size=remain_same_bbox_size)
         else:
             print('testing cropped_patches')
             cropped_patches_list = cropped_patches
@@ -542,7 +542,7 @@ class ClsFinetuner(BaseDetector):
             else:
                 # generate the random feat
                 now_rand_bbox = self.generate_rand_bboxes(img_metas, self.num_of_rand_bboxes)
-            x = self.extract_feat(img, [now_rand_bbox], cropped_patches, img_metas=img_metas)
+            x = self.extract_feat(img, [now_rand_bbox], cropped_patches, img_metas=img_metas, remain_same_bbox_size=True)
             
             # filter the clip proposal base on the categories
             if self.filter_clip_proposal_base_on_cates or self.save_cates_and_conf:
