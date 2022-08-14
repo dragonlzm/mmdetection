@@ -335,7 +335,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                     else:
                         # whether we have the per clip proposal bbox distillation weigth
                         if rand_bbox_weight is not None:
-                            print('with weight')
+                            #print('with weight')
                             rand_bbox_weight = rand_bbox_weight.unsqueeze(dim=-1).repeat([1,feat_dim])
                         else:
                             rand_bbox_weight = torch.ones(random_bbox.shape[0], feat_dim).cuda()
@@ -343,11 +343,11 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                         # otherwise the weight of the random_bbox will be 1
                         weight_per_img = torch.cat([torch.full((original_gt_num, feat_dim), gt_bbox_distill_weight).cuda(), rand_bbox_weight], dim=0)
                         # normalize the weight
-                        print('before normalize', weight_per_img[:,0])
+                        #print('before normalize', weight_per_img[:,0])
                         # the factor should be: (num of gt bbox + num of random bbox) / (weight of all gt bbox + weight of the all random bboxes)
                         normalize_factor = weight_per_img.shape[0] / torch.sum(weight_per_img[:, 0]).item()
                         weight_per_img *= normalize_factor
-                        print('after normalize', weight_per_img.shape[0], torch.sum(weight_per_img[:, 0]).item(), original_gt_num, random_bbox.shape[0], torch.sum(weight_per_img)/512)
+                        #print('after normalize', weight_per_img.shape[0], torch.sum(weight_per_img[:, 0]).item(), original_gt_num, random_bbox.shape[0], torch.sum(weight_per_img)/512)
                     
                     distill_ele_weight.append(weight_per_img)
                 # print(cp_mark, [ele.shape for ele in gt_rand_rois], [ele.shape for ele in distill_ele_weight], [ele for ele in distill_ele_weight],
