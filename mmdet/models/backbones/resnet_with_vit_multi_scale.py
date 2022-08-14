@@ -161,7 +161,7 @@ class ResNetWithVitMultiScale(ResNet):
         return x
 
     def merge(self, clip_x, res_x, step_idx):
-        print('clip_x', clip_x.shape)
+        # clip_x torch.Size([2, 56, 56, 768])
         if(step_idx == 1):
             # [2, 49, 768] => [2 * 49, 64]
             reshape_x = self.adapt_mlp_1(clip_x) # [bs * self.vit_girds_num*self.vit_girds_num, 64]
@@ -175,18 +175,16 @@ class ResNetWithVitMultiScale(ResNet):
     
         #reshape_x = reshape_x.reshape(clip_x.size(0), self.vit_girds_num, self.vit_girds_num, -1) # [bs, self.vit_girds_num, self.vit_girds_num, -]
         reshape_x = reshape_x.permute(0, 3, 1, 2)
-        #print('after reshape:', reshape_x.shape)
         
-        reshape_x = F.interpolate(reshape_x, size=(res_x.size(2), res_x.size(3)), mode='bicubic', align_corners=False) # [bs, 200, 304, 64]
-        #print('after interpolate', reshape_x.shape)
-        #reshape_x = reshape_x.permute(0, 3, 1, 2) # [bs, 64, 200, 304]
-        #print('before merge:', reshape_x.shape, res_x.shape)
+        reshape_x = F.interpolate(reshape_x, size=(res_x.size(2), res_x.size(3)), mode='bicubic', align_corners=False) #  [bs, 64, 200, 304]
         merge_x = reshape_x + res_x
         #print('after merge:', merge_x.shape, res_x.shape)
         return merge_x
     
     def preprocess(self, ori_images):
+        # split each image into one tensor
         ori_images = [ori_image for ori_image in ori_images]
+        # handle the test image
         if len(ori_images[0].shape) == 4:
             ori_images = [ori_image.squeeze(dim=0) for ori_image in ori_images]
         if ori_images[0].shape[0] == 3:
@@ -200,6 +198,7 @@ class ResNetWithVitMultiScale(ResNet):
             H, W, channel = img.shape
             for h_patch_num, w_patch_num in self.image_grids_size_list:
                 patch_H, patch_W = H / h_patch_num, W / w_patch_num
+                #print('in preprocess', h_patch_num, w_patch_num, patch_H, patch_W)
                 h_pos = [int(patch_H) * i for i in range(h_patch_num + 1)]
                 w_pos = [int(patch_W) * i for i in range(w_patch_num + 1)]
 
@@ -245,7 +244,7 @@ class ResNetWithVitMultiScale(ResNet):
                     # convert to list list(tensor[7, 7, 768])
                     all_feat_per_row = [ele for ele in all_feat_per_row]
                     # concat along the width dimension (x dim) list(tensor[7, 7, 768]) => tensor[7, 56, 768]
-                    all_feat_per_row = torch.cat(all_feat_per_row, dim=-1)
+                    all_feat_per_row = torch.cat(all_feat_per_row, dim=-2)
                     all_result_per_lvl.append(all_feat_per_row)
                 # concat along the hight dimension (y dim) list(tensor[7, 56, 768]) => tensor[56, 56, 768]
                 all_result_per_lvl = torch.cat(all_result_per_lvl, dim=0)
@@ -257,7 +256,7 @@ class ResNetWithVitMultiScale(ResNet):
         for i, _ in enumerate(self.image_grids_size_list):
             feat_per_lvl = []
             for j in range(batch_size):
-                feat_per_lvl.append(all_image_results[j][i])
+                feat_per_lvl.append(all_image_results[j][i].unsqueeze(dim=0))
             feat_per_lvl = torch.cat(feat_per_lvl, dim=0)
             feat_by_level.append(feat_per_lvl)
         
@@ -271,9 +270,9 @@ class ResNetWithVitMultiScale(ResNet):
         #     if para_name == 'ln_post.bias':
         #         print(para_name, param.requires_grad, param.shape, param)
         with torch.no_grad():
-            print('before preprocessing', ori_image.shape)
+            # before preprocessing torch.Size([2, 1024, 1024, 3])
             ori_image_patches = self.preprocess(ori_image)
-            print('after preprocessing', ori_image_patches.shape)
+            # after preprocessing torch.Size([170, 3, 224, 224])
             
         # ori_image_patches [128, 3, 224, 224] [bs * h_patch_num * w_patch_num, 3, 224, 224]
         # clip forward
@@ -283,9 +282,9 @@ class ResNetWithVitMultiScale(ResNet):
         clip4 = self.clip_step_4(clip3)
         bs = ori_image.shape[0]
         
-        print('get_per_level_vit_feat', clip4.shape)
+        # clip4 torch.Size([170, 50, 768])
         feat_by_level = self.get_per_level_vit_feat(clip4, bs)
-        print('get_per_level_vit_feat', len(feat_by_level), [ele.shape for ele in feat_by_level])
+        # feat_by_level 4 clip_x [torch.Size([2, 56, 56, 768]), torch.Size([2, 28, 28, 768]), torch.Size([2, 14, 14, 768]), torch.Size([2, 7, 7, 768])]
         
         # clip1: torch.Size([128, 50, 768]) [bs * h_patch_num * w_patch_num, 
         # self.vit_girds_num * self.vit_girds_num + 1, 224, 224]
