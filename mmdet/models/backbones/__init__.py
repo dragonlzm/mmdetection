@@ -18,6 +18,7 @@ from .trident_resnet import TridentResNet
 from .vision_transformer import myVisionTransformer, myTransformer, ModifiedResNet
 from .resnet_with_vit import ResNetWithVit
 from .resnet_with_vit_v2 import ResNetWithVitV2
+from .resnet_with_vit_multi_scale import ResNetWithVitMultiScale
 
 
 __all__ = [
@@ -26,5 +27,5 @@ __all__ = [
     'DetectoRS_ResNeXt', 'Darknet', 'ResNeSt', 'TridentResNet', 'CSPDarknet',
     'SwinTransformer', 'PyramidVisionTransformer', 'PyramidVisionTransformerV2',
     'myVisionTransformer', 'myTransformer', 'ModifiedResNet', 'ResNetWithVit',
-    'ResNetWithVitV2'
+    'ResNetWithVitV2', 'ResNetWithVitMultiScale'
 ]
