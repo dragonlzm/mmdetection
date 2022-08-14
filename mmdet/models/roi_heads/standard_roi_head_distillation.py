@@ -73,6 +73,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                       gt_masks=None,
                       distilled_feat=None, 
                       rand_bboxes=None,
+                      rand_bbox_weights=None,
                       bg_bboxes=None,
                       bg_feats=None,
                       cp_mark=None,
@@ -123,7 +124,8 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             bbox_results = self._bbox_forward_train(x, sampling_results,
                                                     gt_bboxes, gt_labels,
                                                     img_metas, distilled_feat,
-                                                    rand_bboxes, 
+                                                    rand_bboxes,
+                                                    rand_bbox_weights=rand_bbox_weights,
                                                     bg_bboxes=bg_bboxes,
                                                     bg_feats=bg_feats,
                                                     cp_mark=cp_mark)
@@ -278,6 +280,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                             gt_bboxes, gt_labels,
                             img_metas, distilled_feat, 
                             rand_bboxes,
+                            rand_bbox_weights=None,
                             bg_bboxes=None,
                             bg_feats=None,
                             cp_mark=None):
@@ -289,32 +292,55 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             rois = bbox2roi([torch.cat([res.bboxes, bg_bbox]).cuda() for res, bg_bbox in zip(sampling_results, bg_bboxes)])
         else:     
             rois = bbox2roi([res.bboxes for res in sampling_results])
+       
         # prepare the roi for the gt and the random bboxes
         if self.use_bg_pro_for_distill:
             gt_rand_rois = [torch.cat([gt_bbox, random_bbox, bg_bbox], dim=0) for gt_bbox, random_bbox, bg_bbox in zip(gt_bboxes, rand_bboxes, bg_bboxes)]
         elif self.use_only_gt_pro_for_distill:
             gt_rand_rois = gt_bboxes
         else:
+            # filter the padded random bboxes
             rand_bboxes = [rand_bbox[torch.abs(rand_bbox).sum(dim=1) > 0] 
                 for rand_bbox in rand_bboxes]
             original_gt_nums = [dist_feat.shape[0] - rand_bbox.shape[0] for dist_feat, rand_bbox in zip(distilled_feat, rand_bboxes)]
             gt_rand_rois = [torch.cat([gt_bbox[:original_gt_num, :], random_bbox], dim=0).float() for gt_bbox, random_bbox, original_gt_num in zip(gt_bboxes, rand_bboxes, original_gt_nums)]
             
             # prepare the distillation weight
-            if cp_mark is not None or self.gt_bboxes_distill_weight is not None:
-                gt_bbox_distill_weight = self.gt_bboxes_distill_weight if self.gt_bboxes_distill_weight is not None else 1
+            ### there is three situations which need to specify the per clip proposal distillation weight
+            ### 1. when using the copy and paste augmentation: at this situation, the number of gt bbox is large than the gt_feat, 
+            ###    therefore we use original_gt_nums to get the real gt bboxes number
+            ###    at the same time, we also need to set the weight for all the clip proposal to 0, 
+            ###    if the image use the copy and paste augmentation, in which the mark of cp_mark = True
+            ### 2. when given the gt_bboxes_distill_weight: usually, when we filter the base categories clip porposal, we will give a
+            ###    larger weight to the gt bbox when it participate in distillation
+            ### 3. when using the per clip proposal distillation weight, at this time we usually give a per bbox weight for clip proposal
+            
+            if cp_mark is not None or self.gt_bboxes_distill_weight is not None or rand_bbox_weights is not None:
+                # prepare for not in the first situtation
                 if cp_mark == None:
                     cp_mark = [False for ele in rand_bboxes]
+                # prepare for not in the second situation
+                gt_bbox_distill_weight = self.gt_bboxes_distill_weight if self.gt_bboxes_distill_weight is not None else 1
+                # prepate for not in the third situation 
+                if rand_bbox_weights == None:
+                    rand_bbox_weights = [None for ele in rand_bboxes]
+
                 feat_dim = distilled_feat[0].shape[-1]
                 distill_ele_weight = []
-                for original_gt_num, random_bbox, mark in zip(original_gt_nums, rand_bboxes, cp_mark):
+                for original_gt_num, random_bbox, mark, rand_bbox_weight in zip(original_gt_nums, rand_bboxes, cp_mark, rand_bbox_weights):
                     if mark == True:
                         # if we using the copy and paste we just simply ignore all the clip proposal bboxes(random_bbox), so the weight of random_bbox is 0
                         weight_per_img = torch.cat([torch.full((original_gt_num, feat_dim), gt_bbox_distill_weight), torch.zeros(random_bbox.shape[0], feat_dim)], dim=0).cuda()
                         # if we using the copy and paste we do not normalize the weight, otherwise the weight for only gt bboxes will be too large
                     else:
+                        # whether we have the per clip proposal bbox distillation weigth
+                        if rand_bbox_weight is not None:
+                            rand_bbox_weight = rand_bbox_weight.unsqueeze(dim=-1).repeat([1,feat_dim])
+                        else:
+                            rand_bbox_weight = torch.ones(random_bbox.shape[0], feat_dim)
+                        
                         # otherwise the weight of the random_bbox will be 1
-                        weight_per_img = torch.cat([torch.full((original_gt_num, feat_dim), gt_bbox_distill_weight), torch.ones(random_bbox.shape[0], feat_dim)], dim=0).cuda()
+                        weight_per_img = torch.cat([torch.full((original_gt_num, feat_dim), gt_bbox_distill_weight), rand_bbox_weight], dim=0).cuda()
                         # normalize the weight
                         # the factor should be: (num of gt bbox + num of random bbox) / (weight of all gt bbox + weight of the all random bboxes)
                         normalize_factor = weight_per_img.shape[0] / torch.sum(weight_per_img[:, 0]).item()
@@ -326,9 +352,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                 #       [ele.shape for ele in gt_bboxes], [ele.shape for ele in rand_bboxes], [ele.shape for ele in distilled_feat])     
             else:
                 distill_ele_weight = None
-            # temp = [ele.shape[0] for ele in rand_bboxes]
-            # if 0 in temp:
-            #     print([ele.shape for ele in gt_rand_rois])
+
         
         # add pertrubation
         if self.add_distill_pertrub:

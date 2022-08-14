@@ -594,7 +594,8 @@ class LoadCLIPFeat:
                  select_fixed_subset=None,
                  extra_rand_path_prefix=None,
                  filter_iop=False,
-                 max_filter_num=100):
+                 max_filter_num=100,
+                 load_rand_bbox_weight=False):
         self.file_path_prefix = file_path_prefix
         # the path should like this
         # /data/zhuoming/detection/coco/feat
@@ -605,12 +606,13 @@ class LoadCLIPFeat:
         self.extra_rand_path_prefix = extra_rand_path_prefix
         self.filter_iop = filter_iop
         self.max_filter_num = max_filter_num
+        self.load_rand_bbox_weight = load_rand_bbox_weight
 
     def __call__(self, results):
         '''load the pre-extracted CLIP feat'''
         file_name = '.'.join(results['img_info']['filename'].split('.')[:-1]) + '.json'
 
-        # load the gt feat
+        #### load the gt feat
         gt_file_name = osp.join(self.gt_feat_prefix, file_name)
         gt_file_content = json.load(open(gt_file_name))
         
@@ -666,7 +668,7 @@ class LoadCLIPFeat:
             remaining_feat = torch.cat([remaining_feat, padded_results], dim=0)
         results['gt_feats'] = remaining_feat
         
-        # load the random feat
+        #### load the random feat
         rand_file_name = osp.join(self.random_feat_prefix, file_name)
         rand_file_content = json.load(open(rand_file_name))
         
@@ -678,13 +680,21 @@ class LoadCLIPFeat:
         if rand_feat.shape[0] == 0 or rand_bbox.shape[0] == 0:
             results['rand_bboxes'] = np.zeros((self.num_of_rand_bbox, 4))
             results['rand_feats'] = torch.zeros((self.num_of_rand_bbox, 512))
+            if self.load_rand_bbox_weight:
+                results['rand_weight'] = torch.zeros((self.num_of_rand_bbox,))
             return results
         
         # selecting the subset of the file
         if self.select_fixed_subset != None:
             rand_feat = rand_feat[:self.select_fixed_subset]
             rand_bbox = rand_bbox[:self.select_fixed_subset]
-        if rand_bbox.shape[-1] == 5:
+        
+        if self.load_rand_bbox_weight:
+            if rand_bbox.shape[-1] == 5:
+                print('the clip random feat is the old versio, please use the new version')
+            rand_bbox_weight = rand_bbox[:, 4]            
+            
+        if rand_bbox.shape[-1] >= 5:
             rand_bbox = rand_bbox[:, :4]
         
         # compare the scale factor and reshape the random bbox
@@ -732,6 +742,9 @@ class LoadCLIPFeat:
         # convert to the torch tensor
         final_rand_bbox = torch.from_numpy(final_rand_bbox)
         rand_feat = torch.from_numpy(rand_feat)
+        if self.load_rand_bbox_weight:
+            rand_bbox_weight = torch.from_numpy(rand_bbox_weight)  
+        
         #filter the iop sample
         if self.filter_iop:
             # scale the pred and the gt back to the original scale
@@ -775,6 +788,10 @@ class LoadCLIPFeat:
         random_choice = torch.from_numpy(np.random.choice(rand_feat.shape[0], self.num_of_rand_bbox, replace=True))
         final_rand_bbox = final_rand_bbox[random_choice]
         final_rand_feat = rand_feat[random_choice]
+        if self.load_rand_bbox_weight:
+            rand_bbox_weight = rand_bbox_weight[random_choice]
+            results['rand_bbox_weight'] = rand_bbox_weight.cpu().numpy()
+        
         results['rand_bboxes'] = final_rand_bbox.cpu().numpy()
         results['rand_feats'] = final_rand_feat
         

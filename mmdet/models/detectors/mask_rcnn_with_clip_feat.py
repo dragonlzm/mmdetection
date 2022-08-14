@@ -150,6 +150,7 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
                       gt_feats=None,
                       rand_bboxes=None,
                       rand_feats=None,
+                      rand_bbox_weights=None,
                       bg_bboxes=None,
                       bg_feats=None,
                       proposals=None,
@@ -186,14 +187,15 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
         x = self.extract_feat(img, ori_img)
         
         # remove the padded 0 bboxes
-        # gt_feats = [patches[:len(gt_bbox)] 
-        #                         for patches, gt_bbox in zip(gt_feats, gt_bboxes)]
-        #nonZeroRows = torch.abs(test).sum(dim=1) > 0
         gt_feats = [gt_feat[torch.abs(gt_feat).sum(dim=1) > 0] 
                         for gt_feat in gt_feats]
         
         rand_feats = [rand_feat[torch.abs(rand_feat).sum(dim=1) > 0] 
                 for rand_feat in rand_feats]
+
+        if rand_bbox_weights != None:
+            rand_bbox_weights = [rand_bbox_weight[torch.abs(rand_bbox_weight).sum(dim=1) > 0] 
+                for rand_bbox_weight in rand_bbox_weights]
         
         # concat the feat of gt and random
         if self.roi_head.use_bg_pro_for_distill:
@@ -279,6 +281,7 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
                                                  gt_masks=gt_masks,
                                                  distilled_feat=distilled_feat, 
                                                  rand_bboxes=rand_bboxes,
+                                                 rand_bbox_weights=rand_bbox_weights,
                                                  bg_bboxes=bg_bboxes,
                                                  bg_feats=bg_feats,
                                                  **kwargs)
