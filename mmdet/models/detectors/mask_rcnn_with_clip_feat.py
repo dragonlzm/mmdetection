@@ -194,7 +194,7 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
                 for rand_feat in rand_feats]
 
         if rand_bbox_weights != None:
-            rand_bbox_weights = [rand_bbox_weight[torch.abs(rand_bbox_weight).sum(dim=1) > 0] 
+            rand_bbox_weights = [rand_bbox_weight[rand_bbox_weight > 0] 
                 for rand_bbox_weight in rand_bbox_weights]
         
         # concat the feat of gt and random

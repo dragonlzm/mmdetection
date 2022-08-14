@@ -681,7 +681,7 @@ class LoadCLIPFeat:
             results['rand_bboxes'] = np.zeros((self.num_of_rand_bbox, 4))
             results['rand_feats'] = torch.zeros((self.num_of_rand_bbox, 512))
             if self.load_rand_bbox_weight:
-                results['rand_weight'] = torch.zeros((self.num_of_rand_bbox,))
+                results['rand_bbox_weights'] = np.zeros((self.num_of_rand_bbox,))
             return results
         
         # selecting the subset of the file
@@ -692,7 +692,7 @@ class LoadCLIPFeat:
         if self.load_rand_bbox_weight:
             if rand_bbox.shape[-1] == 5:
                 print('the clip random feat is the old versio, please use the new version')
-            rand_bbox_weight = rand_bbox[:, 4]            
+            rand_bbox_weights = rand_bbox[:, 4]            
             
         if rand_bbox.shape[-1] >= 5:
             rand_bbox = rand_bbox[:, :4]
@@ -743,7 +743,7 @@ class LoadCLIPFeat:
         final_rand_bbox = torch.from_numpy(final_rand_bbox)
         rand_feat = torch.from_numpy(rand_feat)
         if self.load_rand_bbox_weight:
-            rand_bbox_weight = torch.from_numpy(rand_bbox_weight)  
+            rand_bbox_weights = torch.from_numpy(rand_bbox_weights)  
         
         #filter the iop sample
         if self.filter_iop:
@@ -789,8 +789,8 @@ class LoadCLIPFeat:
         final_rand_bbox = final_rand_bbox[random_choice]
         final_rand_feat = rand_feat[random_choice]
         if self.load_rand_bbox_weight:
-            rand_bbox_weight = rand_bbox_weight[random_choice]
-            results['rand_bbox_weight'] = rand_bbox_weight.cpu().numpy()
+            rand_bbox_weights = rand_bbox_weights[random_choice]
+            results['rand_bbox_weights'] = rand_bbox_weights.cpu().numpy()
         
         results['rand_bboxes'] = final_rand_bbox.cpu().numpy()
         results['rand_feats'] = final_rand_feat
