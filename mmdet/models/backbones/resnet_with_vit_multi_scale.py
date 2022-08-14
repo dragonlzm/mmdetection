@@ -195,16 +195,6 @@ class ResNetWithVitMultiScale(ResNet):
         #print('in preprocessing', [ele.shape for ele in ori_images])
         
         # list[tensor(800, 1216, 3), tensor(800, 1216, 3)](H, W, C)
-
-        # all_images = []
-        # for img in ori_images:
-        #     PIL_image = Image.fromarray(np.uint8(img))
-        #     # do the preprocessing
-        #     new_image = self._preprocess(PIL_image)
-        #     all_images.append(new_image.unsqueeze(dim=0))
-        
-        # all_images = torch.cat(all_images, dim=0).cuda()
-        
         result = []
         for img in ori_images:
             H, W, channel = img.shape
@@ -281,7 +271,9 @@ class ResNetWithVitMultiScale(ResNet):
         #     if para_name == 'ln_post.bias':
         #         print(para_name, param.requires_grad, param.shape, param)
         with torch.no_grad():
+            print('before preprocessing', ori_image.shape)
             ori_image_patches = self.preprocess(ori_image)
+            print('after preprocessing', ori_image_patches.shape)
             
         # ori_image_patches [128, 3, 224, 224] [bs * h_patch_num * w_patch_num, 3, 224, 224]
         # clip forward
@@ -291,7 +283,9 @@ class ResNetWithVitMultiScale(ResNet):
         clip4 = self.clip_step_4(clip3)
         bs = ori_image.shape[0]
         
+        print('get_per_level_vit_feat', clip4.shape)
         feat_by_level = self.get_per_level_vit_feat(clip4, bs)
+        print('get_per_level_vit_feat', len(feat_by_level), [ele.shape for ele in feat_by_level])
         
         # clip1: torch.Size([128, 50, 768]) [bs * h_patch_num * w_patch_num, 
         # self.vit_girds_num * self.vit_girds_num + 1, 224, 224]

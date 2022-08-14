@@ -55,6 +55,3 @@ model = dict(
     ),
     backbone=dict(
         type='ResNetWithVit'))
-
-
-
