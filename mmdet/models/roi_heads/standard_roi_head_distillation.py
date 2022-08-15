@@ -178,7 +178,6 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             random_file_path = os.path.join(self.save_the_feat, file_name)  
             file = open(random_file_path, 'w')
             result_json = {'feat':gt_and_bg_feats.cpu().tolist()}
-            #print('testing random json', result_json)
             file.write(json.dumps(result_json))
             file.close()
         
@@ -217,11 +216,6 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                     clip_proposal_rn_feat = cat_distilled_feat[start_at:start_at+clip_proposal_num, :]
                     all_clip_proposal_clip_feat.append(clip_proposal_rn_feat)
                     start_at += clip_proposal_num                
-                
-                # print('all_gt_bboxes_rn_feat', [ele.shape for ele in all_gt_bboxes_rn_feat],
-                #       'all_clip_proposal_rn_feat', [ele.shape for ele in all_clip_proposal_rn_feat],
-                #       'all_gt_bboxes_clip_feat', [ele.shape for ele in all_gt_bboxes_clip_feat],
-                #       'all_clip_proposal_clip_feat', [ele.shape for ele in all_clip_proposal_clip_feat])
                 
                 # concat all the feature
                 all_gt_bboxes_rn_feat = torch.cat(all_gt_bboxes_rn_feat, dim=0)
@@ -320,8 +314,8 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                 if cp_mark == None:
                     cp_mark = [False for ele in rand_bboxes]
                 # prepare for not in the second situation
-                gt_bbox_distill_weight = self.gt_bboxes_distill_weight if self.gt_bboxes_distill_weight is not None else 1
-                # prepate for not in the third situation 
+                gt_bbox_distill_weight = self.gt_bboxes_distill_weight if self.gt_bboxes_distill_weight is not None else 1.0
+                # prepare for not in the third situation 
                 if rand_bbox_weights == None:
                     rand_bbox_weights = [None for ele in rand_bboxes]
 
@@ -335,7 +329,6 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                     else:
                         # whether we have the per clip proposal bbox distillation weigth
                         if rand_bbox_weight is not None:
-                            #print('with weight')
                             rand_bbox_weight = rand_bbox_weight.unsqueeze(dim=-1).repeat([1,feat_dim])
                         else:
                             rand_bbox_weight = torch.ones(random_bbox.shape[0], feat_dim).cuda()
@@ -343,15 +336,11 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                         # otherwise the weight of the random_bbox will be 1
                         weight_per_img = torch.cat([torch.full((original_gt_num, feat_dim), gt_bbox_distill_weight).cuda(), rand_bbox_weight], dim=0)
                         # normalize the weight
-                        #print('before normalize', weight_per_img[:,0])
                         # the factor should be: (num of gt bbox + num of random bbox) / (weight of all gt bbox + weight of the all random bboxes)
                         normalize_factor = weight_per_img.shape[0] / torch.sum(weight_per_img[:, 0]).item()
                         weight_per_img *= normalize_factor
-                        #print('after normalize', weight_per_img.shape[0], torch.sum(weight_per_img[:, 0]).item(), original_gt_num, random_bbox.shape[0], torch.sum(weight_per_img)/512)
-                    
-                    distill_ele_weight.append(weight_per_img)
-                # print(cp_mark, [ele.shape for ele in gt_rand_rois], [ele.shape for ele in distill_ele_weight], [ele for ele in distill_ele_weight],
-                #       [ele.shape for ele in gt_bboxes], [ele.shape for ele in rand_bboxes], [ele.shape for ele in distilled_feat])     
+
+                    distill_ele_weight.append(weight_per_img)   
             else:
                 distill_ele_weight = None
 
