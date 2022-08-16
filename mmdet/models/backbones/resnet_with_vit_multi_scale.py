@@ -182,8 +182,6 @@ class ResNetWithVitMultiScale(ResNet):
         return merge_x
     
     def preprocess(self, ori_images):
-        # split each image into one tensor
-        ori_images = [ori_image for ori_image in ori_images]
         # handle the test image
         if len(ori_images[0].shape) == 4:
             ori_images = [ori_image.squeeze(dim=0) for ori_image in ori_images]
@@ -270,7 +268,8 @@ class ResNetWithVitMultiScale(ResNet):
         #     if para_name == 'ln_post.bias':
         #         print(para_name, param.requires_grad, param.shape, param)
         with torch.no_grad():
-            # before preprocessing torch.Size([2, 1024, 1024, 3])
+            # split each image into one tensor
+            ori_image = [image for image in ori_image]
             ori_image_patches = self.preprocess(ori_image)
             # after preprocessing torch.Size([170, 3, 224, 224])
             
@@ -280,7 +279,7 @@ class ResNetWithVitMultiScale(ResNet):
         clip2 = self.clip_step_2(clip1)
         clip3 = self.clip_step_3(clip2)
         clip4 = self.clip_step_4(clip3)
-        bs = ori_image.shape[0]
+        bs = len(ori_image)
         
         # clip4 torch.Size([170, 50, 768])
         feat_by_level = self.get_per_level_vit_feat(clip4, bs)

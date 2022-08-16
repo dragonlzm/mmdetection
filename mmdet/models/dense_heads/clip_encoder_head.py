@@ -313,6 +313,43 @@ class ClipEncoderHead(AnchorFreeHead):
             # normalized features
             text_embeddings = text_embeddings / text_embeddings.norm(dim=-1, keepdim=True)
             
+            ## handle word from outside:
+            # import json
+            # # load_path = '/data/zhuoming/detection/coco/annotations/all_words.json'
+            # # all_words = json.load(open(load_path))
+                        
+            # all_words = ('person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
+            #     'train', 'truck', 'boat', 'traffic light', 'fire hydrant',
+            #     'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog',
+            #     'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe',
+            #     'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee',
+            #     'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat',
+            #     'baseball glove', 'skateboard', 'surfboard', 'tennis racket',
+            #     'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl',
+            #     'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot',
+            #     'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch',
+            #     'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop',
+            #     'mouse', 'remote', 'keyboard', 'cell phone', 'microwave',
+            #     'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock',
+            #     'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush')
+            
+            # all_phrases = ["a " + word for word in all_words]
+            # tokenized_results = self.tokenize(all_phrases).cuda()
+            # result_dict = {}
+            # for i, (name, tokenized_result) in enumerate(zip(all_words, tokenized_results)):
+            #     if i % 1000 == 0:
+            #         print(i)
+            #     text_embeddings = self.encode_text(tokenized_result.unsqueeze(dim=0))
+            #     text_embeddings = text_embeddings / text_embeddings.norm(dim=-1, keepdim=True)
+            #     result_dict[name] = text_embeddings.cpu().tolist()
+            
+            # #result_path = '/data/zhuoming/detection/coco/annotations/finetuned_phrases_vs_feats.json'
+            # result_path = '/data/zhuoming/detection/coco/annotations/finetuned_coco_names_vs_feats.json'
+            # file = open(result_path, 'w')
+            # file.write(json.dumps(result_dict))
+            # file.close()
+            # print('result saved to:', result_path)
+            
             if not self.training:
                 self.text_embeddings = text_embeddings
             
