@@ -34,8 +34,9 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         self.use_contrast_distill = self.train_cfg.get('use_contrast_distill', False) if self.train_cfg is not None else False
         self.contrastive_weight = self.train_cfg.get('contrastive_weight', 0.5) if self.train_cfg is not None else 0.5
         self.gt_bboxes_distill_weight = self.train_cfg.get('gt_bboxes_distill_weight', None) if self.train_cfg is not None else None
-        self.match_count = 0
-        self.total = 0
+        # self.all_cosine_value = 0
+        # self.count = 0
+        # self.iter = 0
 
     def init_mask_head(self, mask_roi_extractor, mask_head):
         """Initialize ``mask_head``"""
@@ -189,6 +190,13 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             if distill_ele_weight:
                 distill_ele_weight = torch.cat(distill_ele_weight, dim=0)
             cat_distilled_feat = cat_distilled_feat / cat_distilled_feat.norm(dim=-1, keepdim=True)
+            # cos_value = torch.sum(pred_feats * cat_distilled_feat)
+            # self.all_cosine_value += cos_value.item()
+            # self.count += pred_feats.shape[0]
+            # self.iter += 1
+            # if self.iter % 100 == 0:
+            #     print('average cosine:', self.all_cosine_value / self.count)
+            
             distill_loss_value = self.distillation_loss(pred_feats, cat_distilled_feat, distill_ele_weight)
             if self.use_contrast_distill:
                 # aggregate the gt bboxes rn feature
