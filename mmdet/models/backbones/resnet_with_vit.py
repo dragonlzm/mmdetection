@@ -70,7 +70,8 @@ class ResNetWithVit(ResNet):
                  init_cfg=None,
                  #clip_architecture="ViT-L/14"):
                  vit_backbone_cfg=None,
-                 merge_step=('merge1', 'merge2', 'merge3', 'merge4')):
+                 merge_step=('merge1', 'merge2', 'merge3', 'merge4'),
+                 merge_method='add'):
         super(ResNetWithVit, self).__init__(
                  depth, in_channels, stem_channels, base_channels,
                  num_stages, strides, dilations, out_indices,
@@ -78,6 +79,7 @@ class ResNetWithVit(ResNet):
                  norm_cfg, norm_eval, dcn, stage_with_dcn, plugins,
                  with_cp, zero_init_residual, pretrained, init_cfg)
         self.merge_step = merge_step
+        self.merge_method = merge_method
         self.vit_backbone_cfg = vit_backbone_cfg
         self.setup_clip_component()
         self.setup_clip_adapter()
@@ -101,15 +103,27 @@ class ResNetWithVit(ResNet):
         #    self.clip_visual_model = clip_model.visual      
         
     def setup_clip_adapter(self):
-        # inject clip feature 4 times (4th time it is same dimension no need to adapt) 
+        # inject clip feature 4 times (4th time it is same dimension no need to adapt)
         if 'merge1' in self.merge_step:
-            self.adapt_mlp_1 = nn.Linear(self.vit_backbone_cfg.width, 64)
+            if self.merge_method == 'cat':
+                self.adapt_mlp_1 = nn.Linear(self.vit_backbone_cfg.width + 64, 64)
+            else:
+                self.adapt_mlp_1 = nn.Linear(self.vit_backbone_cfg.width, 64)
         if 'merge2' in self.merge_step:
-            self.adapt_mlp_2 = nn.Linear(self.vit_backbone_cfg.width, 256)
+            if self.merge_method == 'cat':
+                self.adapt_mlp_2 = nn.Linear(self.vit_backbone_cfg.width + 256, 256)
+            else:
+                self.adapt_mlp_2 = nn.Linear(self.vit_backbone_cfg.width, 256)
         if 'merge3' in self.merge_step:
-            self.adapt_mlp_3 = nn.Linear(self.vit_backbone_cfg.width, 512)
+            if self.merge_method == 'cat':
+                self.adapt_mlp_3 = nn.Linear(self.vit_backbone_cfg.width + 512, 512)
+            else:
+                self.adapt_mlp_3 = nn.Linear(self.vit_backbone_cfg.width, 512)
         if 'merge4' in self.merge_step:
-            self.adapt_mlp_4 = nn.Linear(self.vit_backbone_cfg.width, 1024)
+            if self.merge_method == 'cat':
+                self.adapt_mlp_4 = nn.Linear(self.vit_backbone_cfg.width + 1024, 1024)
+            else:
+                self.adapt_mlp_4 = nn.Linear(self.vit_backbone_cfg.width, 1024)
         
     def clip_pre_transformer(self, x):
         # x = self.preprocess(x)
@@ -175,7 +189,7 @@ class ResNetWithVit(ResNet):
         x = res_layer(x)
         return x
 
-    def merge(self, clip_x, res_x, step_idx):
+    def add_merge(self, clip_x, res_x, step_idx):
         #with torch.no_grad():
         reshape_x = clip_x[:,1:,:] # [bs, self.girds_num*self.girds_num, 1024] / [2, 49, 768]
         #print('before convert:', reshape_x.shape)
@@ -202,6 +216,36 @@ class ResNetWithVit(ResNet):
         #print('after merge:', merge_x.shape, res_x.shape)
         return merge_x
     
+    def cat_merge(self, clip_x, res_x, step_idx):
+        #with torch.no_grad():
+        reshape_x = clip_x[:,1:,:] # [bs, self.girds_num*self.girds_num, 1024] / [2, 49, 768]
+        reshape_x = reshape_x.reshape(clip_x.size(0), self.girds_num, self.girds_num, -1) # [bs, self.girds_num, self.girds_num, vit_dim]
+        reshape_x = reshape_x.permute(0, 3, 1, 2) # [bs, vit_dim, self.girds_num, self.girds_num]
+        reshape_x = F.interpolate(reshape_x, size=(res_x.size(2), res_x.size(3)), mode='bicubic', align_corners=False) # [bs, vit_dim, res_x.size(2), res_x.size(3)]
+        # concat the feature
+        reshape_x = torch.cat([reshape_x, res_x], dim=1) # [bs, vit_dim + res_dim, res_x.size(2), res_x.size(3)]
+        # permute the dim
+        reshape_x = reshape_x.permute([0, 2, 3, 1]) # [bs, res_x.size(2), res_x.size(3), vit_dim + res_dim]
+        
+        if(step_idx == 1):
+            reshape_x = self.adapt_mlp_1(reshape_x) # [bs, res_x.size(2), res_x.size(3), 64]
+        elif(step_idx == 2):
+            reshape_x = self.adapt_mlp_2(reshape_x) # [bs, res_x.size(2), res_x.size(3), 256]
+        elif(step_idx == 3):
+            reshape_x = self.adapt_mlp_3(reshape_x) # [bs, res_x.size(2), res_x.size(3), 512]
+        elif(step_idx == 4):
+            reshape_x = self.adapt_mlp_4(reshape_x) # [bs, res_x.size(2), res_x.size(3), 1024]
+            
+        # permute the dim back
+        reshape_x = reshape_x.permute(0, 3, 1, 2)
+        return reshape_x    
+    
+    def merge(self, clip_x, res_x, step_idx):
+        if self.merge_method == 'add':
+            return self.add_merge(clip_x, res_x, step_idx)
+        elif self.merge_method == 'cat':
+            return self.cat_merge(clip_x, res_x, step_idx)
+
     def preprocess(self, ori_images):
         ori_images = [ori_image for ori_image in ori_images]
         if len(ori_images[0].shape) == 4:
