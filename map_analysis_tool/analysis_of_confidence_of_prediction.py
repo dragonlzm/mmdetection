@@ -14,8 +14,8 @@ iou_calculator = BboxOverlaps2D()
 #prediction_path = '/data/zhuoming/detection/mask_rcnn_clip_classifier/results_novel17_12.bbox.json'
 
 #prediction_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_200clip_pro_reg_with_embedding/base_results.bbox.json'
-prediction_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_200clip_pro_reg_with_embedding/novel_results_trick.bbox.json'
-# prediction_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_200clip_pro_reg_with_embedding/novel_results.bbox.json'
+#prediction_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_200clip_pro_reg_with_embedding/novel_results_trick.bbox.json'
+prediction_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_200clip_pro_reg_with_embedding/novel_results.bbox.json'
 
 prediction_content = json.load(open(prediction_path))
 
@@ -37,7 +37,7 @@ for ele in prediction_content:
 # load the gt
 #gt_path = '/data/zhuoming/detection/coco/annotations/instances_val2017.json'
 gt_path = '/data/zhuoming/detection/coco/annotations/instances_val2017_novel17.json'
-#gt_path = '/data/zhuoming/detection/coco/annotations/instances_val2017_base48.json'
+# gt_path = '/data/zhuoming/detection/coco/annotations/instances_val2017_base48.json'
 
 gt_content = json.load(open(gt_path))
 
@@ -108,13 +108,18 @@ all_valid_iou_score = torch.cat(all_valid_iou_score, dim=0)
 
 # torch.save(all_valid_confidence_score, 'base_predition_all_valid_confidence_score.pt')
 # torch.save(all_invalid_confidence_score, 'base_predition_all_invalid_confidence_score.pt')
-torch.save(all_valid_confidence_score, 'novel_with_trick_predition_all_valid_confidence_score.pt')
-torch.save(all_invalid_confidence_score, 'novel_with_trick_predition_all_invalid_confidence_score.pt')
-torch.save(all_valid_iou_score, 'novel_with_trick_predition_all_valid_iou_score.pt')
-torch.save(all_invalid_iou_score, 'novel_with_trick_predition_all_invalid_iou_score.pt')
+# torch.save(all_valid_iou_score, 'base_predition_all_valid_iou_score.pt')
+# torch.save(all_invalid_iou_score, 'base_predition_all_invalid_iou_score.pt')
 
-# torch.save(all_valid_confidence_score, 'novel_predition_all_valid_confidence_score.pt')
-# torch.save(all_invalid_confidence_score, 'novel_predition_all_invalid_confidence_score.pt')
+# torch.save(all_valid_confidence_score, 'novel_with_trick_predition_all_valid_confidence_score.pt')
+# torch.save(all_invalid_confidence_score, 'novel_with_trick_predition_all_invalid_confidence_score.pt')
+# torch.save(all_valid_iou_score, 'novel_with_trick_predition_all_valid_iou_score.pt')
+# torch.save(all_invalid_iou_score, 'novel_with_trick_predition_all_invalid_iou_score.pt')
+
+torch.save(all_valid_confidence_score, 'novel_predition_all_valid_confidence_score.pt')
+torch.save(all_invalid_confidence_score, 'novel_predition_all_invalid_confidence_score.pt')
+torch.save(all_valid_iou_score, 'novel_predition_all_valid_iou_score.pt')
+torch.save(all_invalid_iou_score, 'novel_predition_all_invalid_iou_score.pt')
 
 
 
