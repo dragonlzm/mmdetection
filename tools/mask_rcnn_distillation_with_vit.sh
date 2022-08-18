@@ -31,16 +31,16 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #     #--resume-from=${WORK_DIR}/latest.pth
 
 # 200 clip proposal filpping(reg with class embedding, cat, with vit backbone, merge4)
-ADDITIONAL_CONFIG="model.backbone.merge_step=['merge4']"
-WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_with_vit_base48_merge4"
-PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
-python -m torch.distributed.launch --nproc_per_node=2 \
-    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
-    configs/mask_rcnn_distill/mask_rcnn_distillation_with_vit_base48.py --launcher pytorch \
-    --work-dir=${WORK_DIR} \
-    --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
-    ${ADDITIONAL_CONFIG} \
-    #--resume-from=${WORK_DIR}/latest.pth
+# ADDITIONAL_CONFIG="model.backbone.merge_step=['merge4']"
+# WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_with_vit_base48_merge4"
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#     configs/mask_rcnn_distill/mask_rcnn_distillation_with_vit_base48.py --launcher pytorch \
+#     --work-dir=${WORK_DIR} \
+#     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
+#     ${ADDITIONAL_CONFIG} \
+#     #--resume-from=${WORK_DIR}/latest.pth
 
 # 200 clip proposal filpping(reg with class embedding, cat, with vit backbone, merge3to4)
 # ADDITIONAL_CONFIG="model.backbone.merge_step=['merge3','merge4']"
@@ -77,6 +77,59 @@ python -m torch.distributed.launch --nproc_per_node=2 \
 #     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
 #     ${ADDITIONAL_CONFIG} \
 #     #--resume-from=${WORK_DIR}/latest.pth
+
+###### concat merge #####
+# 200 clip proposal filpping(reg with class embedding, cat, with vit backbone)
+ADDITIONAL_CONFIG="model.backbone.merge_method='cat'"
+WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_with_vit_base48_cat_merge"
+PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+python -m torch.distributed.launch --nproc_per_node=2 \
+    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+    configs/mask_rcnn_distill/mask_rcnn_distillation_with_vit_base48.py --launcher pytorch \
+    --work-dir=${WORK_DIR} \
+    --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
+    ${ADDITIONAL_CONFIG} \
+    #--resume-from=${WORK_DIR}/latest.pth
+
+
+#200 clip proposal filpping(reg with class embedding, cat, with vit backbone, merge3to4)
+# ADDITIONAL_CONFIG="model.backbone.merge_step=['merge3','merge4'] model.backbone.merge_method='cat'"
+# WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_with_vit_base48_merge3to4_cat_merge"
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#     configs/mask_rcnn_distill/mask_rcnn_distillation_with_vit_base48.py --launcher pytorch \
+#     --work-dir=${WORK_DIR} \
+#     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
+#     ${ADDITIONAL_CONFIG} \
+#     #--resume-from=${WORK_DIR}/latest.pth
+
+
+#200 clip proposal filpping(reg with class embedding, cat, with vit backbone, merge4)
+# ADDITIONAL_CONFIG="model.backbone.merge_step=['merge4'] model.backbone.merge_method='cat'"
+# WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_with_vit_base48_merge4_cat_merge"
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#     configs/mask_rcnn_distill/mask_rcnn_distillation_with_vit_base48.py --launcher pytorch \
+#     --work-dir=${WORK_DIR} \
+#     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
+#     ${ADDITIONAL_CONFIG} \
+#     #--resume-from=${WORK_DIR}/latest.pth
+
+
+#200 clip proposal filpping(reg with class embedding, cat, with vit backbone, merge3)
+# ADDITIONAL_CONFIG="model.backbone.merge_step=['merge3'] model.backbone.merge_method='cat'"
+# WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_with_vit_base48_merge3_cat_merge"
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#     configs/mask_rcnn_distill/mask_rcnn_distillation_with_vit_base48.py --launcher pytorch \
+#     --work-dir=${WORK_DIR} \
+#     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
+#     ${ADDITIONAL_CONFIG} \
+#     #--resume-from=${WORK_DIR}/latest.pth
+
 
 # test the model
 #CHECKPOINT_NAME="epoch_12.pth"
