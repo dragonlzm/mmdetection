@@ -222,6 +222,8 @@ class ResNetWithVit(ResNet):
         reshape_x = reshape_x.reshape(clip_x.size(0), self.girds_num, self.girds_num, -1) # [bs, self.girds_num, self.girds_num, vit_dim]
         reshape_x = reshape_x.permute(0, 3, 1, 2) # [bs, vit_dim, self.girds_num, self.girds_num]
         reshape_x = F.interpolate(reshape_x, size=(res_x.size(2), res_x.size(3)), mode='bicubic', align_corners=False) # [bs, vit_dim, res_x.size(2), res_x.size(3)]
+        #print('after interolation:', reshape_x.shape, 'res_x', res_x.shape)
+        
         # concat the feature
         reshape_x = torch.cat([reshape_x, res_x], dim=1) # [bs, vit_dim + res_dim, res_x.size(2), res_x.size(3)]
         # permute the dim
@@ -237,7 +239,7 @@ class ResNetWithVit(ResNet):
             reshape_x = self.adapt_mlp_4(reshape_x) # [bs, res_x.size(2), res_x.size(3), 1024]
             
         # permute the dim back
-        reshape_x = reshape_x.permute(0, 3, 1, 2)
+        reshape_x = reshape_x.permute(0, 3, 1, 2).contiguous()
         return reshape_x    
     
     def merge(self, clip_x, res_x, step_idx):
