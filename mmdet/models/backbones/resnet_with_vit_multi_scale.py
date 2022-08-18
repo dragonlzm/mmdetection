@@ -69,7 +69,8 @@ class ResNetWithVitMultiScale(ResNet):
                  init_cfg=None,
                  #clip_architecture="ViT-L/14"):
                  vit_backbone_cfg=None,
-                 image_grids_size_list=[(8,8), (4,4), (2,2), (1,1)]):
+                 image_grids_size_list=[(8,8), (4,4), (2,2), (1,1)],
+                 vit_feat_level='lvl4'):
         super(ResNetWithVitMultiScale, self).__init__(
                  depth, in_channels, stem_channels, base_channels,
                  num_stages, strides, dilations, out_indices,
@@ -77,6 +78,7 @@ class ResNetWithVitMultiScale(ResNet):
                  norm_cfg, norm_eval, dcn, stage_with_dcn, plugins,
                  with_cp, zero_init_residual, pretrained, init_cfg)
         self.vit_backbone_cfg = vit_backbone_cfg
+        self.vit_feat_level = vit_feat_level
         self.setup_clip_component()
         self.setup_clip_adapter()
         self.vit_girds_num = int(self.vit_backbone_cfg.input_resolution / self.vit_backbone_cfg.patch_size)
@@ -276,13 +278,24 @@ class ResNetWithVitMultiScale(ResNet):
         # ori_image_patches [128, 3, 224, 224] [bs * h_patch_num * w_patch_num, 3, 224, 224]
         # clip forward
         clip1 = self.clip_step_1(ori_image_patches)
-        clip2 = self.clip_step_2(clip1)
-        clip3 = self.clip_step_3(clip2)
-        clip4 = self.clip_step_4(clip3)
+        if self.vit_feat_level == 'lvl1':
+            vit_feat = clip1
+        elif self.vit_feat_level == 'lvl2':
+            clip2 = self.clip_step_2(clip1)
+            vit_feat = clip2
+        elif self.vit_feat_level == 'lvl3':
+            clip2 = self.clip_step_2(clip1)
+            clip3 = self.clip_step_3(clip2)
+            vit_feat = clip3
+        else:
+            clip2 = self.clip_step_2(clip1)
+            clip3 = self.clip_step_3(clip2)
+            clip4 = self.clip_step_4(clip3)
+            vit_feat = clip4
         bs = len(ori_image)
         
         # clip4 torch.Size([170, 50, 768])
-        feat_by_level = self.get_per_level_vit_feat(clip4, bs)
+        feat_by_level = self.get_per_level_vit_feat(vit_feat, bs)
         # feat_by_level 4 clip_x [torch.Size([2, 56, 56, 768]), torch.Size([2, 28, 28, 768]), torch.Size([2, 14, 14, 768]), torch.Size([2, 7, 7, 768])]
         
         # clip1: torch.Size([128, 50, 768]) [bs * h_patch_num * w_patch_num, 
