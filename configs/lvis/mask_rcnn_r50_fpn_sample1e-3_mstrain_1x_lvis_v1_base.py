@@ -1,4 +1,4 @@
-_base_ = './mask_rcnn_r50_fpn_random_seesaw_loss_normed_mask_mstrain_2x_lvis_v1.py'
+_base_ = './mask_rcnn_r50_fpn_sample1e-3_mstrain_1x_lvis_v1.py'
 
 classes = ('air_conditioner', 'airplane', 'alarm_clock', 'antenna', 'apple', 
            'apron', 'armchair', 'trash_can', 'avocado', 'awning', 'baby_buggy', 
@@ -147,14 +147,12 @@ classes = ('air_conditioner', 'airplane', 'alarm_clock', 'antenna', 'apple',
 
 # dataset settings
 data = dict(
-    train=dict(classes=classes),
+    train=dict(
+        dataset=dict(classes=classes)),
     val=dict(classes=classes),
     test=dict(classes=classes))
 
 model = dict(
     roi_head=dict(
-        bbox_head=dict(
-            num_classes=866,
-            loss_cls=dict(num_classes=866)),
+        bbox_head=dict(num_classes=866), 
         mask_head=dict(num_classes=866)))
-

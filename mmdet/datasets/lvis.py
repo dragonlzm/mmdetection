@@ -733,7 +733,7 @@ class LVISV1Dataset(LVISDataset):
         if len(self.cat_ids) != len(self.CLASSES):
             self.cat_ids = self.filter_cat_ids_base_on_name(self.CLASSES)
         self.cat2label = {cat_id: i for i, cat_id in enumerate(self.cat_ids)}
-        #print('self.cat2label', self.cat2label)
+        # print('self.cat2label', self.cat2label)
         self.img_ids = self.coco.get_img_ids()
         data_infos = []
         for i in self.img_ids:
