@@ -30,7 +30,6 @@ python -m torch.distributed.launch --nproc_per_node=2 \
     --resume-from=${WORK_DIR}/latest.pth
 
 CHECKPOINT_NAME="latest.pth"
-
 bash tools/dist_test.sh configs/mask_rcnn_distill/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48.py \
 ${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox segm \
 --eval-options jsonfile_prefix=${WORK_DIR}/base_results \
@@ -109,7 +108,7 @@ python -m torch.distributed.launch --nproc_per_node=2 \
     --work-dir=${WORK_DIR} \
     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
     ${ADDITIONAL_CONFIG} \
-    #--resume-from=${WORK_DIR}/latest.pth
+    --resume-from=${WORK_DIR}/latest.pth
 
 
 CHECKPOINT_NAME="latest.pth"
