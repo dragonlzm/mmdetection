@@ -710,6 +710,12 @@ class LVISV1Dataset(LVISDataset):
         'wreath', 'wrench', 'wristband', 'wristlet', 'yacht', 'yogurt',
         'yoke_(animal_equipment)', 'zebra', 'zucchini')
 
+    def filter_cat_ids_base_on_name(self, cate_names):
+        cats = self.coco.dataset['categories']
+        cats = [cat for cat in cats if cat['name'] in cate_names]
+        ids = [cat['id'] for cat in cats]
+        return ids
+
     def load_annotations(self, ann_file):
         try:
             import lvis
@@ -724,7 +730,10 @@ class LVISV1Dataset(LVISDataset):
             )
         self.coco = LVIS(ann_file)
         self.cat_ids = self.coco.get_cat_ids()
+        if len(self.cat_ids) != len(self.CLASSES):
+            self.cat_ids = self.filter_cat_ids_base_on_name(self.CLASSES)
         self.cat2label = {cat_id: i for i, cat_id in enumerate(self.cat_ids)}
+        #print('self.cat2label', self.cat2label)
         self.img_ids = self.coco.get_img_ids()
         data_infos = []
         for i in self.img_ids:

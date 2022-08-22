@@ -1,4 +1,4 @@
-_base_ = './mask_rcnn_r50_fpn_sample1e-3_seesaw_loss_mstrain_2x_lvis_v1.py'
+_base_ = './mask_rcnn_r50_fpn_random_seesaw_loss_normed_mask_mstrain_2x_lvis_v1.py'
 
 classes = ('air_conditioner', 'airplane', 'alarm_clock', 'antenna', 'apple', 
            'apron', 'armchair', 'trash_can', 'avocado', 'awning', 'baby_buggy', 
