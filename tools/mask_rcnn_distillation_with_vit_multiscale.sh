@@ -32,7 +32,7 @@ python -m torch.distributed.launch --nproc_per_node=2 \
 #CHECKPOINT_NAME="epoch_12.pth"
 #CHECKPOINT_NAME="epoch_24.pth"
 CHECKPOINT_NAME="latest.pth"
-ADDITIONAL_CONFIG="model.backbone='ResNetWithVitMultiScale'"
+ADDITIONAL_CONFIG="model.backbone.type='ResNetWithVitMultiScale'"
 
 bash tools/dist_test.sh configs/mask_rcnn_distill/mask_rcnn_distillation_with_vit_base48.py \
 ${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox segm \
