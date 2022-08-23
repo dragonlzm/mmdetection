@@ -89,7 +89,6 @@ class ResNetWithVitMultiScale(ResNet):
         
     def setup_clip_component(self):
         self._preprocess = _transform(self.vit_backbone_cfg.input_resolution)
-     
         
     def setup_clip_adapter(self):
         # inject clip feature 4 times (4th time it is same dimension no need to adapt) 
