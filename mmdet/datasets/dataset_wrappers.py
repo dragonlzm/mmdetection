@@ -506,6 +506,8 @@ class ClassBalancedDataset:
             if len(cat_ids) == 0 and not self.filter_empty_gt:
                 cat_ids = set([len(self.CLASSES)])
             for cat_id in cat_ids:
+                if cat_id not in self.dataset.cat_ids:
+                    continue
                 category_freq[cat_id] += 1
         for k, v in category_freq.items():
             category_freq[k] = v / num_images
@@ -528,7 +530,7 @@ class ClassBalancedDataset:
             if len(cat_ids) > 0:
                 repeat_factor = max(
                     {category_repeat[cat_id]
-                     for cat_id in cat_ids})
+                     for cat_id in cat_ids if cat_id in self.dataset.cat_ids})
             repeat_factors.append(repeat_factor)
 
         return repeat_factors
