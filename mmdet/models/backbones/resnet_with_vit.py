@@ -71,7 +71,7 @@ class ResNetWithVit(ResNet):
                  init_cfg=None,
                  #clip_architecture="ViT-L/14"):
                  vit_backbone_cfg=None,
-                 merge_step=('merge1', 'merge2', 'merge3', 'merge4'),
+                 merge_step=dict(merge1='from_vit_1', merge2='from_vit_2', merge3='from_vit_3', merge4='from_vit_4'),
                  merge_method='add',
                  merge_with_mlp=False):
         super(ResNetWithVit, self).__init__(
@@ -80,6 +80,18 @@ class ResNetWithVit(ResNet):
                  style, deep_stem, avg_down, frozen_stages, conv_cfg,
                  norm_cfg, norm_eval, dcn, stage_with_dcn, plugins,
                  with_cp, zero_init_residual, pretrained, init_cfg)
+        # preprocessing for the merge_step
+        if isinstance(merge_step, list):
+            new_merge_step = {}
+            for ele in merge_step:
+                # default setting
+                if '=' not in ele:
+                    lvl_num = ele[-1]
+                    new_merge_step[ele] = 'from_vit_' + lvl_num
+                else:
+                    res = ele.split('=')
+                    new_merge_step[res[0]] = res[1]
+            merge_step = new_merge_step
         self.merge_step = merge_step
         self.merge_method = merge_method
         self.merge_with_mlp = merge_with_mlp
@@ -312,6 +324,16 @@ class ResNetWithVit(ResNet):
         all_images = torch.cat(all_images, dim=0).cuda()
         return all_images
     
+    def select_from_feat(self, from_level):
+        if from_level == 'from_vit_1':
+            return self.clip1
+        elif from_level == 'from_vit_2':
+            return self.clip2
+        elif from_level == 'from_vit_3':
+            return self.clip3
+        else:
+            return self.clip4
+    
     def forward(self, img, ori_image):
         #img torch.Size([2, 3, 1280, 800]) ori_image torch.Size([2, 1024, 1024, 3])
         # in testing the ori_image list[torch.Size([1, 3, 1024, 1024])]
@@ -324,34 +346,47 @@ class ResNetWithVit(ResNet):
             
         # res0: regular resnet backbone input
         # clip0: clip input with corresponding preprocessing
-        clip1 = self.clip_step_1(ori_image)
+        self.clip1 = self.clip_step_1(ori_image)
+        self.clip2 = self.clip_step_2(self.clip1)
+        self.clip3 = self.clip_step_3(self.clip2)
+        self.clip4 = self.clip_step_4(self.clip3)
+        
         res1 = self.res_step_1(img)
         if 'merge1' in self.merge_step:
-            merge1 = self.merge(clip1, res1, 1)
+            from_level = self.merge_step['merge1']
+            print('from merge1', 'from_level', from_level)
+            from_feat = self.select_from_feat(from_level)
+            merge1 = self.merge(from_feat, res1, 1)
         else:
             merge1 = res1
         
         outs = []
-        clip2 = self.clip_step_2(clip1)
         res2 = self.res_step(merge1, 0)
         if 'merge2' in self.merge_step:
-            merge2 = self.merge(clip2, res2, 2)
+            from_level = self.merge_step['merge2']
+            print('from merge2', 'from_level', from_level)
+            from_feat = self.select_from_feat(from_level)
+            merge2 = self.merge(from_feat, res2, 2)
         else:
             merge2 = res2
         outs.append(merge2)
         
-        clip3 = self.clip_step_3(clip2)
         res3 = self.res_step(merge2, 1)
         if 'merge3' in self.merge_step:
-            merge3 = self.merge(clip3, res3, 3)
+            from_level = self.merge_step['merge3']
+            print('from merge3', 'from_level', from_level)
+            from_feat = self.select_from_feat(from_level)
+            merge3 = self.merge(from_feat, res3, 3)
         else:
             merge3 = res3
         outs.append(merge3)
         
-        clip4 = self.clip_step_4(clip3)
         res4 = self.res_step(merge3, 2)
         if 'merge4' in self.merge_step:
-            merge4 = self.merge(clip4, res4, 4)
+            from_level = self.merge_step['merge4']
+            print('from merge4', 'from_level', from_level)
+            from_feat = self.select_from_feat(from_level)
+            merge4 = self.merge(from_feat, res4, 4)
         else:
             merge4 = res4
         outs.append(merge4)
