@@ -354,7 +354,7 @@ class ResNetWithVit(ResNet):
         res1 = self.res_step_1(img)
         if 'merge1' in self.merge_step:
             from_level = self.merge_step['merge1']
-            print('from merge1', 'from_level', from_level)
+            #print('from merge1', 'from_level', from_level)
             from_feat = self.select_from_feat(from_level)
             merge1 = self.merge(from_feat, res1, 1)
         else:
@@ -364,7 +364,7 @@ class ResNetWithVit(ResNet):
         res2 = self.res_step(merge1, 0)
         if 'merge2' in self.merge_step:
             from_level = self.merge_step['merge2']
-            print('from merge2', 'from_level', from_level)
+            #print('from merge2', 'from_level', from_level)
             from_feat = self.select_from_feat(from_level)
             merge2 = self.merge(from_feat, res2, 2)
         else:
@@ -374,7 +374,7 @@ class ResNetWithVit(ResNet):
         res3 = self.res_step(merge2, 1)
         if 'merge3' in self.merge_step:
             from_level = self.merge_step['merge3']
-            print('from merge3', 'from_level', from_level)
+            #print('from merge3', 'from_level', from_level)
             from_feat = self.select_from_feat(from_level)
             merge3 = self.merge(from_feat, res3, 3)
         else:
@@ -384,7 +384,7 @@ class ResNetWithVit(ResNet):
         res4 = self.res_step(merge3, 2)
         if 'merge4' in self.merge_step:
             from_level = self.merge_step['merge4']
-            print('from merge4', 'from_level', from_level)
+            #print('from merge4', 'from_level', from_level)
             from_feat = self.select_from_feat(from_level)
             merge4 = self.merge(from_feat, res4, 4)
         else:
