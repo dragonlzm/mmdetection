@@ -141,8 +141,14 @@ class BBoxTestMixin:
             # There is no proposal in the whole batch
             return [det_bbox] * batch_size, [det_label] * batch_size
 
+
+        num_proposals_per_img = tuple(len(p) for p in proposals)
         if type(self).__name__ == 'StandardRoIHeadCLIPCls': 
             kwargs['img_metas'] = img_metas
+            bbox_results = self._bbox_forward(x, rois, **kwargs)
+        elif type(self).__name__ == 'TransformerBBoxHead':
+            kwargs['img_metas'] = img_metas
+            kwargs['bboxes_num'] = num_proposals_per_img
             bbox_results = self._bbox_forward(x, rois, **kwargs)
         elif self.save_the_feat:
             bbox_results = self._bbox_forward(x, rois, img_metas=img_metas)
@@ -154,7 +160,6 @@ class BBoxTestMixin:
         # split batch bbox prediction back to each image
         cls_score = bbox_results['cls_score']
         bbox_pred = bbox_results['bbox_pred']
-        num_proposals_per_img = tuple(len(p) for p in proposals)
         rois = rois.split(num_proposals_per_img, 0)
         cls_score = cls_score.split(num_proposals_per_img, 0)
 

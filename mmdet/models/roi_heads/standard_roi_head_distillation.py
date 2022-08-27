@@ -142,8 +142,10 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
 
         return losses
 
-    def _bbox_forward(self, x, rois, distilled_feat=None, gt_rand_rois=None, gt_labels=None, img_metas=None, distill_ele_weight=None, gt_bbox_and_clip_proposal_num=None):
-        """Box head forward function used in both training and testing."""  
+    def _bbox_forward(self, x, rois, distilled_feat=None, gt_rand_rois=None, gt_labels=None, img_metas=None, distill_ele_weight=None, bboxes_num=None):
+        """Box head forward function used in both training and testing.
+        bboxes_num: list[tuple(gt_bbox_num, rand_bbox_num, proposal_number)]
+        """  
         # is the number of feat map layer
         if distilled_feat != None and gt_rand_rois != None:
             # gt and random bbox feat from backbone_to
@@ -171,6 +173,8 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         
         # if we use bg proposal, the cls_score will has the the length of samples + bg number
         cls_score, bbox_pred, gt_and_bg_feats = self.bbox_head(bbox_feats)
+        #print('cls_score', cls_score.shape, 'bbox_pred', bbox_pred.shape, 'gt_and_bg_feats', gt_and_bg_feats.shape, 'bboxes_num', [ele for ele in bboxes_num])
+        
         # for save the classification feat
         if self.save_the_feat is not None:
             if not os.path.exists(self.save_the_feat):
@@ -204,7 +208,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                 start_at = 0
                 all_gt_bboxes_rn_feat = []
                 all_clip_proposal_rn_feat = []
-                for gt_bbox_num, clip_proposal_num in gt_bbox_and_clip_proposal_num:
+                for gt_bbox_num, clip_proposal_num, _ in bboxes_num:
                     gt_bbox_rn_feat = pred_feats[start_at:start_at+gt_bbox_num, :]
                     all_gt_bboxes_rn_feat.append(gt_bbox_rn_feat)
                     start_at += gt_bbox_num
@@ -217,7 +221,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                 start_at = 0
                 all_gt_bboxes_clip_feat = []
                 all_clip_proposal_clip_feat = []
-                for gt_bbox_num, clip_proposal_num in gt_bbox_and_clip_proposal_num:
+                for gt_bbox_num, clip_proposal_num, _ in bboxes_num:
                     gt_bbox_rn_feat = cat_distilled_feat[start_at:start_at+gt_bbox_num, :]
                     all_gt_bboxes_clip_feat.append(gt_bbox_rn_feat)
                     start_at += gt_bbox_num
@@ -347,11 +351,9 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                         # the factor should be: (num of gt bbox + num of random bbox) / (weight of all gt bbox + weight of the all random bboxes)
                         normalize_factor = weight_per_img.shape[0] / torch.sum(weight_per_img[:, 0]).item()
                         weight_per_img *= normalize_factor
-
                     distill_ele_weight.append(weight_per_img)   
             else:
                 distill_ele_weight = None
-
         
         # add pertrubation
         if self.add_distill_pertrub:
@@ -387,8 +389,10 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             gt_rand_rois = perturbed_result
     
         gt_rand_rois = bbox2roi(gt_rand_rois)
-        gt_bbox_and_clip_proposal_num = [(gt_bbox.shape[0], random_bbox.shape[0]) for gt_bbox, random_bbox in zip(gt_bboxes, rand_bboxes)]
-        bbox_results = self._bbox_forward(x, rois, distilled_feat, gt_rand_rois, gt_labels, distill_ele_weight=distill_ele_weight, gt_bbox_and_clip_proposal_num=gt_bbox_and_clip_proposal_num)
+        # save the bboxes number for each image:
+        # list[tuple(gt_bbox_num, rand_bbox_num, proposal_number)]
+        bboxes_num = [(gt_bbox.shape[0], random_bbox.shape[0], res.bboxes.shape[0]) for gt_bbox, random_bbox, res in zip(gt_bboxes, rand_bboxes, sampling_results)]
+        bbox_results = self._bbox_forward(x, rois, distilled_feat, gt_rand_rois, gt_labels, distill_ele_weight=distill_ele_weight, bboxes_num=bboxes_num, img_metas=img_metas)
         
         if self.use_bg_pro_as_ns:
             bbox_targets_ori = self.bbox_head.get_targets(sampling_results, gt_bboxes,
