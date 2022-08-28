@@ -612,7 +612,7 @@ class LVISV1Dataset(LVISDataset):
         'legging_(clothing)', 'Lego', 'legume', 'lemon', 'lemonade', 'lettuce',
         'license_plate', 'life_buoy', 'life_jacket', 'lightbulb',
         'lightning_rod', 'lime', 'limousine', 'lion', 'lip_balm', 'liquor',
-        'lizard', 'log', 'lollipop', 'speaker_(stereo_equipment)', 'loveseat',
+        'lizard', 'log', 'lollipop', 'speaker_(stero_equipment)', 'loveseat',
         'machine_gun', 'magazine', 'magnet', 'mail_slot', 'mailbox_(at_home)',
         'mallard', 'mallet', 'mammoth', 'manatee', 'mandarin_orange', 'manger',
         'manhole', 'map', 'marker', 'martini', 'mascot', 'mashed_potato',
