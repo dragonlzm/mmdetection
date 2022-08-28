@@ -559,7 +559,7 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         return cls_score, bbox_pred, x_cls
 
 @HEADS.register_module()
-class TransformerBBoxHead(ConvFCEmbeddingBBoxHead):
+class TransformerBBoxHead(BBoxHead):
     r"""More general bbox head, with shared conv and fc layers and two optional
     separated branches.
 
@@ -712,6 +712,9 @@ class TransformerBBoxHead(ConvFCEmbeddingBBoxHead):
                     in_features=final_reg_in_dim,
                     out_features=final_reg_out_dim)
         
+        # initial dec_pos_embed_proj
+        self.post_input_proj_norm = nn.LayerNorm(self.fc_out_channels)   
+        
         if init_cfg is None:
             self.init_cfg += [
                 dict(
@@ -745,9 +748,9 @@ class TransformerBBoxHead(ConvFCEmbeddingBBoxHead):
         # initial the transformer
         for m in self.encoder.modules():
             if hasattr(m, 'weight') and m.weight.dim() > 1:
-                xavier_init(m, distribution='uniform')
+                xavier_init(m, distribution='uniform')  
 
-    def _foward(self, x, bboxes, img_meta):
+    def _forward(self, x, bboxes, img_meta):
         # shared part
         if self.num_shared_convs > 0:
             for conv in self.shared_convs:
@@ -761,40 +764,56 @@ class TransformerBBoxHead(ConvFCEmbeddingBBoxHead):
 
             for fc in self.shared_fcs:
                 x = self.relu(fc(x))
+        x = x.unsqueeze(dim=0)
         
         # normalize the proposal
         img_h, img_w, _ = img_meta['img_shape']
+        # remove the first ele in each bbox(the idx for image)
+        bboxes = bboxes[:, 1:]
         bboxes = bboxes / torch.tensor([img_w, img_h, img_w, img_h],
                                            dtype=torch.float32, device=bboxes.device)
         bboxes = torch.cat([box_xyxy_to_cxcywh(bboxes), bboxes], dim=-1)
-        
-        # prepare the positional encoding
-        num_pos_feats = self.d_model // 8
-        temperature = 10000.0
-        dim_t = torch.arange(num_pos_feats, dtype=torch.float32, device=x.device)
-        dim_t = temperature ** (2 * (dim_t // 2) / num_pos_feats)
+        bboxes = bboxes.unsqueeze(dim=0)
 
+        # prepare the positional encoding
+        num_pos_feats = self.fc_out_channels // 8
+        temperature = 10000.0
+        
+        # dim_t :torch.Size([num_pos_feats // 8])
+        dim_t = torch.arange(num_pos_feats, dtype=torch.float32, device=x.device)
+        #dim_t = temperature ** (2 * (dim_t // 2) / num_pos_feats)
+        dim_t = temperature ** (2 * (torch.div(dim_t, 2, rounding_mode='trunc')) / num_pos_feats)
+
+        # bboxes: [bs, h, w] => [bs, bbox_num, 8]
+        # dim_t :torch.Size([num_pos_feats // 8])
         bbox_pos_embed = (bboxes[:, :, :, None] * 2 * math.pi) / dim_t
-        bbox_pos_embed = torch.stack((bbox_pos_embed[:, :, :, 0::2].sin(),
-                                        bbox_pos_embed[:, :, :, 1::2].cos()), dim=4).flatten(2)
-        bbox_pos_embed = bbox_pos_embed.transpose(0, 1)
-        dec_pos_embed = self.dec_pos_embed_proj(bbox_pos_embed)
-        x = x + dec_pos_embed
+        # bbox_pos_embed:  [bs, h, w, num_pos_feats] => [bs, bbox_num, num_pos_feats]
+        bbox_pos_embed = torch.stack((bbox_pos_embed[:, :, 0::2].sin(),
+                                        bbox_pos_embed[:, :, 1::2].cos()), dim=4).flatten(2)
         
         # transformer
         x = self.post_input_proj_norm(x)
         
         #x = self.transformer_encoder(x, src_key_padding_mask=dec_mask, pos=bbox_pos_embed)
+        # pos_embed: [h*w, bs, c] => [bbox_num, bs, num_pos_feats]
+        # x: [h*w, bs, c] => [bbox_num, bs, num_pos_feats]
+        x = x.permute(1,0,2)
+        bbox_pos_embed = bbox_pos_embed.permute(1,0,2)
+        #print('bbox_pos_embed', bbox_pos_embed.shape, bbox_pos_embed)
+        #print('bboxes', bboxes.shape)
         x = self.encoder(
             query=x,
             key=None,
             value=None,
-            query_pos=bbox_pos_embed,
-            query_key_padding_mask=dec_mask)
-
-        x = x.transpose(0, 1).contiguous().view(batch_size * seq_length, hidden_size)
+            query_pos=bbox_pos_embed)
+        #print('x', x.shape)
+        #x = x.transpose(0, 1).contiguous().view(batch_size * seq_length, hidden_size)
         
         # separate branches
+        # x: [h*w, bs, c] => [bbox_num, bs, num_pos_feats]
+        x = x.squeeze(dim=1)
+        #print('x', x.shape)
+        # x: [bbox_num, num_pos_feats]
         x_cls = x
         x_reg = x
 
@@ -895,11 +914,11 @@ class TransformerBBoxHead(ConvFCEmbeddingBBoxHead):
         # the order of the feat should be the same as the order of the bbox
         all_feats_per_image = []
         all_boxes_per_image = []
+        proposal_feat_start_idx = 0
+        distill_bbox_feat_start_idx = 0
         if gt_and_rand_bbox_feat is not None:
             assert len(bboxes_num[0]) == 3
             # split the feat base on the image
-            proposal_feat_start_idx = 0
-            distill_bbox_feat_start_idx = 0
             for gt_bbox_num, rand_bbox_num, proposal_number in bboxes_num:
                 now_proposal = proposals[proposal_feat_start_idx: proposal_feat_start_idx + proposal_number]
                 now_distill_bbox = gt_rand_rois[distill_bbox_feat_start_idx: distill_bbox_feat_start_idx + gt_bbox_num + rand_bbox_num]
@@ -915,7 +934,7 @@ class TransformerBBoxHead(ConvFCEmbeddingBBoxHead):
                 all_feats_per_image.append(feat_for_now_image)
         # if in the testing
         else:
-            assert len(bboxes_num[0]) == 1
+            assert isinstance(bboxes_num[0], int)
             for proposal_number in bboxes_num:
                 now_proposal = proposals[proposal_feat_start_idx: proposal_feat_start_idx + proposal_number]
                 now_proposal_feat = bbox_feats[proposal_feat_start_idx: proposal_feat_start_idx + proposal_number]
@@ -929,7 +948,7 @@ class TransformerBBoxHead(ConvFCEmbeddingBBoxHead):
         all_bbox_pred_per_image = []
         all_x_cls_per_image = []
         for feat_per_image, boxes_per_image, img_meta in zip(all_feats_per_image, all_boxes_per_image, img_metas):
-            cls_score_per_image, bbox_pred_per_image, x_cls_per_image = self._foward(feat_per_image, boxes_per_image, img_meta)
+            cls_score_per_image, bbox_pred_per_image, x_cls_per_image = self._forward(feat_per_image, boxes_per_image, img_meta)
             all_cls_score_per_image.append(cls_score_per_image)
             all_bbox_pred_per_image.append(bbox_pred_per_image)
             all_x_cls_per_image.append(x_cls_per_image)
@@ -941,4 +960,43 @@ class TransformerBBoxHead(ConvFCEmbeddingBBoxHead):
         
         return all_cls_score_per_image, all_bbox_pred_per_image, all_x_cls_per_image
 
+    def _add_conv_fc_branch(self,
+                            num_branch_convs,
+                            num_branch_fcs,
+                            in_channels,
+                            is_shared=False):
+        """Add shared or separable branch.
 
+        convs -> avg pool (optional) -> fcs
+        """
+        last_layer_dim = in_channels
+        # add branch specific conv layers
+        branch_convs = nn.ModuleList()
+        if num_branch_convs > 0:
+            for i in range(num_branch_convs):
+                conv_in_channels = (
+                    last_layer_dim if i == 0 else self.conv_out_channels)
+                branch_convs.append(
+                    ConvModule(
+                        conv_in_channels,
+                        self.conv_out_channels,
+                        3,
+                        padding=1,
+                        conv_cfg=self.conv_cfg,
+                        norm_cfg=self.norm_cfg))
+            last_layer_dim = self.conv_out_channels
+        # add branch specific fc layers
+        branch_fcs = nn.ModuleList()
+        if num_branch_fcs > 0:
+            # for shared branch, only consider self.with_avg_pool
+            # for separated branches, also consider self.num_shared_fcs
+            if (is_shared
+                    or self.num_shared_fcs == 0) and not self.with_avg_pool:
+                last_layer_dim *= self.roi_feat_area
+            for i in range(num_branch_fcs):
+                fc_in_channels = (
+                    last_layer_dim if i == 0 else self.fc_out_channels)
+                branch_fcs.append(
+                    nn.Linear(fc_in_channels, self.fc_out_channels))
+            last_layer_dim = self.fc_out_channels
+        return branch_convs, branch_fcs, last_layer_dim

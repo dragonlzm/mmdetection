@@ -40,46 +40,57 @@ class StandardRoIHeadDistillWithTransformer(StandardRoIHeadDistill):
                                                                    gt_and_rand_bbox_feat=gt_and_rand_bbox_feat, bboxes_num=bboxes_num)
         else:
             cls_score, bbox_pred, gt_and_bg_feats = self.bbox_head(bbox_feats, rois, img_metas, bboxes_num=bboxes_num)
-        
 
-        # send the features and the bbox into the transformer for each image in the batch
-        
         # split the feature for distillation and for the final prediction
-        
-        # calcualate the distillation loss
-
-        
-
-        
-        # if we use bg proposal, the cls_score will has the the length of samples + bg number
-        
-        # for save the classification feat
-        if self.save_the_feat is not None:
-            if not os.path.exists(self.save_the_feat):
-                os.makedirs(self.save_the_feat)
-            file_name = img_metas[0]['ori_filename'].split('.')[0] + '.json'
-            random_file_path = os.path.join(self.save_the_feat, file_name)  
-            file = open(random_file_path, 'w')
-            result_json = {'feat':gt_and_bg_feats.cpu().tolist()}
-            file.write(json.dumps(result_json))
-            file.close()
-        
-        # obtain the feat for the distillation
+        # cls_score: torch.Size([1444, 49]) bbox_pred: torch.Size([1444, 192]), gt_and_bg_feats:torch.Size([1444, 512])
+        # [now_proposal, gt_distill_bbox, rand_distill_bbox]
+        #print('cls_score:', cls_score.shape, 'bbox_pred:', bbox_pred.shape, 'gt_and_bg_feats:', gt_and_bg_feats)
         if distilled_feat != None and gt_rand_rois != None:
-            _, _, pred_feats = self.bbox_head(gt_and_rand_bbox_feat)
-            # normalize the distilled feat
+            final_cls_score = []
+            final_bbox_pred = []
+            final_gt_and_bg_feats = []
+            # split the feat base on the image
+            now_start_idx = 0
+            for gt_bbox_num, rand_bbox_num, proposal_number in bboxes_num:
+                # select the cls_score and bbox_pred of prpopsal
+                now_cls_score = cls_score[now_start_idx: now_start_idx + proposal_number]
+                now_bbox_pred = bbox_pred[now_start_idx: now_start_idx + proposal_number]
+                final_cls_score.append(now_cls_score)
+                final_bbox_pred.append(now_bbox_pred)
+                now_start_idx = now_start_idx + proposal_number
+                
+                # select the feature for distillation bboxes
+                now_gt_and_bg_feats = gt_and_bg_feats[now_start_idx: now_start_idx + gt_bbox_num + rand_bbox_num]
+                final_gt_and_bg_feats.append(now_gt_and_bg_feats)
+                now_start_idx = now_start_idx + gt_bbox_num + rand_bbox_num
+            final_cls_score = torch.cat(final_cls_score, dim=0)
+            final_bbox_pred = torch.cat(final_bbox_pred, dim=0)
+            final_gt_and_bg_feats = torch.cat(final_gt_and_bg_feats, dim=0)
+        
+            # calcualate the distillation loss
             cat_distilled_feat = torch.cat(distilled_feat, dim=0)
             if distill_ele_weight:
                 distill_ele_weight = torch.cat(distill_ele_weight, dim=0)
             cat_distilled_feat = cat_distilled_feat / cat_distilled_feat.norm(dim=-1, keepdim=True)
             
-            distill_loss_value = self.distillation_loss(pred_feats, cat_distilled_feat, distill_ele_weight)
+            distill_loss_value = self.distillation_loss(final_gt_and_bg_feats, cat_distilled_feat, distill_ele_weight)
             distill_loss_value *= (self.bbox_head.clip_dim * self.distill_loss_factor)
+
+        # for save the classification feat
+        # if self.save_the_feat is not None:
+        #     if not os.path.exists(self.save_the_feat):
+        #         os.makedirs(self.save_the_feat)
+        #     file_name = img_metas[0]['ori_filename'].split('.')[0] + '.json'
+        #     random_file_path = os.path.join(self.save_the_feat, file_name)  
+        #     file = open(random_file_path, 'w')
+        #     result_json = {'feat':gt_and_bg_feats.cpu().tolist()}
+        #     file.write(json.dumps(result_json))
+        #     file.close()
 
         # if training
         if distilled_feat != None and gt_rand_rois != None:
             bbox_results = dict(
-                cls_score=cls_score, bbox_pred=bbox_pred, bbox_feats=bbox_feats, distill_loss_value=dict(distill_loss_value=distill_loss_value))
+                cls_score=final_cls_score, bbox_pred=final_bbox_pred, bbox_feats=final_gt_and_bg_feats, distill_loss_value=dict(distill_loss_value=distill_loss_value))
         else:
             bbox_results = dict(
                 cls_score=cls_score, bbox_pred=bbox_pred, bbox_feats=bbox_feats)

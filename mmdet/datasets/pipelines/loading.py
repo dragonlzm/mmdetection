@@ -691,7 +691,7 @@ class LoadCLIPFeat:
         
         if self.load_rand_bbox_weight:
             if rand_bbox.shape[-1] == 5:
-                print('the clip random feat is the old versio, please use the new version')
+                print('the clip random feat is the old version, please use the new version')
             rand_bbox_weights = rand_bbox[:, 4]            
             
         if rand_bbox.shape[-1] >= 5:
