@@ -352,7 +352,7 @@ class LVISV05Dataset(CocoDataset):
             format(len(results), len(self)))
 
         metrics = metric if isinstance(metric, list) else [metric]
-        allowed_metrics = ['bbox', 'segm', 'proposal', 'proposal_fast']
+        allowed_metrics = ['bbox', 'segm', 'proposal', 'proposal_fast', 'gt_acc']
         for metric in metrics:
             if metric not in allowed_metrics:
                 raise KeyError('metric {} is not supported'.format(metric))
@@ -372,7 +372,24 @@ class LVISV05Dataset(CocoDataset):
             if logger is None:
                 msg = '\n' + msg
             print_log(msg, logger=logger)
+            if metric == 'gt_acc':
+                over_all_acc, s_acc, m_acc, l_acc, _, overall_entropy, all_cos_score = self.calc_gt_acc(results)
+                eval_results['over_all_acc'] = over_all_acc
+                eval_results['s_acc'] = s_acc
+                eval_results['m_acc'] = m_acc
+                eval_results['l_acc'] = l_acc
+                #eval_results['person_acc'] = person_acc
+                eval_results['overall_entropy'] = overall_entropy
+                eval_results['all_cos_score'] = all_cos_score
 
+                log_msg = f'\n over_all_acc\t{over_all_acc:.4f}' + \
+                    f'\n s_acc\t{s_acc:.4f}' + \
+                    f'\n m_acc\t{m_acc:.4f}' + \
+                    f'\n l_acc\t{l_acc:.4f}' + \
+                    f'\n overall_entropy\t{overall_entropy:.4f}' + \
+                    f'\n all_cos_score\t{all_cos_score:.4f}'
+                print_log(log_msg, logger=logger)
+                continue
             if metric == 'proposal_fast':
                 ar = self.fast_eval_recall(
                     results, proposal_nums, iou_thrs, logger='silent')
