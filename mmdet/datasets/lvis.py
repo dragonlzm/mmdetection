@@ -148,7 +148,7 @@ class LVISV05Dataset(CocoDataset):
         'life_jacket', 'lightbulb', 'lightning_rod', 'lime', 'limousine',
         'linen_paper', 'lion', 'lip_balm', 'lipstick', 'liquor', 'lizard',
         'Loafer_(type_of_shoe)', 'log', 'lollipop', 'lotion',
-        'speaker_(stereo_equipment)', 'loveseat', 'machine_gun', 'magazine',
+        'speaker_(stero_equipment)', 'loveseat', 'machine_gun', 'magazine',
         'magnet', 'mail_slot', 'mailbox_(at_home)', 'mallet', 'mammoth',
         'mandarin_orange', 'manger', 'manhole', 'map', 'marker', 'martini',
         'mascot', 'mashed_potato', 'masher', 'mask', 'mast',
@@ -729,7 +729,9 @@ class LVISV1Dataset(LVISDataset):
 
     def filter_cat_ids_base_on_name(self, cate_names):
         cats = self.coco.dataset['categories']
+        #print('before filter', len(cats))
         cats = [cat for cat in cats if cat['name'] in cate_names]
+        #print('cats', [ele['name'] for ele in cats])
         ids = [cat['id'] for cat in cats]
         return ids
 
