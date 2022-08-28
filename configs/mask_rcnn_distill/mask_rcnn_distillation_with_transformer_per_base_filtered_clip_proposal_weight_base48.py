@@ -1,4 +1,4 @@
-_base_ = './mask_rcnn_distillation_per_clip_proposal_weight.py'
+_base_ = './mask_rcnn_distillation_per_base_filtered_clip_proposal_weight.py'
 
 # regression with embedding, base filtered proposal, per distillation bbox weight
 # become default setting in here

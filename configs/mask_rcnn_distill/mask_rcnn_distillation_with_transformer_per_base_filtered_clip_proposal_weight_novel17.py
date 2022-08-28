@@ -1,4 +1,4 @@
-_base_ = './mask_rcnn_distillation_with_transformer_per_clip_proposal_weight_base48.py'
+_base_ = './mask_rcnn_distillation_with_transformer_per_base_filtered_clip_proposal_weight_base48.py'
 
 classes = ('airplane', 'bus', 'cat', 'dog', 'cow', 
         'elephant', 'umbrella', 'tie', 'snowboard', 
