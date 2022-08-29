@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+from enum import unique
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -86,6 +87,8 @@ class ClipEncoderHead(AnchorFreeHead):
                  test_cfg=None,
                  init_cfg=None,
                  return_test_score=False,
+                 use_gt_name=False,
+                 use_rand_name=False,
                  **kwargs):
         # NOTE here use `AnchorFreeHead` instead of `TransformerHead`,
         # since it brings inconvenience when the initialization of
@@ -136,6 +139,9 @@ class ClipEncoderHead(AnchorFreeHead):
         self.return_test_score = return_test_score
         self.test_with_rand_bboxes = self.test_cfg.get('test_with_rand_bboxes', False) if self.test_cfg is not None else False 
         self.selected_need_feat = self.test_cfg.get('selected_need_feat', None) if self.test_cfg is not None else None 
+        self.use_gt_name = use_gt_name
+        self.use_rand_name = use_rand_name
+        self.from_id_to_cate_name = {i:name for i, name in enumerate(self.cate_names)}
 
         # create the layers
         self._init_layers()
@@ -160,9 +166,7 @@ class ClipEncoderHead(AnchorFreeHead):
     def prepare_the_text_embedding(self):
         # if do not use the attribute
         self.all_cate_tokenize_res = []
-        self.from_id_to_cate_name = {}
         for i, cate_name in enumerate(self.cate_names):
-            self.from_id_to_cate_name[i] = cate_name
             #sentences_result_for_cate = []
             for template in self.sentence_templates:
                 now_sentence = template.replace('{}', cate_name)
@@ -197,6 +201,23 @@ class ClipEncoderHead(AnchorFreeHead):
 
         # concatenate all the result to torch tensor
         self.all_cate_tokenize_res = torch.cat(self.all_cate_tokenize_res, dim=0)
+
+    def prepare_the_text_embedding_subset(self, now_cate_names):
+        # if do not use the attribute
+        self.all_cate_tokenize_res = []
+        for i, cate_name in enumerate(now_cate_names):
+            #sentences_result_for_cate = []
+            for template in self.sentence_templates:
+                now_sentence = template.replace('{}', cate_name)
+                #print(now_sentence)
+                tokenized_result = self.tokenize(now_sentence).cuda()
+                #sentences_result_for_cate.append(tokenized_result)
+                #sentences_result_for_cate = torch.cat(sentences_result_for_cate, dim=0)
+                self.all_cate_tokenize_res.append(tokenized_result)
+
+        # concatenate all the result to torch tensor
+        self.all_cate_tokenize_res = torch.cat(self.all_cate_tokenize_res, dim=0)
+
 
     def fix_model_parameter(self):
         if self.open_ln == False:
@@ -295,22 +316,35 @@ class ClipEncoderHead(AnchorFreeHead):
 
         return x
     
-    def get_text_embedding(self):
+    def get_text_embedding(self,  gt_labels=None):
         # for each forward we need to calculate the text embeddings
         # self.all_cate_tokenize_res: tensor tensor.shape = [number of cls * num_of_template, 77]
         # obtain the text embedding [number of cls * num_of_template, 512]
         if (self.training and self.open_ln == True) or self.text_embeddings == None:
-            #print('creating the text embedding')
-            text_embeddings = self.encode_text(self.all_cate_tokenize_res)
-            # group by the cate_name [number of cls, num_of_template, 512]
-            #text_embeddings = text_embeddings.view(len(self.cate_names), -1, text_embeddings.shape[-1])
-            text_embeddings = text_embeddings.view(-1, len(self.sentence_templates), text_embeddings.shape[-1])
-            # average over all templates: [number_of_cls, 512]
-            text_embeddings = torch.mean(text_embeddings, dim=1)
-            #path = '/data/zhuoming/code/new_rpn/mmdetection/embedding.pt'
-            #print(text_embeddings.shape, 'saving to path', path)
-            #torch.save(text_embeddings.cpu(), path)
-            # normalized features
+            if self.use_gt_name:
+                # obtain all gt name
+                unique_gt_label = list(set(gt_labels.detach().cpu().tolist()))
+                from_old_label_to_new_label = {old_label: new_label for new_label, old_label in enumerate(unique_gt_label)}
+                unique_gt_name = [self.from_id_to_cate_name[label] for label in unique_gt_label]
+                
+                # get the updated label
+                updated_label = torch.tensor([from_old_label_to_new_label[old_label] for old_label in gt_labels])
+                # prepare the tokenized_res
+                now_tokenize_res = self.prepare_the_text_embedding_subset(unique_gt_name)
+                # encode the text
+                text_embeddings = self.encode_text(now_tokenize_res)
+
+            else:
+                text_embeddings = self.encode_text(self.all_cate_tokenize_res)
+                # group by the cate_name [number of cls, num_of_template, 512]
+                #text_embeddings = text_embeddings.view(len(self.cate_names), -1, text_embeddings.shape[-1])
+                text_embeddings = text_embeddings.view(-1, len(self.sentence_templates), text_embeddings.shape[-1])
+                # average over all templates: [number_of_cls, 512]
+                text_embeddings = torch.mean(text_embeddings, dim=1)
+                #path = '/data/zhuoming/code/new_rpn/mmdetection/embedding.pt'
+                #print(text_embeddings.shape, 'saving to path', path)
+                #torch.save(text_embeddings.cpu(), path)
+                # normalized features
             text_embeddings = text_embeddings / text_embeddings.norm(dim=-1, keepdim=True)
             
             ## handle word from outside:
@@ -353,12 +387,15 @@ class ClipEncoderHead(AnchorFreeHead):
             if not self.training or (self.training and self.open_ln == False):
                 self.text_embeddings = text_embeddings
             
-            return text_embeddings
+            if self.use_gt_name:
+                return text_embeddings, updated_label
+            else:
+                return text_embeddings
         else:
             #print('testing the update')
             return self.text_embeddings
 
-    def forward(self, feats, img_metas):
+    def forward(self, feats, img_metas, gt_labels=None):
         """Forward function.
 
         Args:
@@ -370,7 +407,10 @@ class ClipEncoderHead(AnchorFreeHead):
 
                 - all_cls_scores [gt_num_in_batch, cls_out_channels].
         """
-        text_embeddings = self.get_text_embedding()
+        if self.use_gt_name:
+            text_embeddings, updated_label = self.get_text_embedding(gt_labels=gt_labels)
+        else:
+            text_embeddings = self.get_text_embedding()
 
         logit_scale = self.logit_scale.exp()
 
@@ -382,8 +422,11 @@ class ClipEncoderHead(AnchorFreeHead):
             logits_per_image = logit_scale * image_features @ text_embeddings.t()
             #cls_scores = (feat @ self.word_embeddings.T).softmax(dim=-1)
             all_cls_scores_list.append(logits_per_image)
-            
-        return all_cls_scores_list
+        
+        if self.use_gt_name:
+            return all_cls_scores_list, updated_label
+        else:
+            return all_cls_scores_list
 
     @force_fp32(apply_to=('all_cls_scores_list', 'all_bbox_preds_list'))
     def loss(self,
@@ -456,9 +499,12 @@ class ClipEncoderHead(AnchorFreeHead):
 
         assert proposal_cfg is None, '"proposal_cfg" must be None'
         # the out here should be two lists, all_cls_scores_list and all_bbox_preds_list
-        outs = self(x, img_metas)
-        #if patches_gt is None:
-        loss_inputs = (outs,) + (gt_labels, img_metas)
+        if hasattr(self, 'use_gt_name') and self.use_gt_name:
+            outs, updated_gt_labels = self(x, img_metas, gt_labels)
+            loss_inputs = (outs,) + (updated_gt_labels, img_metas)
+        else:
+            outs = self(x, img_metas)
+            loss_inputs = (outs,) + (gt_labels, img_metas)
         losses = self.loss(*loss_inputs)
         return losses
 
