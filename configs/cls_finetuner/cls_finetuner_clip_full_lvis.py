@@ -76,6 +76,7 @@ model = dict(
     backbone=dict(open_ln=True),
     rpn_head=dict(
         type='ClipEncoderHead',
+        open_ln=False,
         num_classes=1203,
         in_channels=512,
         vocab_size=49408,

@@ -299,7 +299,7 @@ class ClipEncoderHead(AnchorFreeHead):
         # for each forward we need to calculate the text embeddings
         # self.all_cate_tokenize_res: tensor tensor.shape = [number of cls * num_of_template, 77]
         # obtain the text embedding [number of cls * num_of_template, 512]
-        if self.training or self.text_embeddings == None:
+        if (self.training and self.open_ln == True) or self.text_embeddings == None:
             #print('creating the text embedding')
             text_embeddings = self.encode_text(self.all_cate_tokenize_res)
             # group by the cate_name [number of cls, num_of_template, 512]
@@ -350,7 +350,7 @@ class ClipEncoderHead(AnchorFreeHead):
             # file.close()
             # print('result saved to:', result_path)
             
-            if not self.training:
+            if not self.training or (self.training and self.open_ln == False):
                 self.text_embeddings = text_embeddings
             
             return text_embeddings
