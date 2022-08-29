@@ -18,11 +18,19 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #rm -rf ./data
 #ln -sf /project/nevatia_174/zhuoming/detection ./data
 
-WORK_DIR="data/exp_res/cls_finetuner_clip_lvis_base_train"
+# WORK_DIR="data/exp_res/cls_finetuner_clip_lvis_base_train"
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#     configs/cls_finetuner/cls_finetuner_clip_lvis_base_train.py --launcher pytorch \
+#     --work-dir=${WORK_DIR} \
+#     #--resume-from=${WORK_DIR}/latest.pth
+
+WORK_DIR="data/exp_res/cls_finetuner_clip_lvis_base_train_gt_only"
 PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
-    configs/cls_finetuner/cls_finetuner_clip_lvis_base_train.py --launcher pytorch \
+    configs/cls_finetuner/cls_finetuner_clip_lvis_base_train_gt_only.py --launcher pytorch \
     --work-dir=${WORK_DIR} \
     #--resume-from=${WORK_DIR}/latest.pth
 

@@ -204,7 +204,7 @@ class ClipEncoderHead(AnchorFreeHead):
 
     def prepare_the_text_embedding_subset(self, now_cate_names):
         # if do not use the attribute
-        self.all_cate_tokenize_res = []
+        cate_tokenize_res = []
         for i, cate_name in enumerate(now_cate_names):
             #sentences_result_for_cate = []
             for template in self.sentence_templates:
@@ -213,11 +213,9 @@ class ClipEncoderHead(AnchorFreeHead):
                 tokenized_result = self.tokenize(now_sentence).cuda()
                 #sentences_result_for_cate.append(tokenized_result)
                 #sentences_result_for_cate = torch.cat(sentences_result_for_cate, dim=0)
-                self.all_cate_tokenize_res.append(tokenized_result)
-
-        # concatenate all the result to torch tensor
-        self.all_cate_tokenize_res = torch.cat(self.all_cate_tokenize_res, dim=0)
-
+                cate_tokenize_res.append(tokenized_result)
+        cate_tokenize_res = torch.cat(cate_tokenize_res, dim=0)
+        return cate_tokenize_res
 
     def fix_model_parameter(self):
         if self.open_ln == False:
@@ -323,17 +321,28 @@ class ClipEncoderHead(AnchorFreeHead):
         if (self.training and self.open_ln == True) or self.text_embeddings == None:
             if self.use_gt_name:
                 # obtain all gt name
-                unique_gt_label = list(set(gt_labels.detach().cpu().tolist()))
-                from_old_label_to_new_label = {old_label: new_label for new_label, old_label in enumerate(unique_gt_label)}
-                unique_gt_name = [self.from_id_to_cate_name[label] for label in unique_gt_label]
-                
-                # get the updated label
-                updated_label = torch.tensor([from_old_label_to_new_label[old_label] for old_label in gt_labels])
-                # prepare the tokenized_res
-                now_tokenize_res = self.prepare_the_text_embedding_subset(unique_gt_name)
-                # encode the text
-                text_embeddings = self.encode_text(now_tokenize_res)
-
+                text_embeddings = []
+                all_updated_label = []
+                for label_per_img in gt_labels:
+                    unique_gt_label = list(set(label_per_img.detach().cpu().tolist()))
+                    from_old_label_to_new_label = {old_label: new_label for new_label, old_label in enumerate(unique_gt_label)}
+                    unique_gt_name = [self.from_id_to_cate_name[label] for label in unique_gt_label]
+                    
+                    # get the updated label
+                    updated_label = torch.tensor([from_old_label_to_new_label[old_label.item()] for old_label in label_per_img]).cuda()
+                    all_updated_label.append(updated_label)
+                    #print('gt_labels', gt_labels, 'unique_gt_label', unique_gt_label, 'from_old_label_to_new_label', from_old_label_to_new_label,
+                    #      'unique_gt_name', unique_gt_name, 'updated_label', updated_label)
+                    # prepare the tokenized_res
+                    now_tokenize_res = self.prepare_the_text_embedding_subset(unique_gt_name)
+                    # encode the text
+                    now_text_embeddings = self.encode_text(now_tokenize_res)
+                    now_text_embeddings = now_text_embeddings.view(-1, len(self.sentence_templates), now_text_embeddings.shape[-1])
+                    # average over all templates: [number_of_cls, 512]
+                    now_text_embeddings = torch.mean(now_text_embeddings, dim=1)
+                    
+                    now_text_embeddings = now_text_embeddings / now_text_embeddings.norm(dim=-1, keepdim=True)
+                    text_embeddings.append(now_text_embeddings)
             else:
                 text_embeddings = self.encode_text(self.all_cate_tokenize_res)
                 # group by the cate_name [number of cls, num_of_template, 512]
@@ -345,7 +354,7 @@ class ClipEncoderHead(AnchorFreeHead):
                 #print(text_embeddings.shape, 'saving to path', path)
                 #torch.save(text_embeddings.cpu(), path)
                 # normalized features
-            text_embeddings = text_embeddings / text_embeddings.norm(dim=-1, keepdim=True)
+                text_embeddings = text_embeddings / text_embeddings.norm(dim=-1, keepdim=True)
             
             ## handle word from outside:
             # import json
@@ -388,7 +397,7 @@ class ClipEncoderHead(AnchorFreeHead):
                 self.text_embeddings = text_embeddings
             
             if self.use_gt_name:
-                return text_embeddings, updated_label
+                return text_embeddings, all_updated_label
             else:
                 return text_embeddings
         else:
@@ -407,26 +416,28 @@ class ClipEncoderHead(AnchorFreeHead):
 
                 - all_cls_scores [gt_num_in_batch, cls_out_channels].
         """
+        logit_scale = self.logit_scale.exp()
+        all_cls_scores_list = []
         if self.use_gt_name:
             text_embeddings, updated_label = self.get_text_embedding(gt_labels=gt_labels)
-        else:
-            text_embeddings = self.get_text_embedding()
-
-        logit_scale = self.logit_scale.exp()
-
-        all_cls_scores_list = []
-        for image_features in feats:
-            image_features = image_features / image_features.norm(dim=-1, keepdim=True)
-            # since for the cross entropy loss the input should be logit
-            # we do not need the softmax here
-            logits_per_image = logit_scale * image_features @ text_embeddings.t()
-            #cls_scores = (feat @ self.word_embeddings.T).softmax(dim=-1)
-            all_cls_scores_list.append(logits_per_image)
-        
-        if self.use_gt_name:
+            for image_features, text_embedding in zip(feats, text_embeddings):
+                image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+                # since for the cross entropy loss the input should be logit
+                # we do not need the softmax here
+                logits_per_image = logit_scale * image_features @ text_embedding.t()
+                #cls_scores = (feat @ self.word_embeddings.T).softmax(dim=-1)
+                all_cls_scores_list.append(logits_per_image)
             return all_cls_scores_list, updated_label
         else:
-            return all_cls_scores_list
+            text_embeddings = self.get_text_embedding()
+            for image_features in feats:
+                image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+                # since for the cross entropy loss the input should be logit
+                # we do not need the softmax here
+                logits_per_image = logit_scale * image_features @ text_embeddings.t()
+                #cls_scores = (feat @ self.word_embeddings.T).softmax(dim=-1)
+                all_cls_scores_list.append(logits_per_image)
+            return all_cls_scores_list            
 
     @force_fp32(apply_to=('all_cls_scores_list', 'all_bbox_preds_list'))
     def loss(self,
@@ -452,15 +463,26 @@ class ClipEncoderHead(AnchorFreeHead):
             dict[str, Tensor]: A dictionary of loss components.
         """
         # NOTE defaultly only the outputs from the last feature scale is used.
-        all_pred = torch.cat(cls_scores_list)
-        all_label = torch.cat(gt_labels_list)
+        # ori_all_pred = torch.cat(cls_scores_list)
+        # ori_all_label = torch.cat(gt_labels_list)
+        # ori_loss_cls = self.loss_cls(ori_all_pred, ori_all_label)
         
         # classification loss
-        loss_cls = self.loss_cls(all_pred, all_label)
+        all_cls_loss = []
+        all_weight_factor = []
+        for pred, label in zip(cls_scores_list, gt_labels_list):
+            loss_cls = self.loss_cls(pred, label)
+            all_cls_loss.append(loss_cls.unsqueeze(dim=0))
+            all_weight_factor.append(pred.shape[0])
+        all_cls_loss = torch.cat(all_cls_loss, dim=0)
+        all_weight_factor = torch.tensor(all_weight_factor).float().cuda()
+        all_weight_factor /= torch.sum(all_weight_factor)
+        all_cls_loss = all_cls_loss * all_weight_factor
+        all_cls_loss = torch.sum(all_cls_loss, dim=0)
 
         loss_dict = dict()
         # loss from the last decoder layer
-        loss_dict['loss_cls'] = loss_cls
+        loss_dict['loss_cls'] = all_cls_loss
         return loss_dict
 
     # over-write because img_metas are needed as inputs for bbox_head.
@@ -502,6 +524,8 @@ class ClipEncoderHead(AnchorFreeHead):
         if hasattr(self, 'use_gt_name') and self.use_gt_name:
             outs, updated_gt_labels = self(x, img_metas, gt_labels)
             loss_inputs = (outs,) + (updated_gt_labels, img_metas)
+            #print('gt_labels:', [ele.shape for ele in gt_labels], 
+            #      'updated_gt_labels:', [ele.shape for ele in updated_gt_labels])
         else:
             outs = self(x, img_metas)
             loss_inputs = (outs,) + (gt_labels, img_metas)
