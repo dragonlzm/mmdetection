@@ -320,10 +320,12 @@ class ClipEncoderHead(AnchorFreeHead):
         # self.all_cate_tokenize_res: tensor tensor.shape = [number of cls * num_of_template, 77]
         # obtain the text embedding [number of cls * num_of_template, 512]
         if (self.training and self.open_ln == True) or self.text_embeddings == None:
-            if self.use_gt_name:
+            if self.use_gt_name and (self.training and self.open_ln == True):
                 # obtain all gt name
                 text_embeddings = []
                 all_updated_label = []
+                if img_metas == None:
+                    img_metas = [None for i in range(len(gt_labels))]
                 for label_per_img, img_meta in zip(gt_labels, img_metas):
                     unique_gt_label = list(set(label_per_img.detach().cpu().tolist()))
                     from_old_label_to_new_label = {old_label: new_label for new_label, old_label in enumerate(unique_gt_label)}
@@ -376,7 +378,7 @@ class ClipEncoderHead(AnchorFreeHead):
             if not self.training or (self.training and self.open_ln == False):
                 self.text_embeddings = text_embeddings
             
-            if self.use_gt_name:
+            if self.use_gt_name and (self.training and self.open_ln == True):
                 return text_embeddings, all_updated_label
             else:
                 return text_embeddings
@@ -398,7 +400,7 @@ class ClipEncoderHead(AnchorFreeHead):
         """
         logit_scale = self.logit_scale.exp()
         all_cls_scores_list = []
-        if self.use_gt_name:
+        if self.use_gt_name and (self.training and self.open_ln == True):
             text_embeddings, updated_label = self.get_text_embedding(gt_labels=gt_labels, img_metas=img_metas)
             # in some situation, one image does not has annotation, at this time the len(feats) == 1
             # while len(text_embeddings) == 2
