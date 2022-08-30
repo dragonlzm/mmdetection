@@ -202,7 +202,7 @@ class ClipEncoderHead(AnchorFreeHead):
         # concatenate all the result to torch tensor
         self.all_cate_tokenize_res = torch.cat(self.all_cate_tokenize_res, dim=0)
 
-    def prepare_the_text_embedding_subset(self, now_cate_names):
+    def prepare_the_text_embedding_subset(self, now_cate_names, img_meta):
         # if do not use the attribute
         cate_tokenize_res = []
         for i, cate_name in enumerate(now_cate_names):
@@ -214,6 +214,7 @@ class ClipEncoderHead(AnchorFreeHead):
                 #sentences_result_for_cate.append(tokenized_result)
                 #sentences_result_for_cate = torch.cat(sentences_result_for_cate, dim=0)
                 cate_tokenize_res.append(tokenized_result)
+        
         cate_tokenize_res = torch.cat(cate_tokenize_res, dim=0)
         return cate_tokenize_res
 
@@ -314,7 +315,7 @@ class ClipEncoderHead(AnchorFreeHead):
 
         return x
     
-    def get_text_embedding(self,  gt_labels=None):
+    def get_text_embedding(self,  gt_labels=None, img_metas=None):
         # for each forward we need to calculate the text embeddings
         # self.all_cate_tokenize_res: tensor tensor.shape = [number of cls * num_of_template, 77]
         # obtain the text embedding [number of cls * num_of_template, 512]
@@ -323,18 +324,36 @@ class ClipEncoderHead(AnchorFreeHead):
                 # obtain all gt name
                 text_embeddings = []
                 all_updated_label = []
-                for label_per_img in gt_labels:
+                for label_per_img, img_meta in zip(gt_labels, img_metas):
                     unique_gt_label = list(set(label_per_img.detach().cpu().tolist()))
                     from_old_label_to_new_label = {old_label: new_label for new_label, old_label in enumerate(unique_gt_label)}
                     unique_gt_name = [self.from_id_to_cate_name[label] for label in unique_gt_label]
                     
+                    # handle the situation which does not have gt
+                    if len(unique_gt_name) == 0:
+                        print(label_per_img, img_meta)
+                        #now_text_embeddings = torch.tensor([0, 512]).cuda()
+                        #text_embeddings.append(now_text_embeddings)
+                        continue
+                    
+                    if self.use_rand_name != False:
+                        # random sample idx
+                        random_choice = np.random.choice(self.num_classes, self.use_rand_name, replace=True)
+                        print(random_choice)
+                        # filter the idx already in the unique_gt_label
+                        random_label = [ele for ele in random_choice if ele not in unique_gt_label]
+                        # obtain the random name 
+                        random_name = [self.from_id_to_cate_name[label] for label in random_label]
+                        # concat with unique_gt_name
+                        unique_gt_name = unique_gt_name + random_name
+                        print(len(unique_gt_name), unique_gt_name)
+                    
                     # get the updated label
                     updated_label = torch.tensor([from_old_label_to_new_label[old_label.item()] for old_label in label_per_img]).cuda()
                     all_updated_label.append(updated_label)
-                    #print('gt_labels', gt_labels, 'unique_gt_label', unique_gt_label, 'from_old_label_to_new_label', from_old_label_to_new_label,
-                    #      'unique_gt_name', unique_gt_name, 'updated_label', updated_label)
+                    
                     # prepare the tokenized_res
-                    now_tokenize_res = self.prepare_the_text_embedding_subset(unique_gt_name)
+                    now_tokenize_res = self.prepare_the_text_embedding_subset(unique_gt_name, img_meta)
                     # encode the text
                     now_text_embeddings = self.encode_text(now_tokenize_res)
                     now_text_embeddings = now_text_embeddings.view(-1, len(self.sentence_templates), now_text_embeddings.shape[-1])
@@ -355,43 +374,6 @@ class ClipEncoderHead(AnchorFreeHead):
                 #torch.save(text_embeddings.cpu(), path)
                 # normalized features
                 text_embeddings = text_embeddings / text_embeddings.norm(dim=-1, keepdim=True)
-            
-            ## handle word from outside:
-            # import json
-            # # load_path = '/data/zhuoming/detection/coco/annotations/all_words.json'
-            # # all_words = json.load(open(load_path))
-                        
-            # all_words = ('person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
-            #     'train', 'truck', 'boat', 'traffic light', 'fire hydrant',
-            #     'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog',
-            #     'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe',
-            #     'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee',
-            #     'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat',
-            #     'baseball glove', 'skateboard', 'surfboard', 'tennis racket',
-            #     'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl',
-            #     'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot',
-            #     'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch',
-            #     'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop',
-            #     'mouse', 'remote', 'keyboard', 'cell phone', 'microwave',
-            #     'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock',
-            #     'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush')
-            
-            # all_phrases = ["a " + word for word in all_words]
-            # tokenized_results = self.tokenize(all_phrases).cuda()
-            # result_dict = {}
-            # for i, (name, tokenized_result) in enumerate(zip(all_words, tokenized_results)):
-            #     if i % 1000 == 0:
-            #         print(i)
-            #     text_embeddings = self.encode_text(tokenized_result.unsqueeze(dim=0))
-            #     text_embeddings = text_embeddings / text_embeddings.norm(dim=-1, keepdim=True)
-            #     result_dict[name] = text_embeddings.cpu().tolist()
-            
-            # #result_path = '/data/zhuoming/detection/coco/annotations/finetuned_phrases_vs_feats.json'
-            # result_path = '/data/zhuoming/detection/coco/annotations/finetuned_coco_names_vs_feats.json'
-            # file = open(result_path, 'w')
-            # file.write(json.dumps(result_dict))
-            # file.close()
-            # print('result saved to:', result_path)
             
             if not self.training or (self.training and self.open_ln == False):
                 self.text_embeddings = text_embeddings
@@ -419,8 +401,19 @@ class ClipEncoderHead(AnchorFreeHead):
         logit_scale = self.logit_scale.exp()
         all_cls_scores_list = []
         if self.use_gt_name:
-            text_embeddings, updated_label = self.get_text_embedding(gt_labels=gt_labels)
+            text_embeddings, updated_label = self.get_text_embedding(gt_labels=gt_labels, img_metas=img_metas)
+            # in some situation, one image does not has annotation, at this time the len(feats) == 1
+            # while len(text_embeddings) == 2
+            # at this situation, just concat the text_embeddings and updated_label, then include it into a list
+            #if len(feats) != len(text_embeddings):
+            #    text_embeddings = [torch.cat(text_embeddings, dim=0)]
+            #    updated_label = [torch.cat(updated_label, dim=0)]
+            
             for image_features, text_embedding in zip(feats, text_embeddings):
+                if text_embedding.shape[0] == 0:
+                    #print('in forward', len(text_embeddings), text_embeddings, len(feats), feats)
+                    all_cls_scores_list.append(text_embedding)
+                    continue
                 image_features = image_features / image_features.norm(dim=-1, keepdim=True)
                 # since for the cross entropy loss the input should be logit
                 # we do not need the softmax here
@@ -471,9 +464,12 @@ class ClipEncoderHead(AnchorFreeHead):
         all_cls_loss = []
         all_weight_factor = []
         for pred, label in zip(cls_scores_list, gt_labels_list):
+            #if pred.shape[0] == 0:
+            #    continue
             loss_cls = self.loss_cls(pred, label)
             all_cls_loss.append(loss_cls.unsqueeze(dim=0))
             all_weight_factor.append(pred.shape[0])
+
         all_cls_loss = torch.cat(all_cls_loss, dim=0)
         all_weight_factor = torch.tensor(all_weight_factor).float().cuda()
         all_weight_factor /= torch.sum(all_weight_factor)
