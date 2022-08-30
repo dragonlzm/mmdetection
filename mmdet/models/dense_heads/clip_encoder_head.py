@@ -117,7 +117,7 @@ class ClipEncoderHead(AnchorFreeHead):
                 self.bg_cls_weight = bg_cls_weight'''
 
         #self.num_query = num_query
-        self.num_class = num_classes
+        self.num_classes = num_classes
         self.in_channels = in_channels
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
@@ -339,14 +339,12 @@ class ClipEncoderHead(AnchorFreeHead):
                     if self.use_rand_name != False:
                         # random sample idx
                         random_choice = np.random.choice(self.num_classes, self.use_rand_name, replace=True)
-                        print(random_choice)
                         # filter the idx already in the unique_gt_label
                         random_label = [ele for ele in random_choice if ele not in unique_gt_label]
                         # obtain the random name 
                         random_name = [self.from_id_to_cate_name[label] for label in random_label]
                         # concat with unique_gt_name
                         unique_gt_name = unique_gt_name + random_name
-                        print(len(unique_gt_name), unique_gt_name)
                     
                     # get the updated label
                     updated_label = torch.tensor([from_old_label_to_new_label[old_label.item()] for old_label in label_per_img]).cuda()
@@ -764,8 +762,8 @@ class ClipEncoderHead(AnchorFreeHead):
             cls_scores = cls_scores.sigmoid()
             scores, indexes = cls_scores.view(batch_size, -1).topk(
                 max_per_img, dim=1)
-            det_labels = indexes % self.num_class
-            bbox_index = indexes // self.num_class
+            det_labels = indexes % self.num_classes
+            bbox_index = indexes // self.num_classes
             bbox_index = (bbox_index + batch_index_offset).view(-1)
             bbox_preds = bbox_preds.view(-1, 4)[bbox_index]
             bbox_preds = bbox_preds.view(batch_size, -1, 4)
