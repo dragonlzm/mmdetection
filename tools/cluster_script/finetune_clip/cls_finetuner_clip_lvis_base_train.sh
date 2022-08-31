@@ -36,14 +36,14 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #     #--resume-from=${WORK_DIR}/latest.pth
 
 # with gt embeddings + 50 random embedding
-WORK_DIR="data/exp_res/cls_finetuner_clip_lvis_base_train_gt_and_50_rand_embedding"
-PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
-python -m torch.distributed.launch --nproc_per_node=2 \
-    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
-    configs/cls_finetuner/cls_finetuner_clip_lvis_base_train_gt_only.py --launcher pytorch \
-    --work-dir=${WORK_DIR} \
-    --cfg-options model.rpn_head.use_rand_name=50 \
-    #--resume-from=${WORK_DIR}/latest.pth
+# WORK_DIR="data/exp_res/cls_finetuner_clip_lvis_base_train_gt_and_50_rand_embedding"
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#     configs/cls_finetuner/cls_finetuner_clip_lvis_base_train_gt_only.py --launcher pytorch \
+#     --work-dir=${WORK_DIR} \
+#     --cfg-options model.rpn_head.use_rand_name=50 \
+#     #--resume-from=${WORK_DIR}/latest.pth
 
 # with gt embeddings + 100 random embedding
 # WORK_DIR="data/exp_res/cls_finetuner_clip_lvis_base_train_gt_and_100_rand_embedding"
@@ -63,6 +63,27 @@ python -m torch.distributed.launch --nproc_per_node=2 \
 #     configs/cls_finetuner/cls_finetuner_clip_lvis_base_train_gt_only.py --launcher pytorch \
 #     --work-dir=${WORK_DIR} \
 #     --cfg-options model.rpn_head.use_rand_name=200 \
+#     #--resume-from=${WORK_DIR}/latest.pth
+
+
+### oversample experiments
+# vision only
+WORK_DIR="data/exp_res/cls_finetuner_clip_lvis_base_train_over_sample"
+PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+python -m torch.distributed.launch --nproc_per_node=2 \
+    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+    configs/cls_finetuner/cls_finetuner_clip_lvis_base_train_over_sample.py --launcher pytorch \
+    --work-dir=${WORK_DIR} \
+    #--resume-from=${WORK_DIR}/latest.pth
+
+# with gt embeddings + 100 random embedding
+# WORK_DIR="data/exp_res/cls_finetuner_clip_lvis_base_train_gt_and_100_rand_embedding_over_sample"
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#     configs/cls_finetuner/cls_finetuner_clip_lvis_base_train_over_sample.py --launcher pytorch \
+#     --work-dir=${WORK_DIR} \
+#     --cfg-options model.rpn_head.open_ln=True model.rpn_head.use_gt_name=True model.rpn_head.use_rand_name=100 \
 #     #--resume-from=${WORK_DIR}/latest.pth
 
 
