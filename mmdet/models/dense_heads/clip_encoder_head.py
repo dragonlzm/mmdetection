@@ -463,6 +463,14 @@ class ClipEncoderHead(AnchorFreeHead):
         # classification loss
         all_cls_loss = []
         all_weight_factor = []
+        
+        # in some situation since the image without annoation 
+        # there is possible that len(cls_scores_list) != len(gt_labels_list)
+        # in most of the time is len(gt_labels_list) > len(cls_scores_list)
+        if len(cls_scores_list) != len(gt_labels_list):
+            cls_scores_list = [ele for ele in cls_scores_list if ele.shape[0] != 0]
+            gt_labels_list = [ele for ele in gt_labels_list if ele.shape[0] != 0]
+        
         for pred, label in zip(cls_scores_list, gt_labels_list):
             #if pred.shape[0] == 0:
             #    continue
