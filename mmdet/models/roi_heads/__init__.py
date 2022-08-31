@@ -39,6 +39,6 @@ __all__ = [
     'CoarseMaskHead', 'DynamicRoIHead', 'SparseRoIHead', 'TridentRoIHead',
     'SCNetRoIHead', 'SCNetMaskHead', 'SCNetSemanticHead', 'SCNetBBoxHead',
     'FeatureRelayHead', 'GlobalContextHead', 'StandardRoIHeadDistill',
-    'StandardRoIHeadCLIPCls', 'MultiRelationRoIHead', 'StandardRoIHeadDistillWithTransformer'
+    'StandardRoIHeadCLIPCls', 'MultiRelationRoIHead', 'StandardRoIHeadDistillWithTransformer',
     'StandardRoIHeadDistillWithTransformerV2',
 ]
