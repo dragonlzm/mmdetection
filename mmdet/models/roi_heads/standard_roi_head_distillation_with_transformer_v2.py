@@ -34,12 +34,15 @@ class StandardRoIHeadDistillWithTransformerV2(StandardRoIHeadDistill):
             if distilled_feat != None and gt_rand_rois != None:
                 gt_and_rand_bbox_feat = self.shared_head(gt_and_rand_bbox_feat)  
         
-        # original ROI head forward which handle the classfication and regression
-        cls_score, bbox_pred, _ = self.bbox_head(img_metas, bbox_feats=bbox_feats, proposals=rois, bboxes_num=[proposal_number for gt_bbox_num, rand_bbox_num, proposal_number in bboxes_num])
+        # original ROI head forward which handle the classfication and regression(this will be used on both training and testing)
+        cls_score, bbox_pred, _ = self.bbox_head(img_metas, bbox_feats=bbox_feats, proposals=rois, 
+                                                 bboxes_num=[proposal_number for gt_bbox_num, rand_bbox_num, proposal_number in bboxes_num] 
+                                                 if not isinstance(bboxes_num[0], int) else bboxes_num)
         
-        # extra ROI head forward which handle the distillation
+        # extra ROI head forward which handle the distillation(this only be used in training)
         if distilled_feat != None and gt_rand_rois != None:
-            _, _, gt_and_bg_feats = self.bbox_head(img_metas, bbox_feats=gt_and_rand_bbox_feat, proposals=gt_rand_rois, bboxes_num=[gt_bbox_num + rand_bbox_num for gt_bbox_num, rand_bbox_num, proposal_number in bboxes_num])
+            _, _, gt_and_bg_feats = self.bbox_head(img_metas, bbox_feats=gt_and_rand_bbox_feat, proposals=gt_rand_rois, 
+                                                   bboxes_num=[gt_bbox_num + rand_bbox_num for gt_bbox_num, rand_bbox_num, proposal_number in bboxes_num])
 
 
         # split the feature for distillation and for the final prediction
