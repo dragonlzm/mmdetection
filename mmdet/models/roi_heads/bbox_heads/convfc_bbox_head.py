@@ -875,7 +875,7 @@ class TransformerBBoxHead(BBoxHead):
             bbox_pred = self.fc_reg(x_reg) if self.with_reg else None
         return cls_score, bbox_pred, x_cls
 
-    def forward(self, bbox_feats, proposals, img_metas, 
+    def forward(self, img_metas, bbox_feats=None, proposals=None,
                 gt_rand_rois=None, gt_and_rand_bbox_feat=None, bboxes_num=None):
         """
             The input should like this:
@@ -909,8 +909,10 @@ class TransformerBBoxHead(BBoxHead):
                 for param in self.fc_cls_base.parameters():
                     param.requires_grad = False 
         
-        # if in the training: concat the bbox_feats and gt_and_rand_bbox_feat,
-        # 1. aggregate the feature base on the image. 2. aggregate the bbox base on the image
+        # if in the training: 
+        # 1. forward with both proposal and distillation bboxes: 
+        # i.concat the bbox_feats and gt_and_rand_bbox_feat,
+        # ii. aggregate the feature base on the image. iii. aggregate the bbox base on the image
         # the order of the feat should be the same as the order of the bbox
         all_feats_per_image = []
         all_boxes_per_image = []
@@ -932,7 +934,8 @@ class TransformerBBoxHead(BBoxHead):
                 feat_for_now_image = torch.cat([now_proposal_feat, now_distill_bbox_feat], dim=0)
                 all_boxes_per_image.append(bbox_for_now_image)
                 all_feats_per_image.append(feat_for_now_image)
-        # if in the testing
+        # if 1.in the testing / in the training (forward with the proposal only)
+        # 2. forward with distillation bboxes only:
         else:
             assert isinstance(bboxes_num[0], int)
             for proposal_number in bboxes_num:

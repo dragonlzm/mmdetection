@@ -12,7 +12,7 @@ import json
 
 
 @HEADS.register_module()
-class StandardRoIHeadDistillWithTransformer(StandardRoIHeadDistill):
+class StandardRoIHeadDistillWithTransformerV2(StandardRoIHeadDistill):
     """Simplest base roi head including one bbox head and one mask head."""
 
     def _bbox_forward(self, x, rois, distilled_feat=None, gt_rand_rois=None, gt_labels=None, img_metas=None, distill_ele_weight=None, bboxes_num=None):
@@ -34,38 +34,39 @@ class StandardRoIHeadDistillWithTransformer(StandardRoIHeadDistill):
             if distilled_feat != None and gt_rand_rois != None:
                 gt_and_rand_bbox_feat = self.shared_head(gt_and_rand_bbox_feat)  
         
-        # if training
+        # original ROI head forward which handle the classfication and regression
+        cls_score, bbox_pred, _ = self.bbox_head(img_metas, bbox_feats=bbox_feats, proposals=rois, bboxes_num=[proposal_number for gt_bbox_num, rand_bbox_num, proposal_number in bboxes_num])
+        
+        # extra ROI head forward which handle the distillation
         if distilled_feat != None and gt_rand_rois != None:
-            cls_score, bbox_pred, gt_and_bg_feats = self.bbox_head(img_metas, bbox_feats=bbox_feats, proposals=rois, gt_rand_rois=gt_rand_rois,
-                                                                   gt_and_rand_bbox_feat=gt_and_rand_bbox_feat, bboxes_num=bboxes_num)
-        else:
-            cls_score, bbox_pred, gt_and_bg_feats = self.bbox_head(img_metas, bbox_feats=bbox_feats, proposals=rois, bboxes_num=bboxes_num)
+            _, _, gt_and_bg_feats = self.bbox_head(img_metas, bbox_feats=gt_and_rand_bbox_feat, proposals=gt_rand_rois, bboxes_num=[gt_bbox_num + rand_bbox_num for gt_bbox_num, rand_bbox_num, proposal_number in bboxes_num])
+
 
         # split the feature for distillation and for the final prediction
         # cls_score: torch.Size([1444, 49]) bbox_pred: torch.Size([1444, 192]), gt_and_bg_feats:torch.Size([1444, 512])
         # [now_proposal, gt_distill_bbox, rand_distill_bbox]
         #print('cls_score:', cls_score.shape, 'bbox_pred:', bbox_pred.shape, 'gt_and_bg_feats:', gt_and_bg_feats)
         if distilled_feat != None and gt_rand_rois != None:
-            final_cls_score = []
-            final_bbox_pred = []
-            final_gt_and_bg_feats = []
-            # split the feat base on the image
-            now_start_idx = 0
-            for gt_bbox_num, rand_bbox_num, proposal_number in bboxes_num:
-                # select the cls_score and bbox_pred of prpopsal
-                now_cls_score = cls_score[now_start_idx: now_start_idx + proposal_number]
-                now_bbox_pred = bbox_pred[now_start_idx: now_start_idx + proposal_number]
-                final_cls_score.append(now_cls_score)
-                final_bbox_pred.append(now_bbox_pred)
-                now_start_idx = now_start_idx + proposal_number
+            # final_cls_score = []
+            # final_bbox_pred = []
+            # final_gt_and_bg_feats = []
+            # # split the feat base on the image
+            # now_start_idx = 0
+            # for gt_bbox_num, rand_bbox_num, proposal_number in bboxes_num:
+            #     # select the cls_score and bbox_pred of prpopsal
+            #     now_cls_score = cls_score[now_start_idx: now_start_idx + proposal_number]
+            #     now_bbox_pred = bbox_pred[now_start_idx: now_start_idx + proposal_number]
+            #     final_cls_score.append(now_cls_score)
+            #     final_bbox_pred.append(now_bbox_pred)
+            #     now_start_idx = now_start_idx + proposal_number
                 
-                # select the feature for distillation bboxes
-                now_gt_and_bg_feats = gt_and_bg_feats[now_start_idx: now_start_idx + gt_bbox_num + rand_bbox_num]
-                final_gt_and_bg_feats.append(now_gt_and_bg_feats)
-                now_start_idx = now_start_idx + gt_bbox_num + rand_bbox_num
-            final_cls_score = torch.cat(final_cls_score, dim=0)
-            final_bbox_pred = torch.cat(final_bbox_pred, dim=0)
-            final_gt_and_bg_feats = torch.cat(final_gt_and_bg_feats, dim=0)
+            #     # select the feature for distillation bboxes
+            #     now_gt_and_bg_feats = gt_and_bg_feats[now_start_idx: now_start_idx + gt_bbox_num + rand_bbox_num]
+            #     final_gt_and_bg_feats.append(now_gt_and_bg_feats)
+            #     now_start_idx = now_start_idx + gt_bbox_num + rand_bbox_num
+            # final_cls_score = torch.cat(final_cls_score, dim=0)
+            # final_bbox_pred = torch.cat(final_bbox_pred, dim=0)
+            # final_gt_and_bg_feats = torch.cat(final_gt_and_bg_feats, dim=0)
         
             # calcualate the distillation loss
             cat_distilled_feat = torch.cat(distilled_feat, dim=0)
@@ -73,7 +74,7 @@ class StandardRoIHeadDistillWithTransformer(StandardRoIHeadDistill):
                 distill_ele_weight = torch.cat(distill_ele_weight, dim=0)
             cat_distilled_feat = cat_distilled_feat / cat_distilled_feat.norm(dim=-1, keepdim=True)
             
-            distill_loss_value = self.distillation_loss(final_gt_and_bg_feats, cat_distilled_feat, distill_ele_weight)
+            distill_loss_value = self.distillation_loss(gt_and_bg_feats, cat_distilled_feat, distill_ele_weight)
             distill_loss_value *= (self.bbox_head.clip_dim * self.distill_loss_factor)
 
         # for save the classification feat
@@ -90,7 +91,7 @@ class StandardRoIHeadDistillWithTransformer(StandardRoIHeadDistill):
         # if training
         if distilled_feat != None and gt_rand_rois != None:
             bbox_results = dict(
-                cls_score=final_cls_score, bbox_pred=final_bbox_pred, bbox_feats=final_gt_and_bg_feats, distill_loss_value=dict(distill_loss_value=distill_loss_value))
+                cls_score=cls_score, bbox_pred=bbox_pred, bbox_feats=gt_and_bg_feats, distill_loss_value=dict(distill_loss_value=distill_loss_value))
         else:
             bbox_results = dict(
                 cls_score=cls_score, bbox_pred=bbox_pred, bbox_feats=bbox_feats)

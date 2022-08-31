@@ -26,6 +26,7 @@ from .standard_roi_head_distillation import StandardRoIHeadDistill
 from .standard_roi_head_clip_cls import StandardRoIHeadCLIPCls
 from .multi_relation_roi_head import MultiRelationRoIHead
 from .standard_roi_head_distillation_with_transformer import StandardRoIHeadDistillWithTransformer
+from .standard_roi_head_distillation_with_transformer_v2 import StandardRoIHeadDistillWithTransformerV2
 
 __all__ = [
     'BaseRoIHead', 'CascadeRoIHead', 'DoubleHeadRoIHead', 'MaskScoringRoIHead',
@@ -39,4 +40,5 @@ __all__ = [
     'SCNetRoIHead', 'SCNetMaskHead', 'SCNetSemanticHead', 'SCNetBBoxHead',
     'FeatureRelayHead', 'GlobalContextHead', 'StandardRoIHeadDistill',
     'StandardRoIHeadCLIPCls', 'MultiRelationRoIHead', 'StandardRoIHeadDistillWithTransformer'
+    'StandardRoIHeadDistillWithTransformerV2',
 ]
