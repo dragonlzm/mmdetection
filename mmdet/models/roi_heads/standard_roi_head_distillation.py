@@ -34,6 +34,8 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         self.use_contrast_distill = self.train_cfg.get('use_contrast_distill', False) if self.train_cfg is not None else False
         self.contrastive_weight = self.train_cfg.get('contrastive_weight', 0.5) if self.train_cfg is not None else 0.5
         self.gt_bboxes_distill_weight = self.train_cfg.get('gt_bboxes_distill_weight', None) if self.train_cfg is not None else None
+        # config for transformer head
+        self.use_proposal_for_distill = self.train_cfg.get('use_proposal_for_distill', False) if self.train_cfg is not None else False
         # self.all_cosine_value = 0
         # self.count = 0
         # self.iter = 0
