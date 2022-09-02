@@ -181,7 +181,7 @@ class ResNetWithVit(ResNet):
                     ("relu", nn.ReLU(inplace=True)),
                     ("dropout", nn.Dropout(0.1)),
                     ("c_proj", nn.Linear(1024, resnet_dim))
-                ]))
+                ]))        
         
     def clip_pre_transformer(self, x):
         # x = self.preprocess(x)
@@ -206,29 +206,25 @@ class ResNetWithVit(ResNet):
         return x
         
     def clip_step_1(self, x):
-        with torch.no_grad():
-            x = self.clip_pre_transformer(x) # [bs, 257, 1024]
+        x = self.clip_pre_transformer(x) # [bs, 257, 1024]
         return x
     
     def clip_step_2(self, x):
-        with torch.no_grad():
-            # for layer [0-4] for small model, [0-8] for large model
-            for i in range(self.vit_backbone_cfg.layers // 3):
-                x = self.clip_transfomer(x, i)
+        # for layer [0-4] for small model, [0-8] for large model
+        for i in range(self.vit_backbone_cfg.layers // 3):
+            x = self.clip_transfomer(x, i)
         return x
     
     def clip_step_3(self, x):
-        with torch.no_grad():
-            # for layer [4-8] for small model, [8-16] for large model
-            for i in range(self.vit_backbone_cfg.layers // 3, self.vit_backbone_cfg.layers // 3 * 2):
-                x = self.clip_transfomer(x, i)
+        # for layer [4-8] for small model, [8-16] for large model
+        for i in range(self.vit_backbone_cfg.layers // 3, self.vit_backbone_cfg.layers // 3 * 2):
+            x = self.clip_transfomer(x, i)
         return x
     
     def clip_step_4(self, x):
-        with torch.no_grad():
-            # for layer [8-12] for small model, [16-24] for large model
-            for i in range(self.vit_backbone_cfg.layers // 3 * 2, self.vit_backbone_cfg.layers):
-                x = self.clip_transfomer(x, i)
+        # for layer [8-12] for small model, [16-24] for large model
+        for i in range(self.vit_backbone_cfg.layers // 3 * 2, self.vit_backbone_cfg.layers):
+            x = self.clip_transfomer(x, i)
         return x
     
     def res_step_1(self, x):
@@ -248,7 +244,6 @@ class ResNetWithVit(ResNet):
         return x
 
     def add_merge(self, clip_x, res_x, step_idx):
-        #with torch.no_grad():
         reshape_x = clip_x[:,1:,:] # [bs, self.girds_num*self.girds_num, 1024] / [2, 49, 768]
         #print('before convert:', reshape_x.shape)
         if(step_idx == 1):
@@ -275,7 +270,6 @@ class ResNetWithVit(ResNet):
         return merge_x
     
     def cat_merge(self, clip_x, res_x, step_idx):
-        #with torch.no_grad():
         reshape_x = clip_x[:,1:,:] # [bs, self.girds_num*self.girds_num, 1024] / [2, 49, 768]
         reshape_x = reshape_x.reshape(clip_x.size(0), self.girds_num, self.girds_num, -1) # [bs, self.girds_num, self.girds_num, vit_dim]
         reshape_x = reshape_x.permute(0, 3, 1, 2) # [bs, vit_dim, self.girds_num, self.girds_num]
@@ -338,18 +332,25 @@ class ResNetWithVit(ResNet):
         #img torch.Size([2, 3, 1280, 800]) ori_image torch.Size([2, 1024, 1024, 3])
         # in testing the ori_image list[torch.Size([1, 3, 1024, 1024])]
         # for para_name, param in zip(self.clip_visual_model.state_dict(), self.clip_visual_model.parameters()):
-        #     if para_name == 'ln_post.bias':
-        #         print(para_name, param.requires_grad, param.shape, param)        
+        #     #print(para_name, self.state_dict()[para_name].shape, param.shape)
+        #     if 'ln_' in para_name:
+        #         print(para_name, param.shape, param.requires_grad)
+        #for para_name, param in zip(self.state_dict(), self.parameters()):
+        #    print(para_name, param.requires_grad, param.shape)    
         
-        with torch.no_grad():
-            ori_image = self.preprocess(ori_image)
+        ori_image = self.preprocess(ori_image)
             
         # res0: regular resnet backbone input
         # clip0: clip input with corresponding preprocessing
-        self.clip1 = self.clip_step_1(ori_image)
-        self.clip2 = self.clip_step_2(self.clip1)
-        self.clip3 = self.clip_step_3(self.clip2)
-        self.clip4 = self.clip_step_4(self.clip3)
+        max_merge_lvl = max([int(ele.strip('merge')) for ele in self.merge_step])
+        if max_merge_lvl >= 1:
+            self.clip1 = self.clip_step_1(ori_image)
+        if max_merge_lvl >= 2:
+            self.clip2 = self.clip_step_2(self.clip1)
+        if max_merge_lvl >= 3:
+            self.clip3 = self.clip_step_3(self.clip2)
+        if max_merge_lvl >= 4:
+            self.clip4 = self.clip_step_4(self.clip3)
         
         res1 = self.res_step_1(img)
         if 'merge1' in self.merge_step:

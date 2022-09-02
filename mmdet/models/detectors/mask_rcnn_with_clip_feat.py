@@ -41,6 +41,22 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
         self.backbone = build_backbone(backbone)
         
         if vit_backbone_cfg != None:
+            self.vit_backbone.ln_post.weight.requires_grad = False
+            self.vit_backbone.ln_post.bias.requires_grad = False
+            max_merge_lvl = max([int(ele.strip('merge')) for ele in self.backbone.merge_step])
+            min_unfreeze_transformer_lvl = (max_merge_lvl - 1) * self.vit_backbone_cfg.layers // 3
+            
+            # for layer >= min_unfreeze_transformer_lvl: required_grad = False
+            for para_name, param in zip(self.vit_backbone.state_dict(), self.vit_backbone.parameters()):
+                #print(para_name, self.state_dict()[para_name].shape, param.shape)
+                if 'ln_' in para_name and not para_name.startswith('ln_'):
+                    #transformer.resblocks.1.ln_1.bias
+                    layer_idx = int(para_name.split('.')[2])
+                    if layer_idx >= min_unfreeze_transformer_lvl:
+                        param.requires_grad = False
+                    #print(para_name, param.requires_grad)
+                    
+                    
             self.backbone.clip_visual_model = self.vit_backbone
 
         if neck is not None:
