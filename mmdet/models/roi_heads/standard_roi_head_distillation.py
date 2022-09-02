@@ -352,7 +352,6 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                         # normalize the weight
                         # the factor should be: (num of gt bbox + num of random bbox) / (weight of all gt bbox + weight of the all random bboxes)
                         normalize_factor = weight_per_img.shape[0] / torch.sum(weight_per_img[:, 0]).item()
-                        normalize_factor = 1.0 if normalize_factor > 1000.0 else normalize_factor
                         weight_per_img *= normalize_factor
                     distill_ele_weight.append(weight_per_img)   
             else:
