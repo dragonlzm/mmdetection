@@ -138,9 +138,9 @@ class ResNetWithVitV3(ResNet):
             resnet_dim = 256
             in_dim = self.vit_backbone_cfg.width
             if not self.merge_with_mlp:
-                self.adapt_layer_1 = nn.Linear(in_dim*4, resnet_dim)
+                self.adapt_layer_2 = nn.Linear(in_dim*4, resnet_dim)
             else:
-                self.adapt_layer_1 = nn.Sequential(OrderedDict([
+                self.adapt_layer_2 = nn.Sequential(OrderedDict([
                     ("c_fc", nn.Linear(in_dim*4, 1024)),
                     ("relu", nn.ReLU(inplace=True)),
                     ("dropout", nn.Dropout(0.1)),
@@ -151,9 +151,9 @@ class ResNetWithVitV3(ResNet):
             resnet_dim = 512
             in_dim = self.vit_backbone_cfg.width
             if not self.merge_with_mlp:
-                self.adapt_layer_1 = nn.Linear(in_dim*4, resnet_dim)
+                self.adapt_layer_3 = nn.Linear(in_dim*4, resnet_dim)
             else:
-                self.adapt_layer_1 = nn.Sequential(OrderedDict([
+                self.adapt_layer_3 = nn.Sequential(OrderedDict([
                     ("c_fc", nn.Linear(in_dim*4, 1024)),
                     ("relu", nn.ReLU(inplace=True)),
                     ("dropout", nn.Dropout(0.1)),
@@ -164,9 +164,9 @@ class ResNetWithVitV3(ResNet):
             resnet_dim = 1024
             in_dim = self.vit_backbone_cfg.width
             if not self.merge_with_mlp:
-                self.adapt_layer_1 = nn.Linear(in_dim*4, resnet_dim)
+                self.adapt_layer_4 = nn.Linear(in_dim*4, resnet_dim)
             else:
-                self.adapt_layer_1 = nn.Sequential(OrderedDict([
+                self.adapt_layer_4 = nn.Sequential(OrderedDict([
                     ("c_fc", nn.Linear(in_dim*4, 1024)),
                     ("relu", nn.ReLU(inplace=True)),
                     ("dropout", nn.Dropout(0.1)),
