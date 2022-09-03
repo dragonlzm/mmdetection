@@ -1,8 +1,10 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from enum import unique
+from locale import normalize
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import math
 from mmcv.cnn import Conv2d, Linear, build_activation_layer
 from mmcv.cnn import (build_activation_layer, build_conv_layer,
                       build_norm_layer, xavier_init)
@@ -89,6 +91,7 @@ class ClipEncoderHead(AnchorFreeHead):
                  return_test_score=False,
                  use_gt_name=False,
                  use_rand_name=False,
+                 use_size_weight=False,
                  **kwargs):
         # NOTE here use `AnchorFreeHead` instead of `TransformerHead`,
         # since it brings inconvenience when the initialization of
@@ -142,6 +145,7 @@ class ClipEncoderHead(AnchorFreeHead):
         self.use_gt_name = use_gt_name
         self.use_rand_name = use_rand_name
         self.from_id_to_cate_name = {i:name for i, name in enumerate(self.cate_names)}
+        self.use_size_weight = use_size_weight
 
         # create the layers
         self._init_layers()
@@ -436,7 +440,8 @@ class ClipEncoderHead(AnchorFreeHead):
     def loss(self,
              cls_scores_list,
              gt_labels_list,
-             img_metas):
+             img_metas,
+             gt_bboxes=None):
         """"Loss function.
 
         Only outputs from the last feature level are used for computing
@@ -459,6 +464,25 @@ class ClipEncoderHead(AnchorFreeHead):
         # ori_all_pred = torch.cat(cls_scores_list)
         # ori_all_label = torch.cat(gt_labels_list)
         # ori_loss_cls = self.loss_cls(ori_all_pred, ori_all_label)
+        # prepare the weight
+        # using the weight function e ^ -(sqrt(bbox_area) / sqrt(img_area)) and normalize the weight to make the total equal to instance number
+        if self.use_size_weight:
+            all_weights = []
+            for bbox_per_img, image_meta in zip(gt_bboxes, img_metas):
+                if bbox_per_img.shape[0] == 0:
+                    continue
+                img_h, img_w, _ = image_meta['img_shape']
+                img_factor = math.sqrt(img_h * img_w)
+                bbox_w = bbox_per_img[:, 2] - bbox_per_img[:, 0]
+                bbox_h = bbox_per_img[:, 3] - bbox_per_img[:, 1]
+                bbox_factor = torch.sqrt(bbox_w * bbox_h)
+                weight = - (bbox_factor / img_factor)
+                weight = torch.exp(weight)
+                # normalize over all the weight
+                normalize_factor = bbox_per_img.shape[0] / torch.sum(weight)
+                weight *= normalize_factor
+                print(bbox_factor, weight, torch.sum(weight))
+                all_weights.append(weight)
         
         # classification loss
         all_cls_loss = []
@@ -471,10 +495,11 @@ class ClipEncoderHead(AnchorFreeHead):
             cls_scores_list = [ele for ele in cls_scores_list if ele.shape[0] != 0]
             gt_labels_list = [ele for ele in gt_labels_list if ele.shape[0] != 0]
         
-        for pred, label in zip(cls_scores_list, gt_labels_list):
-            #if pred.shape[0] == 0:
-            #    continue
-            loss_cls = self.loss_cls(pred, label)
+        for i, (pred, label) in enumerate(zip(cls_scores_list, gt_labels_list)):
+            if self.use_size_weight:
+                loss_cls = self.loss_cls(pred, label, weight=all_weights[i])
+            else:
+                loss_cls = self.loss_cls(pred, label)
             all_cls_loss.append(loss_cls.unsqueeze(dim=0))
             all_weight_factor.append(pred.shape[0])
 
@@ -527,12 +552,12 @@ class ClipEncoderHead(AnchorFreeHead):
         # the out here should be two lists, all_cls_scores_list and all_bbox_preds_list
         if hasattr(self, 'use_gt_name') and self.use_gt_name:
             outs, updated_gt_labels = self(x, img_metas, gt_labels)
-            loss_inputs = (outs,) + (updated_gt_labels, img_metas)
+            loss_inputs = (outs,) + (updated_gt_labels, img_metas, gt_bboxes)
             #print('gt_labels:', [ele.shape for ele in gt_labels], 
             #      'updated_gt_labels:', [ele.shape for ele in updated_gt_labels])
         else:
             outs = self(x, img_metas)
-            loss_inputs = (outs,) + (gt_labels, img_metas)
+            loss_inputs = (outs,) + (gt_labels, img_metas, gt_bboxes)
         losses = self.loss(*loss_inputs)
         return losses
 
