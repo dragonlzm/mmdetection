@@ -461,9 +461,6 @@ class ClipEncoderHead(AnchorFreeHead):
             dict[str, Tensor]: A dictionary of loss components.
         """
         # NOTE defaultly only the outputs from the last feature scale is used.
-        # ori_all_pred = torch.cat(cls_scores_list)
-        # ori_all_label = torch.cat(gt_labels_list)
-        # ori_loss_cls = self.loss_cls(ori_all_pred, ori_all_label)
         # prepare the weight
         # using the weight function e ^ -(sqrt(bbox_area) / sqrt(img_area)) and normalize the weight to make the total equal to instance number
         if self.use_size_weight:
@@ -481,10 +478,14 @@ class ClipEncoderHead(AnchorFreeHead):
                 # normalize over all the weight
                 normalize_factor = bbox_per_img.shape[0] / torch.sum(weight)
                 weight *= normalize_factor
-                print(bbox_factor, weight, torch.sum(weight))
+                #print(bbox_factor, weight, torch.sum(weight))
                 all_weights.append(weight)
         
         # classification loss
+        # ori_all_pred = torch.cat(cls_scores_list)
+        # ori_all_label = torch.cat(gt_labels_list)
+        # ori_all_weights = torch.cat(all_weights)
+        # ori_loss_cls = self.loss_cls(ori_all_pred, ori_all_label, weight=ori_all_weights)
         all_cls_loss = []
         all_weight_factor = []
         
@@ -509,6 +510,7 @@ class ClipEncoderHead(AnchorFreeHead):
         all_cls_loss = all_cls_loss * all_weight_factor
         all_cls_loss = torch.sum(all_cls_loss, dim=0)
 
+        #print('ori:', ori_loss_cls, 'new:', all_cls_loss)
         loss_dict = dict()
         # loss from the last decoder layer
         loss_dict['loss_cls'] = all_cls_loss
