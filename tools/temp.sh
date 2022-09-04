@@ -18,15 +18,14 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #rm -rf ./data
 #ln -sf /project/nevatia_174/zhuoming/detection ./data
 
-### 300 proposal exps
-# base_filtered gt weight = 1 (reproduce, fixed seed, 1.0 distillation weight)
-WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_per_base_filtered_clip_proposal_weight_300"
+# base_filtered gt weight = 1 (reproduce, fixed seed, 2/3 distillation weight)
+WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_per_base_filtered_clip_proposal_weight_300_distw0666"
 PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
     configs/mask_rcnn_distill/mask_rcnn_distillation_per_base_filtered_clip_proposal_weight_300.py --launcher pytorch \
     --work-dir=${WORK_DIR} \
-    --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
+    --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=2/3 optimizer_config.grad_clip.max_norm=10 \
     --seed=42 --deterministic \
     --resume-from=${WORK_DIR}/latest.pth
 
@@ -61,14 +60,14 @@ ${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox segm \
 model.roi_head.bbox_head.reg_with_cls_embedding=True 
 
 
-# base_filtered gt weight = 1 (reproduce, fixed seed, 1.0 distillation weight)
-WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_per_base_filtered_clip_proposal_weight_300_unfixed"
+# base_filtered gt weight = 1 (reproduce, fixed seed, 2/3 distillation weight, unfixed)
+WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_per_base_filtered_clip_proposal_weight_300_distw0666_unfixed"
 PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
     configs/mask_rcnn_distill/mask_rcnn_distillation_per_base_filtered_clip_proposal_weight_300.py --launcher pytorch \
     --work-dir=${WORK_DIR} \
-    --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
+    --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=2/3 optimizer_config.grad_clip.max_norm=10 \
     #--resume-from=${WORK_DIR}/latest.pth
 
 # test the model
