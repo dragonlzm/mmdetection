@@ -2,6 +2,18 @@ _base_ = './mask_rcnn_distillation_per_base_filtered_clip_proposal_weight.py'
 
 # regression with embedding, base filtered proposal, per distillation bbox weight
 # become default setting in here
+optimizer = dict(type='HybridOptimizer', lr=0.005, momentum=0.9, weight_decay=0.0001, tranformer_multiplier=0.01)
+# learning policy
+lr_config = dict(
+    policy='step',
+    warmup='linear',
+    warmup_iters=500,
+    warmup_ratio=0.001,
+    step=[8, 11])
+
+optimizer_config = dict(_delete_=True, 
+                        constructor='HybridOptimizerConstructor',
+                        grad_clip=dict(max_norm=10, norm_type=2))
 
 # model settings
 model = dict(
