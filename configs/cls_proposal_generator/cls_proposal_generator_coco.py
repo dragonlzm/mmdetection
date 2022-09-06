@@ -27,24 +27,17 @@ test_pipeline = [
     dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels']),
 ]
 
-classes = ('person', 'bicycle', 'car', 'motorcycle', 
-'airplane', 'bus', 'train', 'boat', 'bird', 'cat', 
-'dog', 'horse', 'sheep', 'cow', 'bottle', 'chair', 
-'couch', 'potted plant', 'dining table', 'tv')
-
 data_root = 'data/coco/'
 data = dict(train=dict(pipeline=train_pipeline),
             val=dict(eval_filter_empty_gt=True, 
                 pipeline=test_pipeline, 
                 ann_file=data_root + 'annotations/train_100imgs.json',
                 img_prefix=data_root + 'train2017/',
-                #classes=classes
                 ),
             test=dict(eval_filter_empty_gt=True, 
                 pipeline=test_pipeline, 
                 ann_file=data_root + 'annotations/train_100imgs.json',
                 img_prefix=data_root + 'train2017/',
-                #classes=classes
                 ))
 evaluation = dict(interval=1, metric='proposal_fast')
 
