@@ -134,9 +134,10 @@ class HybridOptimizerConstructor(DefaultOptimizerConstructor):
                 if "encoder" in name:
                     lr = lr * self.tranformer_multiplier
                     optimizer_name = "ADAMW"
-                    print(name, 'self.base_lr:', self.base_lr, 'self.tranformer_multiplier', self.tranformer_multiplier,
-                          'lr', lr, 'optimizer_name:', optimizer_name)
+                    #print(name, 'self.base_lr:', self.base_lr, 'self.tranformer_multiplier', self.tranformer_multiplier,
+                    #      'lr', lr, 'optimizer_name:', optimizer_name)
 
+                #params += [{"params": [value], "lr": lr, "weight_decay": weight_decay, "optimizer": optimizer_name, 'name': name + '.' + key}]
                 params += [{"params": [value], "lr": lr, "weight_decay": weight_decay, "optimizer": optimizer_name}]
         
         # # get param-wise options
@@ -235,5 +236,7 @@ class HybridOptimizerConstructor(DefaultOptimizerConstructor):
         params = []
         self.add_params(params, model)
         optimizer_cfg['params'] = params
+        # for ele in params:
+        #     print(ele['name'], ele["lr"], ele["weight_decay"], ele["optimizer"])
 
         return build_from_cfg(optimizer_cfg, OPTIMIZERS)

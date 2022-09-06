@@ -84,7 +84,7 @@ class HybridOptimizer(torch.optim.Optimizer):
 
                     step_size = group['lr'] / bias_correction1
                     
-                    print("group['lr']", group['lr'])
+                    #print("group['lr']", group['lr'])
 
                     p.addcdiv_(exp_avg, denom, value=-step_size)
                 else:

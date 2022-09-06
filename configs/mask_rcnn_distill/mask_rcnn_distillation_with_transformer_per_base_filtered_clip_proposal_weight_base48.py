@@ -13,7 +13,7 @@ lr_config = dict(
     step=[8, 11])
 
 optimizer_config = dict(_delete_=True, 
-                        type='ParamWiseOptimizerHook', 
+                        #type='ParamWiseOptimizerHook', 
                         grad_clip=dict(max_norm=10, norm_type=2))
 
 # model settings
