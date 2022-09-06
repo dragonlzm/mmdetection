@@ -7,8 +7,8 @@ DATA_DIR=$4
 
 PORT=${PORT:-29501}
 
-rm -rf ./data
-ln -sf ${DATA_DIR} ./data
+# rm -rf ./data
+# ln -sf ${DATA_DIR} ./data
 
 PYTHONPATH="$(dirname $0)/..":$PYTHONPATH \
 CUDA_VISIBLE_DEVICES=2,3 python -m torch.distributed.launch --nproc_per_node=$GPUS --master_port=$PORT \

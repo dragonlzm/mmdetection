@@ -160,7 +160,7 @@ python -m torch.distributed.launch --nproc_per_node=2 \
 #     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
 #     configs/cls_finetuner/cls_finetuner_clip_lvis_base_train_over_sample.py --launcher pytorch \
 #     --work-dir=${WORK_DIR} \
-#     --cfg-options runner.max_epochs=18 model.rpn_head.open_ln=True model.rpn_head.use_gt_name=True model.rpn_head.use_rand_name=50 \
+#     --cfg-options runner.max_epochs=18 model.rpn_head.open_ln=True model.rpn_head.use_gt_name=True model.rpn_head.use_rand_name=50 model.rpn_head.use_size_weight=True \
 #     #--resume-from=${WORK_DIR}/latest.pth
 
 
