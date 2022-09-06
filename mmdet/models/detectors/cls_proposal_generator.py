@@ -320,8 +320,12 @@ class ClsProposalGenerator(BaseDetector):
         if self.bbox_save_path_root != None:
             if not os.path.exists(self.bbox_save_path_root):
                 os.makedirs(self.bbox_save_path_root)
-            
-            file_name = os.path.join(self.bbox_save_path_root, '.'.join(img_metas[0]['ori_filename'].split('.')[:-1]) + '.json')
+            clear_file_name = img_metas[0]['ori_filename']
+            # handle Lvis situation
+            if '/' in clear_file_name:
+                clear_file_name = clear_file_name.split('/')[-1]
+                
+            file_name = os.path.join(self.bbox_save_path_root, '.'.join(clear_file_name.split('.')[:-1]) + '.json')
             if os.path.exists(file_name):
                 return [np.zeros((1,5))]
 
@@ -493,7 +497,7 @@ class ClsProposalGenerator(BaseDetector):
         
         if self.bbox_save_path_root != None:        
             file = open(file_name, 'w')
-            result_json = {'image_id':int(img_metas[0]['ori_filename'].split('.')[0].strip('0')), 'score':result[0].tolist()}
+            result_json = {'image_id':int(clear_file_name.split('.')[0].strip('0')), 'score':result[0].tolist()}
             file.write(json.dumps(result_json))
             file.close()
             
