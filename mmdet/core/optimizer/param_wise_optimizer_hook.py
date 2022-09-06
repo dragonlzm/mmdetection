@@ -33,12 +33,6 @@ class ParamWiseOptimizerHook(Hook):
         runner.outputs['loss'].backward()
         #needed_para = []
         if self.grad_clip is not None:
-            ### for testing
-            # for name, module in runner.model.named_modules():
-            #     for key, value in module.named_parameters(recurse=False):
-            #         if "encoder" in name:
-            #             needed_para.append(value)
-            # grad_norm = self.clip_grads(needed_para)
             searched_param = set()
             all_grads = []
             for param_key in self.grad_clip:
@@ -51,6 +45,9 @@ class ParamWiseOptimizerHook(Hook):
                             now_param_group.append(value)
                             # save the assigned params
                         searched_param.add(name)
+                #print('param_key', param_key, len(now_param_group))
+                if len(all_grads) == 0:
+                    continue
                 now_config = self.grad_clip[param_key]
                 grad_norm = self.clip_grads(now_param_group, now_config)
                 all_grads.append(grad_norm.unsqueeze(dim=0))
@@ -67,7 +64,7 @@ class ParamWiseOptimizerHook(Hook):
                 now_config = self.grad_clip['other']
                 grad_norm = self.clip_grads(now_param_group, now_config)
                 all_grads.append(grad_norm.unsqueeze(dim=0))
-            grad_norm = torch.sum(all_grads)
+            grad_norm = torch.sum(torch.cat(all_grads, dim=0))
             
             if grad_norm is not None:
                 # Add grad norm to the logger
