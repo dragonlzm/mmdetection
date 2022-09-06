@@ -46,11 +46,12 @@ class ParamWiseOptimizerHook(Hook):
                             # save the assigned params
                         searched_param.add(name)
                 #print('param_key', param_key, len(now_param_group))
-                if len(all_grads) == 0:
+                if len(now_param_group) == 0:
                     continue
                 now_config = self.grad_clip[param_key]
                 grad_norm = self.clip_grads(now_param_group, now_config)
                 all_grads.append(grad_norm.unsqueeze(dim=0))
+                #print('param_key', param_key, 'grad_norm', grad_norm, 'now_config', now_config)
             
             # handle the rest of the parameters
             if 'other' in self.grad_clip:
