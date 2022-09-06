@@ -122,7 +122,7 @@ python -m torch.distributed.launch --nproc_per_node=2 \
 #     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
 #     configs/mask_rcnn_distill/mask_rcnn_distillation_per_base_filtered_clip_proposal_weight_300.py --launcher pytorch \
 #     --work-dir=${WORK_DIR} \
-#     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=2/3 optimizer_config.grad_clip.max_norm=10 \
+#     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=0.666 optimizer_config.grad_clip.max_norm=10 \
 #     --seed=42 --deterministic \
 #     #--resume-from=${WORK_DIR}/latest.pth
 
@@ -143,7 +143,7 @@ python -m torch.distributed.launch --nproc_per_node=2 \
 #     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
 #     configs/mask_rcnn_distill/mask_rcnn_distillation_per_base_filtered_clip_proposal_weight_300.py --launcher pytorch \
 #     --work-dir=${WORK_DIR} \
-#     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=2/3 optimizer_config.grad_clip.max_norm=10 \
+#     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=0.666 optimizer_config.grad_clip.max_norm=10 \
 #     #--resume-from=${WORK_DIR}/latest.pth
 
 # test the model
