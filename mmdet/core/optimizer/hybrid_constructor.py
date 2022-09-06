@@ -6,8 +6,7 @@ from torch.nn import GroupNorm, LayerNorm
 
 from mmcv.utils import _BatchNorm, _InstanceNorm, build_from_cfg, is_list_of
 from mmcv.utils.ext_loader import check_ops_exist
-from mmcv.runner.builder import OPTIMIZER_BUILDERS, OPTIMIZERS, DefaultOptimizerConstructor
-from .hybrid_optimizer import HybridOptimizer
+from mmcv.runner.optimizer import OPTIMIZER_BUILDERS, OPTIMIZERS, DefaultOptimizerConstructor
 
 @OPTIMIZER_BUILDERS.register_module()
 class HybridOptimizerConstructor(DefaultOptimizerConstructor):
@@ -100,7 +99,8 @@ class HybridOptimizerConstructor(DefaultOptimizerConstructor):
         self.paramwise_cfg = {} if paramwise_cfg is None else paramwise_cfg
         self.base_lr = optimizer_cfg.get('lr', None)
         self.base_wd = optimizer_cfg.get('weight_decay', None)
-        self.tranformer_multiplier = optimizer_cfg.get('tranformer_multiplier', None)
+        self.tranformer_multiplier = optimizer_cfg.pop('tranformer_multiplier', None)
+        
         self._validate_cfg()
 
     def add_params(self, params, model, prefix='', is_dcn_module=None):
@@ -134,6 +134,8 @@ class HybridOptimizerConstructor(DefaultOptimizerConstructor):
                 if "encoder" in name:
                     lr = lr * self.tranformer_multiplier
                     optimizer_name = "ADAMW"
+                    print(name, 'self.base_lr:', self.base_lr, 'self.tranformer_multiplier', self.tranformer_multiplier,
+                          'lr', lr, 'optimizer_name:', optimizer_name)
 
                 params += [{"params": [value], "lr": lr, "weight_decay": weight_decay, "optimizer": optimizer_name}]
         

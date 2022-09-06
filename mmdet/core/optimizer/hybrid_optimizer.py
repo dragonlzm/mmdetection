@@ -83,6 +83,8 @@ class HybridOptimizer(torch.optim.Optimizer):
                     denom = (exp_avg_sq.sqrt() / math.sqrt(bias_correction2)).add_(group['eps'])
 
                     step_size = group['lr'] / bias_correction1
+                    
+                    print("group['lr']", group['lr'])
 
                     p.addcdiv_(exp_avg, denom, value=-step_size)
                 else:
