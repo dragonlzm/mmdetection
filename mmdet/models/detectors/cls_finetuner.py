@@ -49,7 +49,9 @@ class ClsFinetuner(BaseDetector):
                  train_cfg,
                  test_cfg,
                  pretrained=None,
-                 init_cfg=None):
+                 init_cfg=None,
+                 base_cate_name=None,
+                 all_cate_name=None):
         super(ClsFinetuner, self).__init__(init_cfg)
         if pretrained:
             warnings.warn('DeprecationWarning: pretrained is deprecated, '
@@ -95,47 +97,46 @@ class ClsFinetuner(BaseDetector):
         self.extra_patches_num = self.test_cfg.get('extra_patches_num', 3) if self.test_cfg is not None else 3
         # filter the clip proposal using the categories
         self.filter_clip_proposal_base_on_cates = self.test_cfg.get('filter_clip_proposal_base_on_cates', False) if self.test_cfg is not None else False
-        self.from_gt_idx_to_coco_name = {0: 'person', 1: 'bicycle', 2: 'car', 3: 'motorcycle', 4: 'airplane', 5: 'bus', 6: 'train', 7: 'truck', 
-                                       8: 'boat', 9: 'traffic light', 10: 'fire hydrant', 11: 'stop sign', 12: 'parking meter', 13: 'bench', 
-                                       14: 'bird', 15: 'cat', 16: 'dog', 17: 'horse', 18: 'sheep', 19: 'cow', 20: 'elephant', 21: 'bear', 
-                                       22: 'zebra', 23: 'giraffe', 24: 'backpack', 25: 'umbrella', 26: 'handbag', 27: 'tie', 28: 'suitcase', 
-                                       29: 'frisbee', 30: 'skis', 31: 'snowboard', 32: 'sports ball', 33: 'kite', 34: 'baseball bat', 
-                                       35: 'baseball glove', 36: 'skateboard', 37: 'surfboard', 38: 'tennis racket', 39: 'bottle', 40: 'wine glass', 
-                                       41: 'cup', 42: 'fork', 43: 'knife', 44: 'spoon', 45: 'bowl', 46: 'banana', 47: 'apple', 48: 'sandwich', 
-                                       49: 'orange', 50: 'broccoli', 51: 'carrot', 52: 'hot dog', 53: 'pizza', 54: 'donut', 55: 'cake', 
-                                       56: 'chair', 57: 'couch', 58: 'potted plant', 59: 'bed', 60: 'dining table', 61: 'toilet', 62: 'tv', 
-                                       63: 'laptop', 64: 'mouse', 65: 'remote', 66: 'keyboard', 67: 'cell phone', 68: 'microwave', 69: 'oven', 
-                                       70: 'toaster', 71: 'sink', 72: 'refrigerator', 73: 'book', 74: 'clock', 75: 'vase', 76: 'scissors', 
-                                       77: 'teddy bear', 78: 'hair drier', 79: 'toothbrush'}
-        self.from_coco_name_to_gt_idx = {'person': 0, 'bicycle': 1, 'car': 2, 'motorcycle': 3, 'airplane': 4, 'bus': 5, 'train': 6, 'truck': 7, 
-                                         'boat': 8, 'traffic light': 9, 'fire hydrant': 10, 'stop sign': 11, 'parking meter': 12, 'bench': 13, 
-                                         'bird': 14, 'cat': 15, 'dog': 16, 'horse': 17, 'sheep': 18, 'cow': 19, 'elephant': 20, 'bear': 21, 
-                                         'zebra': 22, 'giraffe': 23, 'backpack': 24, 'umbrella': 25, 'handbag': 26, 'tie': 27, 'suitcase': 28, 
-                                         'frisbee': 29, 'skis': 30, 'snowboard': 31, 'sports ball': 32, 'kite': 33, 'baseball bat': 34, 'baseball glove': 35, 
-                                         'skateboard': 36, 'surfboard': 37, 'tennis racket': 38, 'bottle': 39, 'wine glass': 40, 'cup': 41, 'fork': 42, 
-                                         'knife': 43, 'spoon': 44, 'bowl': 45, 'banana': 46, 'apple': 47, 'sandwich': 48, 'orange': 49, 'broccoli': 50, 
-                                         'carrot': 51, 'hot dog': 52, 'pizza': 53, 'donut': 54, 'cake': 55, 'chair': 56, 'couch': 57, 'potted plant': 58, 
-                                         'bed': 59, 'dining table': 60, 'toilet': 61, 'tv': 62, 'laptop': 63, 'mouse': 64, 'remote': 65, 'keyboard': 66, 
-                                         'cell phone': 67, 'microwave': 68, 'oven': 69, 'toaster': 70, 'sink': 71, 'refrigerator': 72, 'book': 73, 'clock': 74, 
-                                         'vase': 75, 'scissors': 76, 'teddy bear': 77, 'hair drier': 78, 'toothbrush': 79}
-        self.from_gt_idx_to_coco_idx = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8, 8: 9, 9: 10, 10: 11, 11: 13, 12: 14, 
-                                        13: 15, 14: 16, 15: 17, 16: 18, 17: 19, 18: 20, 19: 21, 20: 22, 21: 23, 22: 24, 23: 25, 
-                                        24: 27, 25: 28, 26: 31, 27: 32, 28: 33, 29: 34, 30: 35, 31: 36, 32: 37, 33: 38, 34: 39, 
-                                        35: 40, 36: 41, 37: 42, 38: 43, 39: 44, 40: 46, 41: 47, 42: 48, 43: 49, 44: 50, 45: 51, 
-                                        46: 52, 47: 53, 48: 54, 49: 55, 50: 56, 51: 57, 52: 58, 53: 59, 54: 60, 55: 61, 56: 62, 
-                                        57: 63, 58: 64, 59: 65, 60: 67, 61: 70, 62: 72, 63: 73, 64: 74, 65: 75, 66: 76, 67: 77, 
-                                        68: 78, 69: 79, 70: 80, 71: 81, 72: 82, 73: 84, 74: 85, 75: 86, 76: 87, 77: 88, 78: 89, 
-                                        79: 90}
-        self.base_cate_name = ('person', 'bicycle', 'car', 'motorcycle', 'train', 
-                                'truck', 'boat', 'bench', 'bird', 'horse', 'sheep', 
-                                'bear', 'zebra', 'giraffe', 'backpack', 'handbag', 
-                                'suitcase', 'frisbee', 'skis', 'kite', 'surfboard', 
-                                'bottle', 'fork', 'spoon', 'bowl', 'banana', 'apple', 
-                                'sandwich', 'orange', 'broccoli', 'carrot', 'pizza', 
-                                'donut', 'chair', 'bed', 'toilet', 'tv', 'laptop', 
-                                'mouse', 'remote', 'microwave', 'oven', 'toaster', 
-                                'refrigerator', 'book', 'clock', 'vase', 'toothbrush')
-        self.base_cate_gt_idx = [self.from_coco_name_to_gt_idx[name] for name in self.base_cate_name]
+        
+        # for the following self.from_cate_name_to_gt_idx, self.from_gt_idx_to_cate_idx, self.base_cate_name 
+        # if base_cate_name == None, then now is for coco dataset, otherwise is for LVIS dataset
+        if base_cate_name == None:
+            self.from_cate_name_to_gt_idx = {'person': 0, 'bicycle': 1, 'car': 2, 'motorcycle': 3, 'airplane': 4, 'bus': 5, 'train': 6, 'truck': 7, 
+                                            'boat': 8, 'traffic light': 9, 'fire hydrant': 10, 'stop sign': 11, 'parking meter': 12, 'bench': 13, 
+                                            'bird': 14, 'cat': 15, 'dog': 16, 'horse': 17, 'sheep': 18, 'cow': 19, 'elephant': 20, 'bear': 21, 
+                                            'zebra': 22, 'giraffe': 23, 'backpack': 24, 'umbrella': 25, 'handbag': 26, 'tie': 27, 'suitcase': 28, 
+                                            'frisbee': 29, 'skis': 30, 'snowboard': 31, 'sports ball': 32, 'kite': 33, 'baseball bat': 34, 'baseball glove': 35, 
+                                            'skateboard': 36, 'surfboard': 37, 'tennis racket': 38, 'bottle': 39, 'wine glass': 40, 'cup': 41, 'fork': 42, 
+                                            'knife': 43, 'spoon': 44, 'bowl': 45, 'banana': 46, 'apple': 47, 'sandwich': 48, 'orange': 49, 'broccoli': 50, 
+                                            'carrot': 51, 'hot dog': 52, 'pizza': 53, 'donut': 54, 'cake': 55, 'chair': 56, 'couch': 57, 'potted plant': 58, 
+                                            'bed': 59, 'dining table': 60, 'toilet': 61, 'tv': 62, 'laptop': 63, 'mouse': 64, 'remote': 65, 'keyboard': 66, 
+                                            'cell phone': 67, 'microwave': 68, 'oven': 69, 'toaster': 70, 'sink': 71, 'refrigerator': 72, 'book': 73, 'clock': 74, 
+                                            'vase': 75, 'scissors': 76, 'teddy bear': 77, 'hair drier': 78, 'toothbrush': 79}
+            self.from_gt_idx_to_cate_idx = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8, 8: 9, 9: 10, 10: 11, 11: 13, 12: 14, 
+                                            13: 15, 14: 16, 15: 17, 16: 18, 17: 19, 18: 20, 19: 21, 20: 22, 21: 23, 22: 24, 23: 25, 
+                                            24: 27, 25: 28, 26: 31, 27: 32, 28: 33, 29: 34, 30: 35, 31: 36, 32: 37, 33: 38, 34: 39, 
+                                            35: 40, 36: 41, 37: 42, 38: 43, 39: 44, 40: 46, 41: 47, 42: 48, 43: 49, 44: 50, 45: 51, 
+                                            46: 52, 47: 53, 48: 54, 49: 55, 50: 56, 51: 57, 52: 58, 53: 59, 54: 60, 55: 61, 56: 62, 
+                                            57: 63, 58: 64, 59: 65, 60: 67, 61: 70, 62: 72, 63: 73, 64: 74, 65: 75, 66: 76, 67: 77, 
+                                            68: 78, 69: 79, 70: 80, 71: 81, 72: 82, 73: 84, 74: 85, 75: 86, 76: 87, 77: 88, 78: 89, 
+                                            79: 90}
+            self.base_cate_name = ('person', 'bicycle', 'car', 'motorcycle', 'train', 
+                                    'truck', 'boat', 'bench', 'bird', 'horse', 'sheep', 
+                                    'bear', 'zebra', 'giraffe', 'backpack', 'handbag', 
+                                    'suitcase', 'frisbee', 'skis', 'kite', 'surfboard', 
+                                    'bottle', 'fork', 'spoon', 'bowl', 'banana', 'apple', 
+                                    'sandwich', 'orange', 'broccoli', 'carrot', 'pizza', 
+                                    'donut', 'chair', 'bed', 'toilet', 'tv', 'laptop', 
+                                    'mouse', 'remote', 'microwave', 'oven', 'toaster', 
+                                    'refrigerator', 'book', 'clock', 'vase', 'toothbrush')
+        else:
+            # for lvis dataset
+            self.base_cate_name = base_cate_name
+            self.all_cate_name = all_cate_name
+            self.from_gt_idx_to_cate_idx = {i:i+1 for i in range(1203)}
+            self.from_cate_name_to_gt_idx = {name:idx for idx, name in enumerate(self.all_cate_name)}
+            
+        self.base_cate_gt_idx = [self.from_cate_name_to_gt_idx[name] for name in self.base_cate_name]
         # save the predicted cate and confidence
         self.save_cates_and_conf = self.test_cfg.get('save_cates_and_conf', False) if self.test_cfg is not None else False
 
@@ -542,7 +543,7 @@ class ClsFinetuner(BaseDetector):
             else:
                 # generate the random feat
                 now_rand_bbox = self.generate_rand_bboxes(img_metas, self.num_of_rand_bboxes)
-            x = self.extract_feat(img, [now_rand_bbox], cropped_patches, img_metas=img_metas, remain_same_bbox_size=True)
+            x = self.extract_feat(img, [now_rand_bbox], cropped_patches, img_metas=img_metas)
             
             # filter the clip proposal base on the categories
             if self.filter_clip_proposal_base_on_cates or self.save_cates_and_conf:
@@ -572,7 +573,7 @@ class ClsFinetuner(BaseDetector):
                     print('now_rand_bbox.shape[1] is not equal to 4 or 5')
                 
                 # add the max confidence coco cate id (convert from the gt idx to the coco id)
-                all_coco_idx = torch.tensor([self.from_gt_idx_to_coco_idx[ele.item()] for ele in pred_idx]).cuda()
+                all_coco_idx = torch.tensor([self.from_gt_idx_to_cate_idx[ele.item()] for ele in pred_idx]).cuda()
                 now_rand_bbox = torch.cat([now_rand_bbox, all_coco_idx.unsqueeze(dim=-1)], dim=-1)
 
                 if self.filter_clip_proposal_base_on_cates:
