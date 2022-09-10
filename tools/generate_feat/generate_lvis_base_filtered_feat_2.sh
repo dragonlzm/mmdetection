@@ -125,3 +125,17 @@ python -m torch.distributed.launch --nproc_per_node=2 \
    model.test_cfg.use_pregenerated_proposal=${BBOX_SAVE_PATH_ROOT} \
    model.test_cfg.num_of_rand_bboxes=1000 model.test_cfg.filter_clip_proposal_base_on_cates=True \
    model.test_cfg.save_cates_and_conf=True
+
+# all
+PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+python -m torch.distributed.launch --nproc_per_node=2 \
+   /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/test.py \
+   ${CONFIG_FILE} \
+   ${CHECKPOINT} \
+   --launcher pytorch --eval=gt_acc \
+   --eval-options jsonfile_prefix=${FEAT_SAVE_PATH_ROOT}/extract_feat \
+   --cfg-options data.test.ann_file=data/lvis_v1/annotations/lvis_v1_train.json \
+   model.test_cfg.generate_bbox_feat=True model.test_cfg.feat_save_path=${FEAT_SAVE_PATH_ROOT} \
+   model.test_cfg.use_pregenerated_proposal=${BBOX_SAVE_PATH_ROOT} \
+   model.test_cfg.num_of_rand_bboxes=1000 model.test_cfg.filter_clip_proposal_base_on_cates=True \
+   model.test_cfg.save_cates_and_conf=True
