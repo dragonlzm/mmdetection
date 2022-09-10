@@ -424,8 +424,9 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             bbox_weights = torch.cat(bbox_weights, 0)
             bbox_targets = (labels, label_weights, bbox_targets, bbox_weights)
         else:
+            #print('in roi head:', img_metas)
             bbox_targets = self.bbox_head.get_targets(sampling_results, gt_bboxes,
-                                                  gt_labels, self.train_cfg)
+                                                  gt_labels, self.train_cfg, img_metas=img_metas)
             
         loss_bbox = self.bbox_head.loss(bbox_results['cls_score'],
                                         bbox_results['bbox_pred'], rois,

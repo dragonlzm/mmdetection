@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import torch
 import torch.nn as nn
+from torch.nn import functional as F
 from collections import OrderedDict
 from mmcv.cnn import (ConvModule, build_activation_layer, build_conv_layer,
                       build_norm_layer, xavier_init)
@@ -19,6 +20,25 @@ def box_xyxy_to_cxcywh(x):
     b = [(x0 + x1) / 2, (y0 + y1) / 2,
          (x1 - x0), (y1 - y0)]
     return torch.stack(b, dim=-1)
+
+
+class MLP(nn.Module):
+    """ Very simple multi-layer perceptron (also called FFN)"""
+
+    def __init__(self, input_dim, hidden_dim, output_dim, num_layers):
+        super().__init__()
+        self.num_layers = num_layers
+        h = [hidden_dim] * (num_layers - 1)
+        self.layers = nn.ModuleList(nn.Linear(n, k) for n, k in zip([input_dim] + h, h + [output_dim]))
+
+        nn.init.normal_(self.layers[-1].weight, std=0.001)
+        for l in [self.layers[-1]]:
+            nn.init.constant_(l.bias, 0)
+
+    def forward(self, x):
+        for i, layer in enumerate(self.layers):
+            x = F.relu(layer(x)) if i < self.num_layers - 1 else layer(x)
+        return x
 
 
 @HEADS.register_module()
@@ -700,12 +720,13 @@ class TransformerBBoxHead(BBoxHead):
                             self.num_classes)
             
             if self.reg_with_mlp:
-                self.fc_reg = nn.Sequential(OrderedDict([
-                    ("c_fc", nn.Linear(final_reg_in_dim, 1024)),
-                    ("relu", nn.ReLU(inplace=True)),
-                    #("dropout", nn.Dropout(0.1)),
-                    ("c_proj", nn.Linear(1024, final_reg_out_dim))
-                ]))
+                # self.fc_reg = nn.Sequential(OrderedDict([
+                #     ("c_fc", nn.Linear(final_reg_in_dim, 1024)),
+                #     ("relu", nn.ReLU(inplace=True)),
+                #     #("dropout", nn.Dropout(0.1)),
+                #     ("c_proj", nn.Linear(1024, final_reg_out_dim))
+                # ]))
+                self.fc_reg = MLP(final_reg_in_dim, final_reg_in_dim, final_reg_out_dim, 3)
             else:
                 self.fc_reg = build_linear_layer(
                     self.reg_predictor_cfg,

@@ -25,8 +25,8 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 # spliting the generation into other section to accelerate the procedure
 CHECKPOINT="data/exp_res/cls_finetuner_clip_lvis_base_train_over_sample_v2/epoch_18.pth"
 CONFIG_FILE="configs/cls_finetuner/cls_finetuner_clip_full_lvis.py"
-BBOX_SAVE_PATH_ROOT="data/coco/clip_proposal/lvis_32_32_512"
-FEAT_SAVE_PATH_ROOT="data/coco/clip_proposal_feat/lvis_base_finetuned"
+BBOX_SAVE_PATH_ROOT="data/lvis_v1/clip_proposal/lvis_32_32_512"
+FEAT_SAVE_PATH_ROOT="data/lvis_v1/clip_proposal_feat/lvis_base_finetuned"
 
 PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \

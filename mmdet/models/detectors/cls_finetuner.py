@@ -142,7 +142,11 @@ class ClsFinetuner(BaseDetector):
 
 
     def read_use_base_novel_clip(self, img_metas):
-        pregenerate_prop_path = os.path.join(self.use_base_novel_clip, '.'.join(img_metas[0]['ori_filename'].split('.')[:-1]) + '.json')
+        file_name = img_metas[0]['ori_filename']
+        # for lvis dataset
+        if file_name.startswith('train2017'):
+            file_name = file_name.split('/')[-1]
+        pregenerate_prop_path = os.path.join(self.use_base_novel_clip, '.'.join(file_name.split('.')[:-1]) + '.json')
         pregenerated_bbox = json.load(open(pregenerate_prop_path))
         
         # preprocessing of the clip proposal
@@ -188,7 +192,11 @@ class ClsFinetuner(BaseDetector):
         return all_bboxes
 
     def read_pregenerated_bbox(self, img_metas, gt_bboxes, num_of_rand_bboxes):
-        file_name = os.path.join(self.use_pregenerated_proposal, '.'.join(img_metas[0]['ori_filename'].split('.')[:-1]) + '.json')
+        file_name = img_metas[0]['ori_filename']
+        # for lvis dataset
+        if file_name.startswith('train2017'):
+            file_name = file_name.split('/')[-1]
+        file_name = os.path.join(self.use_pregenerated_proposal, '.'.join(file_name.split('.')[:-1]) + '.json')
         # read the random bbox, the loaded bbox is xyxy format
         pregenerated_bbox = json.load(open(file_name))['score']
         pregenerated_bbox = torch.tensor(pregenerated_bbox).cuda()
@@ -522,14 +530,20 @@ class ClsFinetuner(BaseDetector):
             gt_save_root = os.path.join(self.feat_save_path, 'gt')
             if not os.path.exists(gt_save_root):
                 os.makedirs(gt_save_root)
-            file_name = img_metas[0]['ori_filename'].split('.')[0] + '.json'
+            #file_name = img_metas[0]['ori_filename'].split('.')[0] + '.json'
+            file_name = img_metas[0]['ori_filename']
+            # for lvis dataset
+            if file_name.startswith('train2017'):
+                file_name = file_name.split('/')[-1]
+            file_name = file_name.split('.')[0] + '.json'
+            
             gt_file_path = os.path.join(gt_save_root, file_name)
             
             # obtain the random file path
             random_save_root = os.path.join(self.feat_save_path, 'random')
             if not os.path.exists(random_save_root):
                 os.makedirs(random_save_root)
-            file_name = img_metas[0]['ori_filename'].split('.')[0] + '.json'
+            #file_name = img_metas[0]['ori_filename'].split('.')[0] + '.json'
             random_file_path = os.path.join(random_save_root, file_name)      
             
             # if the file has been created, skip this image

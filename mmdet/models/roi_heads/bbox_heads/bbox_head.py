@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import os
 import json
+import math
 from mmcv.runner import BaseModule, auto_fp16, force_fp32
 from torch.nn.modules.utils import _pair
 
@@ -42,6 +43,7 @@ class BBoxHead(BaseModule):
                      type='SmoothL1Loss', beta=1.0, loss_weight=1.0),
                  reg_with_cls_embedding=False,
                  combine_reg_and_cls_embedding='cat',
+                 per_bbox_reg_weight=False,
                  init_cfg=None):
         super(BBoxHead, self).__init__(init_cfg)
         assert with_cls or with_reg
@@ -112,6 +114,7 @@ class BBoxHead(BaseModule):
                                          27, 31, 33, 34, 35, 38, 42, 44, 48, 50, 51, 52, 
                                          53, 54, 55, 56, 57, 59, 60, 62, 65, 70, 72, 73, 
                                          74, 75, 78, 79, 80, 82, 84, 85, 86, 90]}
+        self.per_bbox_reg_weight = per_bbox_reg_weight
 
     @property
     def custom_cls_channels(self):
@@ -140,7 +143,7 @@ class BBoxHead(BaseModule):
         return cls_score, bbox_pred
 
     def _get_target_single(self, pos_bboxes, neg_bboxes, pos_gt_bboxes,
-                           pos_gt_labels, cfg):
+                           pos_gt_labels, img_meta, cfg):
         """Calculate the ground truth for proposals in the single image
         according to the sampling results.
 
@@ -199,7 +202,24 @@ class BBoxHead(BaseModule):
                 # absolute coordinate format.
                 pos_bbox_targets = pos_gt_bboxes
             bbox_targets[:num_pos, :] = pos_bbox_targets
-            bbox_weights[:num_pos, :] = 1
+            # if we use the per bbox weight
+            if self.per_bbox_reg_weight:
+                img_h, img_w, _ = img_meta['img_shape']
+                img_factor = math.sqrt(img_h * img_w)
+                bbox_w = pos_gt_bboxes[:, 2] - pos_gt_bboxes[:, 0]
+                bbox_h = pos_gt_bboxes[:, 3] - pos_gt_bboxes[:, 1]
+                bbox_factor = torch.sqrt(bbox_w * bbox_h)
+                weight = - (bbox_factor / img_factor)
+                weight = torch.exp(weight)
+                # normalize over all the weight
+                normalize_factor = pos_bbox_targets.shape[0] / torch.sum(weight)
+                weight *= normalize_factor
+                #print('bbox_factor', bbox_factor, 'weight', weight)
+                weight = weight.unsqueeze(dim=-1).repeat([1, 4])
+                
+                bbox_weights[:num_pos, :] = weight
+            else:
+                bbox_weights[:num_pos, :] = 1
         if num_neg > 0:
             label_weights[-num_neg:] = 1.0
 
@@ -210,7 +230,8 @@ class BBoxHead(BaseModule):
                     gt_bboxes,
                     gt_labels,
                     rcnn_train_cfg,
-                    concat=True):
+                    concat=True,
+                    img_metas=None):
         """Calculate the ground truth for all samples in a batch according to
         the sampling_results.
 
@@ -257,12 +278,17 @@ class BBoxHead(BaseModule):
         neg_bboxes_list = [res.neg_bboxes for res in sampling_results]
         pos_gt_bboxes_list = [res.pos_gt_bboxes for res in sampling_results]
         pos_gt_labels_list = [res.pos_gt_labels for res in sampling_results]
+        #print('img_metas', img_metas)
+        if img_metas is None:
+            img_metas = [None for res in sampling_results]
+            
         labels, label_weights, bbox_targets, bbox_weights = multi_apply(
             self._get_target_single,
             pos_bboxes_list,
             neg_bboxes_list,
             pos_gt_bboxes_list,
             pos_gt_labels_list,
+            img_metas,
             cfg=rcnn_train_cfg)
 
         if concat:
