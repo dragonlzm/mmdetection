@@ -393,12 +393,14 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                             self.num_classes)
             
             if self.reg_with_mlp:
-                self.fc_reg = nn.Sequential(OrderedDict([
-                    ("c_fc", nn.Linear(final_reg_in_dim, 1024)),
-                    ("relu", nn.ReLU(inplace=True)),
-                    #("dropout", nn.Dropout(0.1)),
-                    ("c_proj", nn.Linear(1024, final_reg_out_dim))
-                ]))
+                # self.fc_reg = nn.Sequential(OrderedDict([
+                #     ("c_fc", nn.Linear(final_reg_in_dim, 1024)),
+                #     ("relu", nn.ReLU(inplace=True)),
+                #     #("dropout", nn.Dropout(0.1)),
+                #     ("c_proj", nn.Linear(1024, final_reg_out_dim))
+                # ]))
+                #print('in self.reg_with_mlp')
+                self.fc_reg = MLP(final_reg_in_dim, final_reg_in_dim, final_reg_out_dim, 3)
             else:
                 self.fc_reg = build_linear_layer(
                     self.reg_predictor_cfg,
