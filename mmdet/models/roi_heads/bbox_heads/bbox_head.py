@@ -203,12 +203,16 @@ class BBoxHead(BaseModule):
                 pos_bbox_targets = pos_gt_bboxes
             bbox_targets[:num_pos, :] = pos_bbox_targets
             # if we use the per bbox weight
-            if self.per_bbox_reg_weight:
+            if self.per_bbox_reg_weight is not False:
                 img_h, img_w, _ = img_meta['img_shape']
-                img_factor = math.sqrt(img_h * img_w)
                 bbox_w = pos_gt_bboxes[:, 2] - pos_gt_bboxes[:, 0]
                 bbox_h = pos_gt_bboxes[:, 3] - pos_gt_bboxes[:, 1]
-                bbox_factor = torch.sqrt(bbox_w * bbox_h)
+                if self.per_bbox_reg_weight == 'sqrt':
+                    img_factor = math.sqrt(img_h * img_w)
+                    bbox_factor = torch.sqrt(bbox_w * bbox_h)
+                else:
+                    img_factor = img_h * img_w
+                    bbox_factor = bbox_w * bbox_h
                 weight = - (bbox_factor / img_factor)
                 weight = torch.exp(weight)
                 # normalize over all the weight
