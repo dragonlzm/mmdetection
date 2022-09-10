@@ -606,9 +606,9 @@ class ClsFinetuner(BaseDetector):
                     now_rand_bbox = now_rand_bbox[all_novel_idx]
                     
                 #sort the feat base on the confidence score
-                _, confi_indices = torch.sort(now_rand_bbox[:, -2], descending=True)
-                x = [x[0][confi_indices]]
-                now_rand_bbox = now_rand_bbox[confi_indices]
+                # _, confi_indices = torch.sort(now_rand_bbox[:, -2], descending=True)
+                # x = [x[0][confi_indices]]
+                # now_rand_bbox = now_rand_bbox[confi_indices]
                 
                 if self.filter_clip_proposal_base_on_cates:
                     # make the number of remaining bbox become self.num_of_rand_bboxes
