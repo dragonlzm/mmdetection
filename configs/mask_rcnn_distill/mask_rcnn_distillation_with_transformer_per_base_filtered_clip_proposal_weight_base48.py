@@ -3,7 +3,7 @@ _base_ = './mask_rcnn_distillation_per_base_filtered_clip_proposal_weight.py'
 # regression with embedding, base filtered proposal, per distillation bbox weight
 # become default setting in here
 optimizer = dict(type='HybridOptimizer', lr=0.005, momentum=0.9, weight_decay=0.0001,
-                 constructor='HybridOptimizerConstructor', tranformer_multiplier=0.01)
+                 constructor='HybridOptimizerConstructor', tranformer_multiplier=0.005)
 # learning policy
 lr_config = dict(
     policy='step',
@@ -22,10 +22,11 @@ model = dict(
         type='StandardRoIHeadDistillWithTransformer',
         bbox_head=dict(
             type='TransformerBBoxHead',
-            num_shared_convs=2,
+            num_shared_convs=4,
             reg_class_agnostic=True,
             in_channels=256,
-            fc_out_channels=1024,
+            reg_with_cls_embedding=False,
+            fc_out_channels=512,
             encoder=dict(
                 type='DetrTransformerEncoder',
                 num_layers=6,
@@ -34,13 +35,13 @@ model = dict(
                     attn_cfgs=[
                         dict(
                             type='MultiheadAttention',
-                            embed_dims=1024,
+                            embed_dims=512,
                             num_heads=8,
                             dropout=0.1)
                     ],
                     ffn_cfgs=dict(
                             type='FFN',
-                            embed_dims=1024,
+                            embed_dims=512,
                             feedforward_channels=2048,
                             num_fcs=2,
                             ffn_drop=0.1,

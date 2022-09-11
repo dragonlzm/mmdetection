@@ -604,7 +604,7 @@ class TransformerBBoxHead(BBoxHead):
                  fg_vec_cfg=None,
                  clip_dim=512,
                  temperature=100,
-                 reg_with_mlp=False,
+                 reg_with_mlp=True,
                  use_bg_vector=True,
                  filter_base_cate=None,
                  encoder=None,
