@@ -304,8 +304,10 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         # prepare the roi for the gt and the random bboxes
         if self.use_bg_pro_for_distill:
             gt_rand_rois = [torch.cat([gt_bbox, random_bbox, bg_bbox], dim=0) for gt_bbox, random_bbox, bg_bbox in zip(gt_bboxes, rand_bboxes, bg_bboxes)]
+            distill_ele_weight = None
         elif self.use_only_gt_pro_for_distill:
             gt_rand_rois = gt_bboxes
+            distill_ele_weight = None
         else:
             # filter the padded random bboxes
             rand_bboxes = [rand_bbox[torch.abs(rand_bbox).sum(dim=1) > 0] 
@@ -351,6 +353,9 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                         weight_per_img = torch.cat([torch.full((original_gt_num, feat_dim), gt_bbox_distill_weight).cuda(), rand_bbox_weight], dim=0)
                         # normalize the weight
                         # the factor should be: (num of gt bbox + num of random bbox) / (weight of all gt bbox + weight of the all random bboxes)
+                        # p.s. here the normalization is for the weight, since the l1loss will always reduce the loss to average value
+                        # therefore the size of the loss is irrelavant with the number of bbox
+                        # but the weight we add here will affect the loss size, l1 loss is a: weighted sum / number of ele
                         normalize_factor = weight_per_img.shape[0] / torch.sum(weight_per_img[:, 0]).item()
                         weight_per_img *= normalize_factor
                     distill_ele_weight.append(weight_per_img)   
