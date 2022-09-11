@@ -210,6 +210,9 @@ class BBoxHead(BaseModule):
                 if self.per_bbox_reg_weight == 'sqrt':
                     img_factor = math.sqrt(img_h * img_w)
                     bbox_factor = torch.sqrt(bbox_w * bbox_h)
+                elif self.per_bbox_reg_weight == 'log':
+                    img_factor = math.log(img_h * img_w + 1.1)
+                    bbox_factor = torch.log(bbox_w * bbox_h + 1.1)
                 else:
                     img_factor = img_h * img_w
                     bbox_factor = bbox_w * bbox_h
