@@ -94,13 +94,13 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 
 ### fixed sample
 # for mask_rcnn_r50_fpn_sample1e-3_seesaw_loss_normed_mask_mstrain_2x_lvis_v1_base
-PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
-python -m torch.distributed.launch --nproc_per_node=2 \
-   /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
-   configs/seesaw_loss/mask_rcnn_r50_fpn_sample1e-3_seesaw_loss_normed_mask_mstrain_2x_lvis_v1_base.py --launcher pytorch \
-   --work-dir=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_sample1e-3_seesaw_loss_normed_mask_mstrain_2x_lvis_v1_base_sample_fixed \
-   --cfg-options optimizer.lr=0.005 \
-   #--resume-from=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_sample1e-3_seesaw_loss_normed_mask_mstrain_2x_lvis_v1_base_sample_fixed/latest.pth
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#    configs/seesaw_loss/mask_rcnn_r50_fpn_sample1e-3_seesaw_loss_normed_mask_mstrain_2x_lvis_v1_base.py --launcher pytorch \
+#    --work-dir=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_sample1e-3_seesaw_loss_normed_mask_mstrain_2x_lvis_v1_base_sample_fixed \
+#    --cfg-options optimizer.lr=0.005 \
+#    #--resume-from=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_sample1e-3_seesaw_loss_normed_mask_mstrain_2x_lvis_v1_base_sample_fixed/latest.pth
 
 # for mask_rcnn_r50_fpn_sample1e-3_mstrain_1x_lvis_v1_base
 # PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
@@ -109,4 +109,24 @@ python -m torch.distributed.launch --nproc_per_node=2 \
 #    configs/lvis/mask_rcnn_r50_fpn_sample1e-3_mstrain_1x_lvis_v1_base.py --launcher pytorch \
 #    --work-dir=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_sample1e-3_mstrain_1x_lvis_v1_base_sample_fixed \
 #    --cfg-options optimizer.lr=0.005 \
-#    #--resume-from=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_sample1e-3_mstrain_1x_lvis_v1_base_sample_fixed/latest.pth
+   #--resume-from=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_sample1e-3_mstrain_1x_lvis_v1_base_sample_fixed/latest.pth
+
+### 2x without see-saw loss
+# base
+PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+python -m torch.distributed.launch --nproc_per_node=2 \
+   /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+   configs/lvis/mask_rcnn_r50_fpn_sample1e-3_mstrain_2x_lvis_v1_base.py --launcher pytorch \
+   --work-dir=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_sample1e-3_mstrain_2x_lvis_v1_base \
+   --cfg-options optimizer.lr=0.005 \
+   #--resume-from=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_sample1e-3_mstrain_2x_lvis_v1_base/latest.pth
+
+# all
+PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+python -m torch.distributed.launch --nproc_per_node=2 \
+   /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+   configs/lvis/mask_rcnn_r50_fpn_sample1e-3_mstrain_2x_lvis_v1.py --launcher pytorch \
+   --work-dir=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_sample1e-3_mstrain_2x_lvis_v1 \
+   --cfg-options optimizer.lr=0.005 \
+   #--resume-from=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_sample1e-3_mstrain_2x_lvis_v1/latest.pth
+
