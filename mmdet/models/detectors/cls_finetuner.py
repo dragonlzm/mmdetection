@@ -214,8 +214,9 @@ class ClsFinetuner(BaseDetector):
             real_iou = self.iou_calculator(gt_bboxes[0], pregenerated_bbox)
             max_iou_per_proposal = torch.max(real_iou, dim=0)[0]
             all_iou_idx = (max_iou_per_proposal < 0.3)
-            
             remained_bbox = pregenerated_bbox[all_iou_idx]
+        else:
+            remained_bbox = pregenerated_bbox
         
         # select the top 200 bboxes
         remained_bbox = remained_bbox[:num_of_rand_bboxes]
