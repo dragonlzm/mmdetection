@@ -210,7 +210,7 @@ class ClsFinetuner(BaseDetector):
         # scale the bbox to the size of the image
         pregenerated_bbox[:, :4] *= pregenerated_bbox.new_tensor(img_metas[0]['scale_factor'])
         
-        if self.filter_low_iou_bboxes:
+        if self.filter_low_iou_bboxes and gt_bboxes[0].shape[0] != 0:
             real_iou = self.iou_calculator(gt_bboxes[0], pregenerated_bbox)
             max_iou_per_proposal = torch.max(real_iou, dim=0)[0]
             all_iou_idx = (max_iou_per_proposal < 0.3)
