@@ -1,7 +1,7 @@
 _base_ = './mask_rcnn_distillation_with_transformer_per_base_filtered_clip_proposal_weight_base48.py'
 
 # using total batchsize 16, by using the ParamWiseGradientCumulativeOptimizerHook
-optimizer = dict(lr=0.02)
+optimizer = dict(lr=0.01)
 data = dict(
     samples_per_gpu=2,
     workers_per_gpu=2)
