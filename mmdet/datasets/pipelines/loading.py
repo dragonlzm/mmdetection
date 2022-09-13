@@ -610,7 +610,10 @@ class LoadCLIPFeat:
 
     def __call__(self, results):
         '''load the pre-extracted CLIP feat'''
-        file_name = '.'.join(results['img_info']['filename'].split('.')[:-1]) + '.json'
+        file_name = results['img_info']['filename']
+        if file_name.startswith('train2017'):
+            file_name = file_name.split('/')[-1]
+        file_name = '.'.join(file_name.split('.')[:-1]) + '.json'
 
         #### load the gt feat
         gt_file_name = osp.join(self.gt_feat_prefix, file_name)
