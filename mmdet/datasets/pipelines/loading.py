@@ -665,8 +665,8 @@ class LoadCLIPFeat:
         remaining_feat = torch.from_numpy(gt_feat[match_idx])
 
         # pad the result
-        if len(remaining_feat) < 100:
-            padded_len = 100 - len(remaining_feat)
+        if len(remaining_feat) < 800:
+            padded_len = 800 - len(remaining_feat)
             padded_results = torch.zeros([padded_len] + list(remaining_feat.shape[1:]))
             remaining_feat = torch.cat([remaining_feat, padded_results], dim=0)
         results['gt_feats'] = remaining_feat
