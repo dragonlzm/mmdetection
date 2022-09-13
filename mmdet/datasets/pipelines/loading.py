@@ -661,9 +661,9 @@ class LoadCLIPFeat:
                     
         # filter and reorder the feat
         match_idx = np.array(match_idx).astype(np.int32)
-        #print('match_idx', match_idx, type(match_idx))
+        #print('match_idx', match_idx, type(match_idx))        
         remaining_feat = torch.from_numpy(gt_feat[match_idx])
-
+        
         # pad the result
         if len(remaining_feat) < 800:
             padded_len = 800 - len(remaining_feat)
