@@ -203,8 +203,8 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
         x = self.extract_feat(img, ori_img)
         
         # remove the padded 0 bboxes
-        gt_feats = [gt_feat[torch.abs(gt_feat).sum(dim=1) > 0] 
-                        for gt_feat in gt_feats]
+        # gt_feats = [gt_feat[torch.abs(gt_feat).sum(dim=1) > 0] 
+        #                 for gt_feat in gt_feats]
         
         rand_feats = [rand_feat[torch.abs(rand_feat).sum(dim=1) > 0] 
                 for rand_feat in rand_feats]

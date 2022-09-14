@@ -624,13 +624,13 @@ class LoadCLIPFeat:
         gt_bbox = np.array(gt_file_content['bbox']).astype(np.float32)
         gt_labels = gt_file_content['gt_labels']
         img_metas = gt_file_content['img_metas']
+        pre_extract_scale_factor = np.array(img_metas['scale_factor']).astype(np.float32)
+        now_scale_factor = results['scale_factor']
         
         # handle the special case for the lvis dataset
         if gt_feat.shape[0] != 0:
             ## filter the feat for the specifc category
             # compare the scale factor the pre-extract and the now pipeline
-            pre_extract_scale_factor = np.array(img_metas['scale_factor']).astype(np.float32)
-            now_scale_factor = results['scale_factor']
             now_gt_bbox = results['gt_bboxes']
             pre_extract_gt_bbox = gt_bbox
             
@@ -667,14 +667,14 @@ class LoadCLIPFeat:
             remaining_feat = torch.from_numpy(gt_feat[match_idx])
             
             # pad the result
-            if len(remaining_feat) < 800:
-                padded_len = 800 - len(remaining_feat)
-                padded_results = torch.zeros([padded_len] + list(remaining_feat.shape[1:]))
-                remaining_feat = torch.cat([remaining_feat, padded_results], dim=0)
+            # if len(remaining_feat) < 800:
+            #     padded_len = 800 - len(remaining_feat)
+            #     padded_results = torch.zeros([padded_len] + list(remaining_feat.shape[1:]))
+            #     remaining_feat = torch.cat([remaining_feat, padded_results], dim=0)
             results['gt_feats'] = remaining_feat
         else:
             # if on this image there is no annotation
-            results['gt_feats'] = torch.zeros([800] + list(remaining_feat.shape[1:]))
+            results['gt_feats'] = torch.zeros([0] + list(gt_feat.shape[1:]))
         
         #### load the random feat
         rand_file_name = osp.join(self.random_feat_prefix, file_name)
@@ -754,7 +754,7 @@ class LoadCLIPFeat:
             rand_bbox_weights = torch.from_numpy(rand_bbox_weights)  
         
         #filter the iop sample
-        if self.filter_iop:
+        if self.filter_iop and len(results['gt_bboxes']) > 0:
             # scale the pred and the gt back to the original scale
             now_gt_bbox = torch.from_numpy(results['gt_bboxes'])
             now_scale_factor = torch.from_numpy(now_scale_factor)
