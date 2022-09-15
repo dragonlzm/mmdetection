@@ -8,16 +8,16 @@ data = dict(
 
 # regression with embedding, base filtered proposal, per distillation bbox weight
 # become default setting in here
-# optimizer_config = dict(_delete_=True, 
-#                         type='ParamWiseGradientCumulativeOptimizerHook', 
-#                         cumulative_iters=2,
-#                         grad_clip=dict(encoder=dict(max_norm=0.01, norm_type=2) , 
-#                                        other=dict(max_norm=10, norm_type=2)))
-
 optimizer_config = dict(_delete_=True, 
-                        type='ParamWiseOptimizerHook',
+                        type='ParamWiseGradientCumulativeOptimizerHook', 
+                        cumulative_iters=2,
                         grad_clip=dict(encoder=dict(max_norm=0.01, norm_type=2) , 
                                        other=dict(max_norm=10, norm_type=2)))
+
+# optimizer_config = dict(_delete_=True, 
+#                         type='ParamWiseOptimizerHook',
+#                         grad_clip=dict(encoder=dict(max_norm=0.01, norm_type=2) , 
+#                                        other=dict(max_norm=10, norm_type=2)))
 
 # for the dataset (try the verion that do not use the weight)
 img_norm_cfg = dict(
