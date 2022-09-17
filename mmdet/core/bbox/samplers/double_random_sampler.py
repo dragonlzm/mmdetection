@@ -107,9 +107,15 @@ class DoubleRandomSampler(RandomSampler):
             # split the idx into remained_idx of pos_inds and remained_idx of neg_inds
             pos_subsample_idx = subsample_idxs[subsample_idxs < pos_idx_max]
             neg_subsample_idx = subsample_idxs[subsample_idxs >= pos_idx_max]
+            # print('before sample:', 'pos_inds:', pos_inds.shape, pos_inds,
+            #     'neg_inds:', neg_inds.shape, neg_inds, 'subsample_idxs', subsample_idxs.shape, subsample_idxs,
+            #     'pos_subsample_idx', pos_subsample_idx, 'neg_subsample_idx', neg_subsample_idx)
+            
             # update the pos_inds, neg_inds
             pos_inds = pos_and_neg_idxs[pos_subsample_idx]
             neg_inds = pos_and_neg_idxs[neg_subsample_idx]
+            # print('after sample:', 'pos_inds:', pos_inds.shape, pos_inds,
+            #       'neg_inds', neg_inds.shape, neg_inds)
 
         sampling_result = SamplingResult(pos_inds, neg_inds, bboxes, gt_bboxes,
                                          assign_result, gt_flags)
