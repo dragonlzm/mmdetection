@@ -3,9 +3,15 @@ _base_ = './mask_rcnn_distillation_with_transformer_per_base_filtered_clip_propo
 # using total batchsize 16, by using the ParamWiseGradientCumulativeOptimizerHook
 optimizer = dict(lr=0.02)
 
-# regression with embedding, base filtered proposal, per distillation bbox weight
-# become default setting in here
-optimizer_config = dict(_delete_=True, 
-                        type='ParamWiseGradientCumulativeOptimizerHook', 
-                        cumulative_iters=2,
-                        grad_clip=dict(encoder=dict(max_norm=0.01, norm_type=2)))
+model = dict(
+    train_cfg=dict(
+        rcnn=dict(
+            sampler=dict(
+                type='DoubleRandomSampler',
+                num=512,
+                pos_fraction=0.25,
+                neg_pos_ub=-1,
+                add_gt_as_proposals=True),
+            pos_weight=-1,
+            debug=False)))
+
