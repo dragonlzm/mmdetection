@@ -1,10 +1,7 @@
 _base_ = './mask_rcnn_distillation_with_transformer_per_base_filtered_clip_proposal_weight_base48.py'
 
 # using total batchsize 16, by using the ParamWiseGradientCumulativeOptimizerHook
-optimizer = dict(lr=0.01)
-data = dict(
-    samples_per_gpu=2,
-    workers_per_gpu=2)
+optimizer = dict(lr=0.005)
 
 # regression with embedding, base filtered proposal, per distillation bbox weight
 # become default setting in here
@@ -13,11 +10,18 @@ optimizer_config = dict(_delete_=True,
                         cumulative_iters=2,
                         grad_clip=dict(encoder=dict(max_norm=0.01, norm_type=2), 
                                        other=dict(max_norm=10, norm_type=2)))
-
-# optimizer_config = dict(_delete_=True, 
-#                         type='ParamWiseOptimizerHook',
-#                         grad_clip=dict(encoder=dict(max_norm=0.01, norm_type=2) , 
-#                                        other=dict(max_norm=10, norm_type=2)))
+# model config
+model = dict(
+    train_cfg=dict(
+        rcnn=dict(
+            sampler=dict(
+                type='DoubleRandomSampler',
+                num=512,
+                pos_fraction=0.25,
+                neg_pos_ub=-1,
+                add_gt_as_proposals=True),
+            pos_weight=-1,
+            debug=False)))
 
 # for the dataset (try the verion that do not use the weight)
 img_norm_cfg = dict(
