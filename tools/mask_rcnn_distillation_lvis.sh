@@ -34,9 +34,9 @@ python -m torch.distributed.launch --nproc_per_node=2 \
 #CHECKPOINT_NAME="epoch_24.pth"
 CHECKPOINT_NAME="latest.pth"
 
-bash tools/dist_test.sh configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_base.py \
+bash tools/dist_test.sh configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_bn.py \
 ${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox segm \
---eval-options jsonfile_prefix=${WORK_DIR}/base_results
+--eval-options jsonfile_prefix=${WORK_DIR}/base_and_novel
 
 bash tools/dist_test.sh configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_novel.py \
 ${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox segm \
@@ -47,6 +47,3 @@ ${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox segm \
 --eval-options jsonfile_prefix=${WORK_DIR}/novel_results_trick \
 --cfg-options model.roi_head.bbox_head.filter_base_cate=data/embeddings/base_finetuned_866cates.pt 
 
-bash tools/dist_test.sh configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_bn.py \
-${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox segm \
---eval-options jsonfile_prefix=${WORK_DIR}/base_and_novel
