@@ -574,7 +574,7 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
             #     final_x_reg = x_reg + prepared_class_embedding
             
             # new version of implementation
-            # mean it's training time
+            # means it's training time
             empty_bg_vec = torch.zeros(1, self.load_value.shape[-1]).cuda()
             prepared_class_embedding = torch.cat([self.load_value, empty_bg_vec], dim=0)
             if proposal_assigned_gt_labels is not None:
@@ -588,6 +588,8 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                 
             #print('final_x_reg', final_x_reg.shape)
             bbox_pred = self.fc_reg(final_x_reg)
+            # in the original version the bbox_pred [1000, 1203, 4]
+            # new version should be [1000, 4]
             bbox_pred = bbox_pred.view(x_reg.shape[0], -1)
             #print('final_prediction', bbox_pred.shape)
         else:
