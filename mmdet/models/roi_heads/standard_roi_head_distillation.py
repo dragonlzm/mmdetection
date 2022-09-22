@@ -144,7 +144,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
 
         return losses
 
-    def _bbox_forward(self, x, rois, distilled_feat=None, gt_rand_rois=None, gt_labels=None, img_metas=None, distill_ele_weight=None, bboxes_num=None):
+    def _bbox_forward(self, x, rois, distilled_feat=None, gt_rand_rois=None, proposal_assigned_gt_labels=None, img_metas=None, distill_ele_weight=None, bboxes_num=None):
         """Box head forward function used in both training and testing.
         bboxes_num: list[tuple(gt_bbox_num, rand_bbox_num, proposal_number)]
         """  
@@ -174,7 +174,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                 gt_and_rand_bbox_feat = self.shared_head(gt_and_rand_bbox_feat)
         
         # if we use bg proposal, the cls_score will has the the length of samples + bg number
-        cls_score, bbox_pred, gt_and_bg_feats = self.bbox_head(bbox_feats)
+        cls_score, bbox_pred, gt_and_bg_feats = self.bbox_head(bbox_feats, proposal_assigned_gt_labels)
         #print('cls_score', cls_score.shape, 'bbox_pred', bbox_pred.shape, 'gt_and_bg_feats', gt_and_bg_feats.shape, 'bboxes_num', [ele for ele in bboxes_num])
         
         # for save the classification feat
@@ -300,6 +300,39 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             rois = bbox2roi([torch.cat([res.bboxes, bg_bbox]).cuda() for res, bg_bbox in zip(sampling_results, bg_bboxes)])
         else:     
             rois = bbox2roi([res.bboxes for res in sampling_results])
+
+        if self.use_bg_pro_as_ns:
+            bbox_targets_ori = self.bbox_head.get_targets(sampling_results, gt_bboxes,
+                                                  gt_labels, self.train_cfg, concat=False)
+            
+            labels, label_weights, bbox_targets, bbox_weights = bbox_targets_ori
+            # concat the labels, label_weights, bbox_targets, bbox_weights
+            # the labels should be bg label, label_weights should be the same as
+            # other label. bbox_weights should be zero
+            bg_labels = [torch.full((bg_bboxes[i].shape[0], ),
+                                     self.bbox_head.num_classes,
+                                     dtype=torch.long).cuda() for i in range(len(bg_bboxes))]
+            bg_label_weights = [torch.full((bg_bboxes[i].shape[0], ),
+                                     self.bg_pro_as_ns_weight,
+                                     dtype=torch.long).cuda() for i in range(len(bg_bboxes))]
+            bg_bbox_targets = [torch.zeros(bg_bboxes[i].shape[0], 4).cuda() for i in range(len(bg_bboxes))]
+            bg_bbox_weights = [torch.zeros(bg_bboxes[i].shape[0], 4).cuda() for i in range(len(bg_bboxes))]
+            # concat inside first
+            labels = [torch.cat([label, bg_label], dim=0).cuda() for label, bg_label in zip(labels, bg_labels)]
+            label_weights = [torch.cat([label_weight, bg_label_weight], dim=0).cuda() for label_weight, bg_label_weight in zip(label_weights, bg_label_weights)]
+            bbox_targets = [torch.cat([bbox_target, bg_bbox_target], dim=0).cuda() for bbox_target, bg_bbox_target in zip(bbox_targets, bg_bbox_targets)]
+            bbox_weights = [torch.cat([bbox_weight, bg_bbox_weight], dim=0).cuda() for bbox_weight, bg_bbox_weight in zip(bbox_weights, bg_bbox_weights)]
+            # concat outside
+            labels = torch.cat(labels, 0)
+            label_weights = torch.cat(label_weights, 0)
+            bbox_targets = torch.cat(bbox_targets, 0)
+            bbox_weights = torch.cat(bbox_weights, 0)
+            bbox_targets = (labels, label_weights, bbox_targets, bbox_weights)
+        else:
+            #print('in roi head:', img_metas)
+            bbox_targets = self.bbox_head.get_targets(sampling_results, gt_bboxes,
+                                                  gt_labels, self.train_cfg, img_metas=img_metas)
+
        
         # prepare the roi for the gt and the random bboxes
         if self.use_bg_pro_for_distill:
@@ -399,39 +432,8 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         # save the bboxes number for each image:
         # list[tuple(gt_bbox_num, rand_bbox_num, proposal_number)]
         bboxes_num = [(gt_bbox.shape[0], random_bbox.shape[0], res.bboxes.shape[0]) for gt_bbox, random_bbox, res in zip(gt_bboxes, rand_bboxes, sampling_results)]
-        bbox_results = self._bbox_forward(x, rois, distilled_feat, gt_rand_rois, gt_labels, distill_ele_weight=distill_ele_weight, bboxes_num=bboxes_num, img_metas=img_metas)
+        bbox_results = self._bbox_forward(x, rois, distilled_feat, gt_rand_rois, bbox_targets[0], distill_ele_weight=distill_ele_weight, bboxes_num=bboxes_num, img_metas=img_metas)
         
-        if self.use_bg_pro_as_ns:
-            bbox_targets_ori = self.bbox_head.get_targets(sampling_results, gt_bboxes,
-                                                  gt_labels, self.train_cfg, concat=False)
-            
-            labels, label_weights, bbox_targets, bbox_weights = bbox_targets_ori
-            # concat the labels, label_weights, bbox_targets, bbox_weights
-            # the labels should be bg label, label_weights should be the same as
-            # other label. bbox_weights should be zero
-            bg_labels = [torch.full((bg_bboxes[i].shape[0], ),
-                                     self.bbox_head.num_classes,
-                                     dtype=torch.long).cuda() for i in range(len(bg_bboxes))]
-            bg_label_weights = [torch.full((bg_bboxes[i].shape[0], ),
-                                     self.bg_pro_as_ns_weight,
-                                     dtype=torch.long).cuda() for i in range(len(bg_bboxes))]
-            bg_bbox_targets = [torch.zeros(bg_bboxes[i].shape[0], 4).cuda() for i in range(len(bg_bboxes))]
-            bg_bbox_weights = [torch.zeros(bg_bboxes[i].shape[0], 4).cuda() for i in range(len(bg_bboxes))]
-            # concat inside first
-            labels = [torch.cat([label, bg_label], dim=0).cuda() for label, bg_label in zip(labels, bg_labels)]
-            label_weights = [torch.cat([label_weight, bg_label_weight], dim=0).cuda() for label_weight, bg_label_weight in zip(label_weights, bg_label_weights)]
-            bbox_targets = [torch.cat([bbox_target, bg_bbox_target], dim=0).cuda() for bbox_target, bg_bbox_target in zip(bbox_targets, bg_bbox_targets)]
-            bbox_weights = [torch.cat([bbox_weight, bg_bbox_weight], dim=0).cuda() for bbox_weight, bg_bbox_weight in zip(bbox_weights, bg_bbox_weights)]
-            # concat outside
-            labels = torch.cat(labels, 0)
-            label_weights = torch.cat(label_weights, 0)
-            bbox_targets = torch.cat(bbox_targets, 0)
-            bbox_weights = torch.cat(bbox_weights, 0)
-            bbox_targets = (labels, label_weights, bbox_targets, bbox_weights)
-        else:
-            #print('in roi head:', img_metas)
-            bbox_targets = self.bbox_head.get_targets(sampling_results, gt_bboxes,
-                                                  gt_labels, self.train_cfg, img_metas=img_metas)
             
         loss_bbox = self.bbox_head.loss(bbox_results['cls_score'],
                                         bbox_results['bbox_pred'], rois,

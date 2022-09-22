@@ -488,7 +488,7 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
             last_layer_dim = self.fc_out_channels
         return branch_convs, branch_fcs, last_layer_dim
 
-    def forward(self, x):
+    def forward(self, x, proposal_assigned_gt_labels=None):
         # load the pretrained text embedding again
         if False in (self.fc_cls_fg.weight.data == self.load_value):
             print('loading value again')
@@ -563,15 +563,29 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         
         if self.reg_with_cls_embedding:
             #print('original shape', x_reg.shape)
-            x_reg = x_reg.unsqueeze(dim=-2)
-            x_reg = x_reg.repeat(1, self.num_classes, 1)
-            prepared_class_embedding = self.load_value.unsqueeze(dim=0).repeat(x_reg.shape[0],1,1)
-            if self.combine_reg_and_cls_embedding == 'cat':
-                # concat the word embedding
-                final_x_reg = torch.cat([x_reg, prepared_class_embedding],dim=-1)
+            # x_reg = x_reg.unsqueeze(dim=-2)
+            # x_reg = x_reg.repeat(1, self.num_classes, 1)
+            # prepared_class_embedding = self.load_value.unsqueeze(dim=0).repeat(x_reg.shape[0],1,1)
+            # if self.combine_reg_and_cls_embedding == 'cat':
+            #     # concat the word embedding
+            #     final_x_reg = torch.cat([x_reg, prepared_class_embedding],dim=-1)
+            # else:
+            #     x_reg = self.reg_map_to_clip(x_reg)
+            #     final_x_reg = x_reg + prepared_class_embedding
+            
+            # new version of implementation
+            # mean it's training time
+            empty_bg_vec = torch.zeros(1, self.load_value.shape[-1]).cuda()
+            prepared_class_embedding = torch.cat([self.load_value, empty_bg_vec], dim=0)
+            if proposal_assigned_gt_labels is not None:
+                selected_embedding = prepared_class_embedding[proposal_assigned_gt_labels]
+                final_x_reg = torch.cat([x_reg, selected_embedding],dim=-1)
+            # means it's testing
             else:
-                x_reg = self.reg_map_to_clip(x_reg)
-                final_x_reg = x_reg + prepared_class_embedding
+                predicted_label = torch.argmax(cls_score, dim=-1)
+                selected_embedding = prepared_class_embedding[predicted_label]
+                final_x_reg = torch.cat([x_reg, selected_embedding],dim=-1)
+                
             #print('final_x_reg', final_x_reg.shape)
             bbox_pred = self.fc_reg(final_x_reg)
             bbox_pred = bbox_pred.view(x_reg.shape[0], -1)
