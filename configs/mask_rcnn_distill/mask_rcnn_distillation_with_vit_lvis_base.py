@@ -212,27 +212,6 @@ data = dict(
         pipeline=test_pipeline,
         classes=classes))
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # model config
 model = dict(
     vit_backbone_cfg=dict(
