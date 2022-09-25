@@ -46,7 +46,7 @@ python -m torch.distributed.launch --nproc_per_node=2 \
     configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_base_range_scale.py --launcher pytorch \
     --work-dir=${WORK_DIR} \
     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
-    --resume-from=${WORK_DIR}/epoch_8.pth
+    --resume-from=${WORK_DIR}/latest.pth
 
 # test the model
 #CHECKPOINT_NAME="epoch_12.pth"
