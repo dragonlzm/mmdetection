@@ -582,7 +582,10 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                 final_x_reg = torch.cat([x_reg, selected_embedding],dim=-1)
             # means it's testing
             else:
-                predicted_label = torch.argmax(cls_score, dim=-1)
+                if self.filter_base_cate != None:
+                    predicted_label = torch.argmax(cls_score[:, :self.num_classes+1], dim=-1)
+                else:
+                    predicted_label = torch.argmax(cls_score, dim=-1)
                 selected_embedding = prepared_class_embedding[predicted_label]
                 final_x_reg = torch.cat([x_reg, selected_embedding],dim=-1)
                 
