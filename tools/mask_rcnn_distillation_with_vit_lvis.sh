@@ -45,16 +45,16 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 
 
 # 200 clip proposal filpping(merge3, 2x regression loss, base filtered proposal, per bbox weight, range scale)
-ADDITIONAL_CONFIG="model.backbone.merge_step=['merge3'] model.rpn_head.loss_bbox.loss_weight=2.0 model.roi_head.bbox_head.loss_bbox.loss_weight=2.0"
-WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_with_vit_lvis_base_range_scale"
-PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
-python -m torch.distributed.launch --nproc_per_node=2 \
-    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
-    configs/mask_rcnn_distill/mask_rcnn_distillation_with_vit_lvis_base_range_scale.py --launcher pytorch \
-    --work-dir=${WORK_DIR} \
-    --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
-    ${ADDITIONAL_CONFIG} \
-    #--resume-from=${WORK_DIR}/latest.pth
+# ADDITIONAL_CONFIG="model.backbone.merge_step=['merge3'] model.rpn_head.loss_bbox.loss_weight=2.0 model.roi_head.bbox_head.loss_bbox.loss_weight=2.0"
+# WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_with_vit_lvis_base_range_scale"
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#     configs/mask_rcnn_distill/mask_rcnn_distillation_with_vit_lvis_base_range_scale.py --launcher pytorch \
+#     --work-dir=${WORK_DIR} \
+#     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
+#     ${ADDITIONAL_CONFIG} \
+#     #--resume-from=${WORK_DIR}/latest.pth
 
 # 200 clip proposal filpping(merge3, 2x regression loss, base filtered proposal, per bbox weight, range scale, 0.5 distw)
 # ADDITIONAL_CONFIG="model.backbone.merge_step=['merge3'] model.rpn_head.loss_bbox.loss_weight=2.0 model.roi_head.bbox_head.loss_bbox.loss_weight=2.0"
@@ -67,6 +67,31 @@ python -m torch.distributed.launch --nproc_per_node=2 \
 #     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=0.5 optimizer_config.grad_clip.max_norm=10 \
 #     ${ADDITIONAL_CONFIG} \
 #     #--resume-from=${WORK_DIR}/latest.pth
+
+# 200 clip proposal filpping(merge3, 2x regression loss, base filtered proposal, per bbox weight, range scale, 0.5 distw， 3x reg)
+# ADDITIONAL_CONFIG="model.backbone.merge_step=['merge3'] model.rpn_head.loss_bbox.loss_weight=3.0 model.roi_head.bbox_head.loss_bbox.loss_weight=3.0"
+# WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_with_vit_lvis_base_range_scale_distw05_regw3"
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#     configs/mask_rcnn_distill/mask_rcnn_distillation_with_vit_lvis_base_range_scale.py --launcher pytorch \
+#     --work-dir=${WORK_DIR} \
+#     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=0.5 optimizer_config.grad_clip.max_norm=10 \
+#     ${ADDITIONAL_CONFIG} \
+#     #--resume-from=${WORK_DIR}/latest.pth
+
+# 200 clip proposal filpping(merge3, 2x regression loss, base filtered proposal, per bbox weight, range scale, 0.5 distw, gt only)
+ADDITIONAL_CONFIG="model.backbone.merge_step=['merge3'] model.rpn_head.loss_bbox.loss_weight=2.0 model.roi_head.bbox_head.loss_bbox.loss_weight=2.0"
+WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_with_vit_lvis_base_range_scale_distw05_gtonly"
+PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+python -m torch.distributed.launch --nproc_per_node=2 \
+    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+    configs/mask_rcnn_distill/mask_rcnn_distillation_with_vit_lvis_base_range_scale.py --launcher pytorch \
+    --work-dir=${WORK_DIR} \
+    --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=0.5 optimizer_config.grad_clip.max_norm=10 \
+    model.train_cfg.rcnn.use_only_gt_pro_for_distill=True \
+    ${ADDITIONAL_CONFIG} \
+    #--resume-from=${WORK_DIR}/latest.pth
 
 
 # test the model
