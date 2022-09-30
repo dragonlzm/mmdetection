@@ -368,7 +368,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                 random_choice = np.random.choice(gt_bbox.shape[0], int(gt_bbox.shape[0] * remain_ratio), replace=False)
                 random_choice = torch.from_numpy(random_choice).cuda()
                 perturbed_bbox_per_img[random_choice] = gt_bbox[random_choice]
-                print('perturbed_bbox_per_img', perturbed_bbox_per_img, 'gt_bbox', gt_bbox)
+                #print('perturbed_bbox_per_img', perturbed_bbox_per_img, 'gt_bbox', gt_bbox)
                                 
                 prepared_gt_bboxes.append(perturbed_bbox_per_img)
         else:
