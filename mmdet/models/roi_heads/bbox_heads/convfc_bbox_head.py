@@ -283,6 +283,7 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                  reg_with_mlp=False,
                  use_bg_vector=True,
                  filter_base_cate=None,
+                 use_svd_conversion=False,
                  conv_cfg=None,
                  norm_cfg=None,
                  init_cfg=None,
@@ -314,6 +315,7 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         self.filter_base_cate = filter_base_cate
         self.use_bg_vector = use_bg_vector
         self.reg_with_mlp = reg_with_mlp
+        self.use_svd_conversion = use_svd_conversion
 
         # add shared convs and fcs
         self.shared_convs, self.shared_fcs, last_layer_dim = \
@@ -416,6 +418,16 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         # layers.append(Linear(feedforward_channels, embed_dims))
         # layers.append(nn.Dropout(ffn_drop))
         # self.layers = Sequential(*layers)
+        if self.use_svd_conversion != None:
+            conversion_mat = torch.load(self.use_svd_conversion)
+            #base_load_value = base_load_value / base_load_value.norm(dim=-1, keepdim=True)
+            self.conversion_mat = conversion_mat.cuda()
+            self.svd_conversion_mat = build_linear_layer(self.cls_predictor_cfg,
+                                in_features=self.clip_dim,
+                                out_features=self.clip_dim,
+                                bias=False)
+            # convert the image feature
+            self.load_value = torch.mm(self.load_value, self.conversion_mat)
 
         if init_cfg is None:
             self.init_cfg += [
@@ -433,6 +445,13 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         """Init module weights."""
         # Training Centripetal Model needs to reset parameters for Conv2d
         super(ConvFCEmbeddingBBoxHead, self).init_weights()
+        # load the conversion mat first if it exist
+        if self.use_svd_conversion != None:
+            with torch.no_grad():
+                self.svd_conversion_mat.weight.copy_(self.conversion_mat)
+            for param in self.svd_conversion_mat.parameters():
+                param.requires_grad = False
+        
         # load the module and set the require_grad
         with torch.no_grad():
             self.fc_cls_fg.weight.copy_(self.load_value)
@@ -503,7 +522,7 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                 with torch.no_grad():
                     self.fc_cls_base.weight.copy_(self.base_load_value)
                 for param in self.fc_cls_base.parameters():
-                    param.requires_grad = False 
+                    param.requires_grad = False
         
         # shared part
         if self.num_shared_convs > 0:
