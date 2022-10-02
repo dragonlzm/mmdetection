@@ -1,6 +1,8 @@
 # this script aims to generate the subset for the lvis dataset 
 # will make use of all novel categories, for each categories will select one image
 # also select 100 image which do not have the novel categories
+# for visualization
+
 import json
 json_path = "/data/zhuoming/detection/lvis_v1/annotations/lvis_v1_train.json"
 json_content = json.load(open(json_path))

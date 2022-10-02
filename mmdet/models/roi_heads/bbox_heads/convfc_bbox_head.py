@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+from json import load
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
@@ -283,7 +284,7 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                  reg_with_mlp=False,
                  use_bg_vector=True,
                  filter_base_cate=None,
-                 use_svd_conversion=False,
+                 use_svd_conversion=None,
                  conv_cfg=None,
                  norm_cfg=None,
                  init_cfg=None,
@@ -368,7 +369,8 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                                             out_features=self.num_classes,
                                             bias=False)
             
-            load_value = torch.load(self.fg_vec_cfg.load_path).cuda()
+            load_value = torch.load(self.fg_vec_cfg.load_path)
+            load_value = load_value.cuda()
             if self.use_svd_conversion:
                 # convert the text feature
                 load_value = torch.mm(load_value, self.conversion_mat)
@@ -381,7 +383,8 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
             # for testing
             if self.filter_base_cate != None:
                 #self.filter_base_cate = 'data/embeddings/base_finetuned_48cates.pt'
-                base_load_value = torch.load(self.filter_base_cate).cuda()
+                base_load_value = torch.load(self.filter_base_cate)
+                base_load_value = base_load_value.cuda()
                 if self.use_svd_conversion:
                     # convert the text feature
                     base_load_value = torch.mm(base_load_value, self.conversion_mat)
