@@ -43,7 +43,7 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #     model.vit_backbone_cfg.open_ln=True \
 #     --resume-from=${WORK_DIR}/latest.pth
 
-
+### hyper-parameters tuning
 # 200 clip proposal filpping(merge3, 2x regression loss, base filtered proposal, per bbox weight, range scale)
 # ADDITIONAL_CONFIG="model.backbone.merge_step=['merge3'] model.rpn_head.loss_bbox.loss_weight=2.0 model.roi_head.bbox_head.loss_bbox.loss_weight=2.0"
 # WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_with_vit_lvis_base_range_scale"
