@@ -117,8 +117,8 @@ python -m torch.distributed.launch --nproc_per_node=2 \
     --work-dir=${WORK_DIR} \
     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
     ${ADDITIONAL_CONFIG} \
-    --resume-from=/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_with_vit_lvis_base/epoch_16.pth
-    #--resume-from=${WORK_DIR}/latest.pth
+    --resume-from=${WORK_DIR}/latest.pth
+    # --resume-from=/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_with_vit_lvis_base/epoch_16.pth
 
 
 # test the model
