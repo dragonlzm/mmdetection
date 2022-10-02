@@ -10,14 +10,14 @@ from .standard_roi_head import StandardRoIHead
 class StandardRoIHeadWithTransformer(StandardRoIHead):
     """Simplest base roi head including one bbox head and one mask head."""
 
-    def _bbox_forward(self, x, rois, img_metas):
+    def _bbox_forward(self, x, rois, img_metas=None, bboxes_num=None):
         """Box head forward function used in both training and testing."""
         # TODO: a more flexible way to decide which feature maps to use
         bbox_feats = self.bbox_roi_extractor(
             x[:self.bbox_roi_extractor.num_inputs], rois)
         if self.with_shared_head:
             bbox_feats = self.shared_head(bbox_feats)
-        cls_score, bbox_pred = self.bbox_head(bbox_feats, rois, img_metas)
+        cls_score, bbox_pred = self.bbox_head(bbox_feats, rois, img_metas, bboxes_num)
 
         bbox_results = dict(
             cls_score=cls_score, bbox_pred=bbox_pred, bbox_feats=bbox_feats)
@@ -27,7 +27,9 @@ class StandardRoIHeadWithTransformer(StandardRoIHead):
                             img_metas):
         """Run forward function and calculate loss for box head in training."""
         rois = bbox2roi([res.bboxes for res in sampling_results])
-        bbox_results = self._bbox_forward(x, rois, img_metas)
+        bboxes_num = [res.bboxes.shape[0] for res in sampling_results]
+        
+        bbox_results = self._bbox_forward(x, rois, img_metas=img_metas, bboxes_num=bboxes_num)
 
         bbox_targets = self.bbox_head.get_targets(sampling_results, gt_bboxes,
                                                   gt_labels, self.train_cfg)

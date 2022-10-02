@@ -253,9 +253,9 @@ class TransformerBBoxHead(BBoxHead):
         
         cls_score = self.fc_cls(x_cls) if self.with_cls else None
         bbox_pred = self.fc_reg(x_reg) if self.with_reg else None
-        return cls_score, bbox_pred
+        return cls_score, bbox_pred, x_cls
 
-    def forward(self, bbox_feats, proposals, img_metas):
+    def forward(self, bbox_feats, proposals, img_metas, bboxes_num=None):
         """
             The input should like this:
             bbox_feats: shape (n, 256, 7, 7), n is the total number of the proposal in the batch
@@ -272,19 +272,33 @@ class TransformerBBoxHead(BBoxHead):
             bbox_pred: torch.Size([1024, 192]) 
             gt_and_bg_feats: torch.Size([1024, 512])
         """
-        print('in forward:', bbox_feats.shape, 'proposals:', proposals.shape)
+        all_feats_per_image = []
+        all_boxes_per_image = []
+        proposal_feat_start_idx = 0
+
+        assert isinstance(bboxes_num[0], int)
+        for proposal_number in bboxes_num:
+            now_proposal = proposals[proposal_feat_start_idx: proposal_feat_start_idx + proposal_number]
+            now_proposal_feat = bbox_feats[proposal_feat_start_idx: proposal_feat_start_idx + proposal_number]
+            
+            proposal_feat_start_idx = proposal_feat_start_idx + proposal_number
+            all_boxes_per_image.append(now_proposal)
+            all_feats_per_image.append(now_proposal_feat)
+
         # forward for each image
         all_cls_score_per_image = []
         all_bbox_pred_per_image = []
-        for feat_per_image, boxes_per_image, img_meta in zip(bbox_feats, proposals, img_metas):
-            feat_per_image = feat_per_image.unsqueeze(dim=0)
-            cls_score_per_image, bbox_pred_per_image = self._forward(feat_per_image, boxes_per_image, img_meta)
+        all_x_cls_per_image = []
+        for feat_per_image, boxes_per_image, img_meta in zip(all_feats_per_image, all_boxes_per_image, img_metas):
+            cls_score_per_image, bbox_pred_per_image, x_cls_per_image = self._forward(feat_per_image, boxes_per_image, img_meta)
             all_cls_score_per_image.append(cls_score_per_image)
             all_bbox_pred_per_image.append(bbox_pred_per_image)
+            all_x_cls_per_image.append(x_cls_per_image)
             
         # concat the result
         all_cls_score_per_image = torch.cat(all_cls_score_per_image, dim=0)
         all_bbox_pred_per_image = torch.cat(all_bbox_pred_per_image, dim=0)
+        all_x_cls_per_image = torch.cat(all_x_cls_per_image, dim=0)
         
         return all_cls_score_per_image, all_bbox_pred_per_image
 

@@ -146,11 +146,11 @@ class BBoxTestMixin:
         if type(self).__name__ == 'StandardRoIHeadCLIPCls': 
             kwargs['img_metas'] = img_metas
             bbox_results = self._bbox_forward(x, rois, **kwargs)
-        elif type(self).__name__.startswith('StandardRoIHeadDistillWithTransformer'):
+        elif type(self).__name__.startswith('StandardRoIHeadDistillWithTransformer') or type(self).__name__ == 'StandardRoIHeadWithTransformer':
             kwargs['img_metas'] = img_metas
             kwargs['bboxes_num'] = num_proposals_per_img
             bbox_results = self._bbox_forward(x, rois, **kwargs)
-        elif self.save_the_feat or type(self).__name__ == 'StandardRoIHeadWithTransformer':
+        elif self.save_the_feat:
             bbox_results = self._bbox_forward(x, rois, img_metas=img_metas)
         else:
             bbox_results = self._bbox_forward(x, rois)
