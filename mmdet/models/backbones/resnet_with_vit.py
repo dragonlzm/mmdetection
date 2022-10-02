@@ -20,7 +20,6 @@ try:
     BICUBIC = InterpolationMode.BICUBIC
 except ImportError:
     BICUBIC = Image.BICUBIC
-import clip
 import numpy as np
 
 # setup device
