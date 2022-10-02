@@ -132,10 +132,15 @@ class TransformerBBoxHead(BBoxHead):
         if self.with_reg:
             out_dim_reg = (4 if self.reg_class_agnostic else 4 *
                            self.num_classes)
-            self.fc_reg = build_linear_layer(
-                self.reg_predictor_cfg,
-                in_features=self.reg_last_dim,
-                out_features=out_dim_reg)
+            
+            if self.reg_with_mlp:
+                self.fc_reg = MLP(self.reg_last_dim, self.reg_last_dim, out_dim_reg, 3)
+            else:
+                self.fc_reg = build_linear_layer(
+                    self.reg_predictor_cfg,
+                    in_features=self.reg_last_dim,
+                    out_features=out_dim_reg)
+
 
         # initial dec_pos_embed_proj
         self.post_input_proj_norm = nn.LayerNorm(self.fc_out_channels)   
@@ -267,11 +272,12 @@ class TransformerBBoxHead(BBoxHead):
             bbox_pred: torch.Size([1024, 192]) 
             gt_and_bg_feats: torch.Size([1024, 512])
         """
-            
+        print('in forward:', bbox_feats.shape, 'proposals:', proposals.shape)
         # forward for each image
         all_cls_score_per_image = []
         all_bbox_pred_per_image = []
         for feat_per_image, boxes_per_image, img_meta in zip(bbox_feats, proposals, img_metas):
+            feat_per_image = feat_per_image.unsqueeze(dim=0)
             cls_score_per_image, bbox_pred_per_image = self._forward(feat_per_image, boxes_per_image, img_meta)
             all_cls_score_per_image.append(cls_score_per_image)
             all_bbox_pred_per_image.append(bbox_pred_per_image)
@@ -532,6 +538,12 @@ class TransformerEmbeddingBBoxHead(BBoxHead):
             for fc in self.shared_fcs:
                 x = self.relu(fc(x))
         x = x.unsqueeze(dim=0)
+        
+        # batch_size, num_proposal, n_channels, nh, nw = x.shape
+        # x = x.transpose(0, 1).contiguous()
+        # x = x.flatten(2)
+        # if self.input_proj is not None:
+        #     x = self.input_proj(x)
         
         # normalize the proposal
         img_h, img_w, _ = img_meta['img_shape']

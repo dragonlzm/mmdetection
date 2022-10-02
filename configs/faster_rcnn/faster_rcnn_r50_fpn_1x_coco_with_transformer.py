@@ -15,11 +15,13 @@ model = dict(
         init_cfg=dict(type='Pretrained', 
             checkpoint='data/pretrain/resnet50-0676ba61.pth')),
     roi_head=dict(
-        type='StandardRoIHead',
+        type='StandardRoIHeadWithTransformer',
         bbox_head=dict(
             type='TransformerBBoxHead',
-            num_shared_convs=4,
-            reg_class_agnostic=True,
+            num_shared_convs=0,
+            num_shared_fcs=1,
+            with_avg_pool=False,
+            reg_class_agnostic=False,
             fc_out_channels=512,
             encoder=dict(
                 type='DetrTransformerEncoder',
