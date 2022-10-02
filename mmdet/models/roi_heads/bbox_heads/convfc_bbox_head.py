@@ -341,6 +341,15 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                 self.reg_last_dim *= self.roi_feat_area
 
         self.relu = nn.ReLU(inplace=True)
+        if self.use_svd_conversion != None:
+            conversion_mat = torch.load(self.use_svd_conversion)
+            #base_load_value = base_load_value / base_load_value.norm(dim=-1, keepdim=True)
+            self.conversion_mat = conversion_mat.cuda()
+            self.svd_conversion_mat = build_linear_layer(self.cls_predictor_cfg,
+                                in_features=self.clip_dim,
+                                out_features=self.clip_dim,
+                                bias=False)
+        
         # reconstruct fc_cls and fc_reg since input channels are changed
         if self.with_cls:
             self.map_to_clip = build_linear_layer(self.cls_predictor_cfg,
@@ -360,6 +369,11 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                                             bias=False)
             
             load_value = torch.load(self.fg_vec_cfg.load_path)
+            if self.use_svd_conversion:
+                # convert the text feature
+                load_value = torch.mm(load_value, self.conversion_mat)
+                print('load_value:', load_value)
+            
             load_value = load_value / load_value.norm(dim=-1, keepdim=True)
             #load_value = load_value.t()
             self.load_value = load_value.cuda()
@@ -368,6 +382,11 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
             if self.filter_base_cate != None:
                 #self.filter_base_cate = 'data/embeddings/base_finetuned_48cates.pt'
                 base_load_value = torch.load(self.filter_base_cate)
+                if self.use_svd_conversion:
+                    # convert the text feature
+                    base_load_value = torch.mm(base_load_value, self.conversion_mat)
+                    print('base_load_value:', base_load_value)
+                
                 base_load_value = base_load_value / base_load_value.norm(dim=-1, keepdim=True)
                 #load_value = load_value.t()
                 self.base_load_value = base_load_value.cuda()
@@ -418,16 +437,6 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         # layers.append(Linear(feedforward_channels, embed_dims))
         # layers.append(nn.Dropout(ffn_drop))
         # self.layers = Sequential(*layers)
-        if self.use_svd_conversion != None:
-            conversion_mat = torch.load(self.use_svd_conversion)
-            #base_load_value = base_load_value / base_load_value.norm(dim=-1, keepdim=True)
-            self.conversion_mat = conversion_mat.cuda()
-            self.svd_conversion_mat = build_linear_layer(self.cls_predictor_cfg,
-                                in_features=self.clip_dim,
-                                out_features=self.clip_dim,
-                                bias=False)
-            # convert the image feature
-            self.load_value = torch.mm(self.load_value, self.conversion_mat)
 
         if init_cfg is None:
             self.init_cfg += [
@@ -523,6 +532,16 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                     self.fc_cls_base.weight.copy_(self.base_load_value)
                 for param in self.fc_cls_base.parameters():
                     param.requires_grad = False
+            
+            # load the conversion mat again
+            if self.use_svd_conversion != None:
+                print('svd_conversion_mat is loaded')
+                with torch.no_grad():
+                    self.svd_conversion_mat.weight.copy_(self.conversion_mat)
+                for param in self.svd_conversion_mat.parameters():
+                    param.requires_grad = False
+        
+        print('self.svd_conversion_mat.weight.data', self.svd_conversion_mat.weight.data)
         
         # shared part
         if self.num_shared_convs > 0:
