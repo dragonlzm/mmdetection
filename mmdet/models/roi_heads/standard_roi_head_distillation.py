@@ -198,7 +198,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                 distill_ele_weight = torch.cat(distill_ele_weight, dim=0)
                 
             if hasattr(self.bbox_head, 'use_svd_conversion') and self.bbox_head.use_svd_conversion != None:
-                cat_distilled_feat *= self.svd_conversion_mat(cat_distilled_feat)
+                cat_distilled_feat *= self.bbox_head.svd_conversion_mat(cat_distilled_feat)
             cat_distilled_feat = cat_distilled_feat / cat_distilled_feat.norm(dim=-1, keepdim=True)
             # cos_value = torch.sum(pred_feats * cat_distilled_feat)
             # self.all_cosine_value += cos_value.item()

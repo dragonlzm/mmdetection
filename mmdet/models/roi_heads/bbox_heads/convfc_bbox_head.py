@@ -368,28 +368,28 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                                             out_features=self.num_classes,
                                             bias=False)
             
-            load_value = torch.load(self.fg_vec_cfg.load_path)
+            load_value = torch.load(self.fg_vec_cfg.load_path).cuda()
             if self.use_svd_conversion:
                 # convert the text feature
                 load_value = torch.mm(load_value, self.conversion_mat)
-                print('load_value:', load_value)
+                #print('load_value:', load_value)
             
             load_value = load_value / load_value.norm(dim=-1, keepdim=True)
             #load_value = load_value.t()
-            self.load_value = load_value.cuda()
+            self.load_value = load_value
             
             # for testing
             if self.filter_base_cate != None:
                 #self.filter_base_cate = 'data/embeddings/base_finetuned_48cates.pt'
-                base_load_value = torch.load(self.filter_base_cate)
+                base_load_value = torch.load(self.filter_base_cate).cuda()
                 if self.use_svd_conversion:
                     # convert the text feature
                     base_load_value = torch.mm(base_load_value, self.conversion_mat)
-                    print('base_load_value:', base_load_value)
+                    #print('base_load_value:', base_load_value)
                 
                 base_load_value = base_load_value / base_load_value.norm(dim=-1, keepdim=True)
                 #load_value = load_value.t()
-                self.base_load_value = base_load_value.cuda()
+                self.base_load_value = base_load_value
                 
                 self.fc_cls_base = build_linear_layer(self.cls_predictor_cfg,
                                                 in_features=self.clip_dim,
@@ -540,8 +540,6 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                     self.svd_conversion_mat.weight.copy_(self.conversion_mat)
                 for param in self.svd_conversion_mat.parameters():
                     param.requires_grad = False
-        
-        print('self.svd_conversion_mat.weight.data', self.svd_conversion_mat.weight.data)
         
         # shared part
         if self.num_shared_convs > 0:
