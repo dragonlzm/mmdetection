@@ -35,7 +35,7 @@ CHECKPOINT_NAME="latest.pth"
 bash tools/dist_test.sh configs/mask_rcnn_distill/mask_rcnn_distillation_with_vit_lvis_bn.py \
 ${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox segm \
 --eval-options jsonfile_prefix=${WORK_DIR}/base_and_novel \
-${ADDITIONAL_CONFIG}
+--cfg-options ${ADDITIONAL_CONFIG}
 
 
 # 200 clip proposal filpping(merge3, 2x regression loss, base filtered proposal, per bbox weight, range scale, 0.5 distw)
@@ -55,7 +55,7 @@ CHECKPOINT_NAME="latest.pth"
 bash tools/dist_test.sh configs/mask_rcnn_distill/mask_rcnn_distillation_with_vit_lvis_bn.py \
 ${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox segm \
 --eval-options jsonfile_prefix=${WORK_DIR}/base_and_novel \
-${ADDITIONAL_CONFIG}
+--cfg-options ${ADDITIONAL_CONFIG}
 
 
 # 200 clip proposal filpping(merge3, 2x regression loss, base filtered proposal, per bbox weight, range scale, 0.5 distw， 3x reg)
@@ -75,4 +75,4 @@ CHECKPOINT_NAME="latest.pth"
 bash tools/dist_test.sh configs/mask_rcnn_distill/mask_rcnn_distillation_with_vit_lvis_bn.py \
 ${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox segm \
 --eval-options jsonfile_prefix=${WORK_DIR}/base_and_novel \
-${ADDITIONAL_CONFIG}
+--cfg-options ${ADDITIONAL_CONFIG}
