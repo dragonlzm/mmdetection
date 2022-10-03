@@ -388,6 +388,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             gt_rand_rois = rand_bboxes
             if rand_bbox_weights is not None:
                 distill_ele_weight = []
+                feat_dim = distilled_feat[0].shape[-1]
                 for rand_bbox_weight in rand_bbox_weights:
                     # whether we have the per clip proposal bbox distillation weigth
                     weight_per_img = rand_bbox_weight.unsqueeze(dim=-1).repeat([1,feat_dim])
