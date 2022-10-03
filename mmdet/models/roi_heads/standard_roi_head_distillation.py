@@ -385,6 +385,8 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             gt_rand_rois = prepared_gt_bboxes
             distill_ele_weight = None
         elif self.use_only_clip_prop_for_distill:
+            rand_bboxes = [rand_bbox[torch.abs(rand_bbox).sum(dim=1) > 0].float() 
+                           for rand_bbox in rand_bboxes]
             gt_rand_rois = rand_bboxes
             if rand_bbox_weights is not None:
                 distill_ele_weight = []
@@ -397,17 +399,22 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                     # p.s. here the normalization is for the weight, since the l1loss will always reduce the loss to average value
                     # therefore the size of the loss is irrelavant with the number of bbox
                     # but the weight we add here will affect the loss size, l1 loss is a: weighted sum / number of ele
-                    normalize_factor = weight_per_img.shape[0] / torch.sum(weight_per_img[:, 0]).item()
+                    total_weight = torch.sum(weight_per_img[:, 0]).item()
+                    if total_weight == 0:
+                        print('rand_bboxes', [ele.shape for ele in rand_bboxes], 'weight_per_img', weight_per_img)
+                        total_weight = 1
+                    
+                    normalize_factor = weight_per_img.shape[0] / total_weight
                     weight_per_img *= normalize_factor
                     distill_ele_weight.append(weight_per_img)   
             else:
                 distill_ele_weight = None
         else:
             # filter the padded random bboxes
-            rand_bboxes = [rand_bbox[torch.abs(rand_bbox).sum(dim=1) > 0] 
+            rand_bboxes = [rand_bbox[torch.abs(rand_bbox).sum(dim=1) > 0]
                 for rand_bbox in rand_bboxes]
             original_gt_nums = [dist_feat.shape[0] - rand_bbox.shape[0] for dist_feat, rand_bbox in zip(distilled_feat, rand_bboxes)]
-            gt_rand_rois = [torch.cat([gt_bbox[:original_gt_num, :], random_bbox], dim=0).float() for gt_bbox, random_bbox, original_gt_num in zip(prepared_gt_bboxes, rand_bboxes, original_gt_nums)]
+            gt_rand_rois = [torch.cat([gt_bbox[:original_gt_num, :].float(), random_bbox.float()], dim=0).float() for gt_bbox, random_bbox, original_gt_num in zip(prepared_gt_bboxes, rand_bboxes, original_gt_nums)]
             
             # prepare the distillation weight
             ### there is three situations which need to specify the per clip proposal distillation weight
