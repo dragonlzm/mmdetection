@@ -80,7 +80,8 @@ class ClsFinetuner(BaseDetector):
         self.test_with_rand_bboxes = self.test_cfg.get('test_with_rand_bboxes', False) if self.test_cfg is not None else False
         self.num_of_rand_bboxes = self.test_cfg.get('num_of_rand_bboxes', 100) if self.test_cfg is not None else 100
         self.generate_bbox_feat = self.test_cfg.get('generate_bbox_feat', False) if self.test_cfg is not None else False
-        if self.generate_bbox_feat:
+        self.generate_mix_gt_feat = self.test_cfg.get('generate_mix_gt_feat', False) if self.test_cfg is not None else False
+        if self.generate_bbox_feat or self.generate_mix_gt_feat:
             torch.manual_seed(42)
             random.seed(42)
             np.random.seed(42)
@@ -554,15 +555,15 @@ class ClsFinetuner(BaseDetector):
             if len(gt_bboxes) != 0:
                 self.test_crop_size_modi_ratio = 1.0
                 ori_size_x = self.extract_feat(img, gt_bboxes, cropped_patches, img_metas=img_metas)
-                self.test_crop_size_modi_ratio = 1.0
+                self.test_crop_size_modi_ratio = 1.5
                 enlarge_size_x = self.extract_feat(img, gt_bboxes, cropped_patches, img_metas=img_metas)
-                
-                x = (ori_size_x + enlarge_size_x) / 2
+                #print(len(ori_size_x), len(enlarge_size_x), ori_size_x[0], enlarge_size_x[0])
+                x = (ori_size_x[0] + enlarge_size_x[0]) / 2
                 # save the rand_bbox and the feat, img_metas
                 file = open(gt_file_path, 'w')
                 #print(type(gt_bboxes), type(gt_labels))
                 #print('gt', x[0].shape, gt_bboxes[0].shape, gt_labels[0].shape)
-                result_json = {'feat':x[0].cpu().tolist() if len(x)!=0 else [], 'bbox':gt_bboxes[0].cpu().tolist() if len(gt_bboxes)!=0 else [], 'gt_labels':gt_labels[0].cpu().tolist() if len(gt_labels)!=0 else [], 'img_metas':my_img_meta}
+                result_json = {'feat':x.cpu().tolist() if len(x)!=0 else [], 'bbox':gt_bboxes[0].cpu().tolist() if len(gt_bboxes)!=0 else [], 'gt_labels':gt_labels[0].cpu().tolist() if len(gt_labels)!=0 else [], 'img_metas':my_img_meta}
                 #print('testing gt json', result_json)
                 file.write(json.dumps(result_json))
                 file.close()
