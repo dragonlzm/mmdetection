@@ -414,7 +414,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             rand_bboxes = [rand_bbox[torch.abs(rand_bbox).sum(dim=1) > 0]
                 for rand_bbox in rand_bboxes]
             original_gt_nums = [dist_feat.shape[0] - rand_bbox.shape[0] for dist_feat, rand_bbox in zip(distilled_feat, rand_bboxes)]
-            gt_rand_rois = [torch.cat([gt_bbox[:original_gt_num, :].float(), random_bbox.float()], dim=0).float() for gt_bbox, random_bbox, original_gt_num in zip(prepared_gt_bboxes, rand_bboxes, original_gt_nums)]
+            gt_rand_rois = [torch.cat([gt_bbox[:original_gt_num, :], random_bbox], dim=0).float() for gt_bbox, random_bbox, original_gt_num in zip(prepared_gt_bboxes, rand_bboxes, original_gt_nums)]
             
             # prepare the distillation weight
             ### there is three situations which need to specify the per clip proposal distillation weight
