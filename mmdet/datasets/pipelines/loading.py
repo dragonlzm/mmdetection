@@ -595,11 +595,16 @@ class LoadCLIPFeat:
                  extra_rand_path_prefix=None,
                  filter_iop=False,
                  max_filter_num=100,
-                 load_rand_bbox_weight=False):
+                 load_rand_bbox_weight=False,
+                 use_mix_gt_feat=False):
         self.file_path_prefix = file_path_prefix
+        self.use_mix_gt_feat = use_mix_gt_feat
         # the path should like this
         # /data/zhuoming/detection/coco/feat
-        self.gt_feat_prefix = osp.join(self.file_path_prefix, 'gt')
+        if use_mix_gt_feat:
+            self.gt_feat_prefix = osp.join(self.file_path_prefix, 'mix_gt')
+        else:
+            self.gt_feat_prefix = osp.join(self.file_path_prefix, 'gt')
         self.random_feat_prefix = osp.join(self.file_path_prefix, 'random')
         self.num_of_rand_bbox = num_of_rand_bbox
         self.select_fixed_subset = select_fixed_subset
