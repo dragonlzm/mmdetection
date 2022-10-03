@@ -46,6 +46,8 @@ class BaseRoIHead(BaseModule, metaclass=ABCMeta):
         self.use_pregenerated_proposal = self.test_cfg.get('use_pregenerated_proposal', None) if self.test_cfg is not None else None
         # only using the gt bboxes for distillation
         self.use_only_gt_pro_for_distill = self.train_cfg.get('use_only_gt_pro_for_distill', False) if self.train_cfg is not None else False
+                # only using the gt bboxes for distillation
+        self.use_only_clip_prop_for_distill = self.train_cfg.get('use_only_clip_prop_for_distill', False) if self.train_cfg is not None else False
         # save the prediction
         self.bbox_save_path_root = self.test_cfg.get('bbox_save_path_root', None) if self.test_cfg is not None else None
         # add perturbation to the distillation

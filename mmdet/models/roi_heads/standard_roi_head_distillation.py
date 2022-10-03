@@ -377,7 +377,6 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         else:
             prepared_gt_bboxes = gt_bboxes   
 
-       
         # prepare the roi for the gt and the random bboxes
         if self.use_bg_pro_for_distill:
             gt_rand_rois = [torch.cat([gt_bbox, random_bbox, bg_bbox], dim=0) for gt_bbox, random_bbox, bg_bbox in zip(prepared_gt_bboxes, rand_bboxes, bg_bboxes)]
@@ -385,6 +384,23 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         elif self.use_only_gt_pro_for_distill:
             gt_rand_rois = prepared_gt_bboxes
             distill_ele_weight = None
+        elif self.use_only_clip_prop_for_distill:
+            gt_rand_rois = rand_bboxes
+            if rand_bbox_weights is not None:
+                distill_ele_weight = []
+                for rand_bbox_weight in rand_bbox_weights:
+                    # whether we have the per clip proposal bbox distillation weigth
+                    weight_per_img = rand_bbox_weight.unsqueeze(dim=-1).repeat([1,feat_dim])
+                    # normalize the weight
+                    # the factor should be: (num of gt bbox + num of random bbox) / (weight of all gt bbox + weight of the all random bboxes)
+                    # p.s. here the normalization is for the weight, since the l1loss will always reduce the loss to average value
+                    # therefore the size of the loss is irrelavant with the number of bbox
+                    # but the weight we add here will affect the loss size, l1 loss is a: weighted sum / number of ele
+                    normalize_factor = weight_per_img.shape[0] / torch.sum(weight_per_img[:, 0]).item()
+                    weight_per_img *= normalize_factor
+                    distill_ele_weight.append(weight_per_img)   
+            else:
+                distill_ele_weight = None
         else:
             # filter the padded random bboxes
             rand_bboxes = [rand_bbox[torch.abs(rand_bbox).sum(dim=1) > 0] 
@@ -444,7 +460,6 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         # list[tuple(gt_bbox_num, rand_bbox_num, proposal_number)]
         bboxes_num = [(gt_bbox.shape[0], random_bbox.shape[0], res.bboxes.shape[0]) for gt_bbox, random_bbox, res in zip(prepared_gt_bboxes, rand_bboxes, sampling_results)]
         bbox_results = self._bbox_forward(x, rois, distilled_feat, gt_rand_rois, bbox_targets[0], distill_ele_weight=distill_ele_weight, bboxes_num=bboxes_num, img_metas=img_metas)
-        
             
         loss_bbox = self.bbox_head.loss(bbox_results['cls_score'],
                                         bbox_results['bbox_pred'], rois,

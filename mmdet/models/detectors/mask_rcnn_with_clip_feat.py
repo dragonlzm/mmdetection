@@ -219,6 +219,8 @@ class MaskRCNNWithCLIPFeat(BaseDetector):
                             for gt_feat_per_img, rand_feat_per_img, bg_feat_per_img in zip(gt_feats, rand_feats, bg_feats)] 
         elif self.roi_head.use_only_gt_pro_for_distill:
             distilled_feat = gt_feats
+        elif self.roi_head.use_only_clip_prop_for_distill:
+            distilled_feat = rand_feats
         else:
             distilled_feat = [torch.cat([gt_feat_per_img, rand_feat_per_img], dim=0)
                             for gt_feat_per_img, rand_feat_per_img in zip(gt_feats, rand_feats)]
