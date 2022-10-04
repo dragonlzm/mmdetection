@@ -358,9 +358,14 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                                             out_features=self.clip_dim)
             
             if self.use_bg_vector:
+                if self.custom_cls_channels:
+                    cls_channels = self.loss_cls.get_cls_channels(self.num_classes)
+                    bg_out_features = cls_channels - self.num_classes
+                else:
+                    bg_out_features = 1
                 self.fc_cls_bg = build_linear_layer(self.cls_predictor_cfg,
                                                 in_features=self.clip_dim,
-                                                out_features=1,
+                                                out_features=bg_out_features,
                                                 bias=False)
             self.fc_cls = None
             
