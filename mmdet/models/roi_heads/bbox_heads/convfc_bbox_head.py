@@ -603,7 +603,13 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
             base_score = self.fc_cls_base(x_cls)
             cls_score = torch.cat([cls_score, base_score], dim=-1)
         
-        cls_score *= self._temperature
+        # for see-saw loss
+        if self.custom_cls_channels:
+            #scores = self.loss_cls.get_activation(cls_score)
+            cls_score[..., :self.num_classes] *= self._temperature
+            cls_score[..., self.num_classes+2:] *= self._temperature
+        else:
+            cls_score *= self._temperature
         
         if self.reg_with_cls_embedding:
             #print('original shape', x_reg.shape)
@@ -628,8 +634,13 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                 final_x_reg = torch.cat([x_reg, selected_embedding],dim=-1)
             # means it's testing
             else:
+                if self.custom_cls_channels:
+                    scores = self.loss_cls.get_activation(cls_score)
+                else:
+                    scores = F.softmax(cls_score[:, :self.num_classes+1], dim=-1) if cls_score is not None else None
+                
                 # for the filter_base_cate and see-saw loss
-                predicted_label = torch.argmax(cls_score[:, :self.num_classes+1], dim=-1)
+                predicted_label = torch.argmax(scores, dim=-1)
                 selected_embedding = prepared_class_embedding[predicted_label]
                 final_x_reg = torch.cat([x_reg, selected_embedding],dim=-1)
                 

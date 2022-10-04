@@ -401,20 +401,16 @@ class BBoxHead(BaseModule):
                 dimension 5 represent (tl_x, tl_y, br_x, br_y, score).
                 Second tensor is the labels with shape (num_boxes, ).
         """
-
-        # some loss (Seesaw loss..) may have custom activation
-        if self.custom_cls_channels:
-            scores = self.loss_cls.get_activation(cls_score)
-        else:
-            scores = F.softmax(
-                cls_score, dim=-1) if cls_score is not None else None
         # for testing
         if hasattr(self, 'filter_base_cate') and self.filter_base_cate != None:
-            bg_idx = self.num_classes
+            if self.custom_cls_channels:
+                bg_idx = self.num_classes + 1
+            else:
+                bg_idx = self.num_classes
             
             ## the filtering procedure
             # BS > BGS and NS 
-            max_idx = torch.max(scores, dim=1)[1]
+            max_idx = torch.max(cls_score, dim=1)[1]
             novel_bg_idx = (max_idx <= bg_idx)
             
             # BS > BGS
@@ -431,8 +427,14 @@ class BBoxHead(BaseModule):
             # base_max_value = torch.max(scores[:, bg_idx+1:], dim=1)[0]
             # novel_bg_idx = (base_max_value <= 0.7)                     
             
-            scores = scores[novel_bg_idx]
-            scores = scores[:, :bg_idx+1]
+            cls_score = cls_score[novel_bg_idx]
+            cls_score = cls_score[:, :bg_idx+1]
+        # some loss (Seesaw loss..) may have custom activation
+        if self.custom_cls_channels:
+            scores = self.loss_cls.get_activation(cls_score)
+        else:
+            scores = F.softmax(
+                cls_score, dim=-1) if cls_score is not None else None
         # bbox_pred would be None in some detector when with_reg is False,
         # e.g. Grid R-CNN.
         if bbox_pred is not None:
