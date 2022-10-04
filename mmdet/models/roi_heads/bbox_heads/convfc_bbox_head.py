@@ -622,14 +622,14 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
             empty_bg_vec = torch.zeros(1, self.load_value.shape[-1]).cuda()
             prepared_class_embedding = torch.cat([self.load_value, empty_bg_vec], dim=0)
             if proposal_assigned_gt_labels is not None:
+                #print('torch.max(proposal_assigned_gt_labels)', torch.max(proposal_assigned_gt_labels), 'prepared_class_embedding.shape', prepared_class_embedding.shape)
                 selected_embedding = prepared_class_embedding[proposal_assigned_gt_labels]
+                #selected_embedding = torch.rand([x_reg.shape[0], 512]).cuda()
                 final_x_reg = torch.cat([x_reg, selected_embedding],dim=-1)
             # means it's testing
             else:
-                if self.filter_base_cate != None:
-                    predicted_label = torch.argmax(cls_score[:, :self.num_classes+1], dim=-1)
-                else:
-                    predicted_label = torch.argmax(cls_score, dim=-1)
+                # for the filter_base_cate and see-saw loss
+                predicted_label = torch.argmax(cls_score[:, :self.num_classes+1], dim=-1)
                 selected_embedding = prepared_class_embedding[predicted_label]
                 final_x_reg = torch.cat([x_reg, selected_embedding],dim=-1)
                 
