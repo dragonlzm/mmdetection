@@ -401,7 +401,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                     # but the weight we add here will affect the loss size, l1 loss is a: weighted sum / number of ele
                     total_weight = torch.sum(weight_per_img[:, 0]).item()
                     if total_weight == 0:
-                        print('rand_bboxes', [ele.shape for ele in rand_bboxes], 'weight_per_img', weight_per_img)
+                        #print('rand_bboxes', [ele.shape for ele in rand_bboxes], 'weight_per_img', weight_per_img)
                         total_weight = 1
                     
                     normalize_factor = weight_per_img.shape[0] / total_weight
