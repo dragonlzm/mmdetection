@@ -192,9 +192,9 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         # obtain the feat for the distillation
         if distilled_feat != None and gt_rand_rois != None:
             if gt_and_rand_bbox_feat.shape[0] == 0:
-                gt_and_rand_bbox_feat = torch.cat([torch.zeros(1, gt_and_rand_bbox_feat.shape[-1]), gt_and_rand_bbox_feat], dim=0)
-                distilled_feat = [torch.zeros(1, distilled_feat.shape[-1])] + distilled_feat
-                distill_ele_weight = [torch.zeros(1)] + distill_ele_weight
+                gt_and_rand_bbox_feat = torch.cat([torch.zeros(1, gt_and_rand_bbox_feat.shape[-1]).cuda(), gt_and_rand_bbox_feat], dim=0)
+                distilled_feat = [torch.zeros(1, distilled_feat.shape[-1]).cuda()] + distilled_feat
+                distill_ele_weight = [torch.zeros(1).cuda()] + distill_ele_weight
                 
             _, _, pred_feats = self.bbox_head(gt_and_rand_bbox_feat)
             # normalize the distilled feat
