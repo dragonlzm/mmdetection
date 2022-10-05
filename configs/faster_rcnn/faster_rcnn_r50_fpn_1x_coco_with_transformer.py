@@ -1,7 +1,11 @@
 _base_ = './faster_rcnn_r50_fpn_1x_coco.py'
 
 # set for simulating bs 16
-optimizer = dict(lr=0.02)
+#optimizer = dict(lr=0.02)
+optimizer = dict(_delete_=True,
+    type='HybridOptimizer', lr=0.02, momentum=0.9, weight_decay=0.0001,
+    constructor='HybridOptimizerConstructor', tranformer_multiplier=0.005)
+
 # regression with embedding, base filtered proposal, per distillation bbox weight
 # become default setting in here, defualt using 2gpu
 optimizer_config = dict(_delete_=True, 
