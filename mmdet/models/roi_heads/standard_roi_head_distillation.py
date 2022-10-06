@@ -206,8 +206,8 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                 print('before the combine:', gt_and_rand_bbox_feat.shape, len(distilled_feat), distilled_feat[0].shape, len(distill_ele_weight), distill_ele_weight[0].shape,
                   torch.cat(distilled_feat, dim=0).shape, torch.cat(distill_ele_weight, dim=0).shape)
                 gt_and_rand_bbox_feat = torch.cat([torch.zeros([1] + list(gt_and_rand_bbox_feat.shape[1:])).cuda(), gt_and_rand_bbox_feat], dim=0)
-                distilled_feat = [torch.zeros([1] + list(distilled_feat.shape[1:])).cuda()] + distilled_feat
-                distill_ele_weight = [torch.zeros([1] + list(distill_ele_weight.shape[1:])).cuda()] + distill_ele_weight
+                distilled_feat =  [torch.zeros([1] + list(distilled_feat[0].shape[1:])).cuda()] + distilled_feat
+                distill_ele_weight =  [torch.zeros([1] + list(distill_ele_weight[0].shape[1:])).cuda()] + distill_ele_weight
                 
             _, _, pred_feats = self.bbox_head(gt_and_rand_bbox_feat)
             # normalize the distilled feat
