@@ -275,9 +275,11 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                 
             #distill_loss_value *= (self.bbox_head.clip_dim * 0.5)
             if self.gt_only_damp_factor:
-                self.distill_loss_factor = (self.distill_loss_factor * cat_distilled_feat.shape[0]) / (400 + cat_distilled_feat.shape[0])
-                print('cat_distilled_feat.shape', cat_distilled_feat.shape, 'self.distill_loss_factor', self.distill_loss_factor)
-            distill_loss_value *= (self.bbox_head.clip_dim * self.distill_loss_factor)
+                temp_distill_loss_factor = (self.distill_loss_factor * cat_distilled_feat.shape[0]) / (400 + cat_distilled_feat.shape[0])
+                #print('cat_distilled_feat.shape', cat_distilled_feat.shape, 'temp_distill_loss_factor', temp_distill_loss_factor)
+                distill_loss_value *= (self.bbox_head.clip_dim * temp_distill_loss_factor)
+            else:
+                distill_loss_value *= (self.bbox_head.clip_dim * self.distill_loss_factor)
             
             '''
             # test the feat is matched or not
