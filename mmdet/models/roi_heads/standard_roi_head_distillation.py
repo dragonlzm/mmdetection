@@ -191,10 +191,23 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         
         # obtain the feat for the distillation
         if distilled_feat != None and gt_rand_rois != None:
+            ### just for testing
+            # before combine
+            # print('before the combine:', gt_and_rand_bbox_feat.shape, len(distilled_feat), distilled_feat[0].shape, len(distill_ele_weight), distill_ele_weight[0].shape,
+            #       torch.cat(distilled_feat, dim=0).shape, torch.cat(distill_ele_weight, dim=0).shape)
+            # test_gt_and_rand_bbox_feat = torch.cat([torch.zeros([1] + list(gt_and_rand_bbox_feat.shape[1:])).cuda(), gt_and_rand_bbox_feat], dim=0)
+            # test_distilled_feat = [torch.zeros([1] + list(distilled_feat[0].shape[1:])).cuda()] + distilled_feat
+            # test_distill_ele_weight = [torch.zeros([1] + list(distill_ele_weight[0].shape[1:])).cuda()] + distill_ele_weight
+            # test_distilled_feat = torch.cat(test_distilled_feat, dim=0)
+            # test_distill_ele_weight = torch.cat(test_distill_ele_weight, dim=0)
+            # print('after the combine:', test_gt_and_rand_bbox_feat.shape, test_distilled_feat.shape, test_distill_ele_weight.shape)
+            
             if gt_and_rand_bbox_feat.shape[0] == 0:
-                gt_and_rand_bbox_feat = torch.cat([torch.zeros(1, gt_and_rand_bbox_feat.shape[-1]).cuda(), gt_and_rand_bbox_feat], dim=0)
-                distilled_feat = [torch.zeros(1, distilled_feat.shape[-1]).cuda()] + distilled_feat
-                distill_ele_weight = [torch.zeros(1).cuda()] + distill_ele_weight
+                print('before the combine:', gt_and_rand_bbox_feat.shape, len(distilled_feat), distilled_feat[0].shape, len(distill_ele_weight), distill_ele_weight[0].shape,
+                  torch.cat(distilled_feat, dim=0).shape, torch.cat(distill_ele_weight, dim=0).shape)
+                gt_and_rand_bbox_feat = torch.cat([torch.zeros([1] + list(gt_and_rand_bbox_feat.shape[1:])).cuda(), gt_and_rand_bbox_feat], dim=0)
+                distilled_feat = [torch.zeros([1] + list(distilled_feat.shape[1:])).cuda()] + distilled_feat
+                distill_ele_weight = [torch.zeros([1] + list(distill_ele_weight.shape[1:])).cuda()] + distill_ele_weight
                 
             _, _, pred_feats = self.bbox_head(gt_and_rand_bbox_feat)
             # normalize the distilled feat

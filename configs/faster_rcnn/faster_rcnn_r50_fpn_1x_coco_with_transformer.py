@@ -18,6 +18,12 @@ model = dict(
     backbone=dict(
         init_cfg=dict(type='Pretrained', 
             checkpoint='data/pretrain/resnet50-0676ba61.pth')),
+    rpn_head=dict(
+        type='TSPRPNHead',
+        in_channels=256,
+        feat_channels=256,
+        num_convs=2,
+        loss_bbox=dict(type='L1Loss', loss_weight=2.0)),
     roi_head=dict(
         type='StandardRoIHeadWithTransformer',
         bbox_head=dict(
