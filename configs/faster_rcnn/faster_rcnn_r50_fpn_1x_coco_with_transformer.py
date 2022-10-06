@@ -16,8 +16,12 @@ optimizer_config = dict(_delete_=True,
 # model settings
 model = dict(
     backbone=dict(
-        init_cfg=dict(type='Pretrained', 
-            checkpoint='data/pretrain/resnet50-0676ba61.pth')),
+        norm_cfg=dict(requires_grad=False),
+        norm_eval=True,
+        style='caffe',
+        init_cfg=dict(
+            type='Pretrained',
+            checkpoint='open-mmlab://detectron2/resnet50_caffe')),
     neck=dict(
         type='FPN',
         in_channels=[256, 512, 1024, 2048],
