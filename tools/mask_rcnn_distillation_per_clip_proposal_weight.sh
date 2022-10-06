@@ -233,13 +233,23 @@ ADDITIONAL_CONFIG = ""
 # --resume-from=${WORK_DIR}/epoch_3.pth
 
 #### gt only + damp factor
-WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_gt_only_with_damped_factors"
-bash tools/new_dist_train.sh configs/mask_rcnn_distill/mask_rcnn_distillation_per_base_filtered_clip_proposal_weight.py 2 \
-${WORK_DIR} ./data \
---cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
-model.train_cfg.rcnn.use_only_gt_pro_for_distill=True model.train_cfg.rcnn.gt_only_damp_factor=True \
-#--resume-from=${WORK_DIR}/latest.pth
+# WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_gt_only_with_damped_factors"
+# bash tools/new_dist_train.sh configs/mask_rcnn_distill/mask_rcnn_distillation_per_base_filtered_clip_proposal_weight.py 2 \
+# ${WORK_DIR} ./data \
+# --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
+# model.train_cfg.rcnn.use_only_gt_pro_for_distill=True model.train_cfg.rcnn.gt_only_damp_factor=True \
+# #--resume-from=${WORK_DIR}/latest.pth
 
+
+#### base_filtered per bbox weight with new rpn
+WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_per_base_filtered_clip_proposal_weight_new_rpn"
+PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+python -m torch.distributed.launch --nproc_per_node=2 \
+    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+    configs/mask_rcnn_distill/mask_rcnn_distillation_per_base_filtered_clip_proposal_weight_new_rpn.py --launcher pytorch \
+    --work-dir=${WORK_DIR} \
+    --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
+    #--resume-from=${WORK_DIR}/latest.pth
 
 
 #### perturbation exp 3x
