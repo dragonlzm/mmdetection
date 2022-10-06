@@ -55,6 +55,7 @@ class BaseRoIHead(BaseModule, metaclass=ABCMeta):
         self.crop_loca_modi_ratio = self.train_cfg.get('crop_loca_modi_ratio', 0.5) if self.train_cfg is not None else 0.5
         self.crop_size_modi_ratio = self.train_cfg.get('crop_size_modi_ratio', 1.5) if self.train_cfg is not None else 1.5
         self.pertrub_ratio = self.train_cfg.get('pertrub_ratio', 0.5) if self.train_cfg is not None else 0.5
+        self.gt_only_damp_factor = self.train_cfg.get('gt_only_damp_factor', False) if self.gt_only_damp_factor is not None else False
     @property
     def with_bbox(self):
         """bool: whether the RoI head contains a `bbox_head`"""

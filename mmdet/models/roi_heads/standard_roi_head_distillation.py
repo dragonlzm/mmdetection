@@ -274,6 +274,8 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                 distill_loss_value = distill_loss_value + (contrastive_loss_for_gt_bbox + contrastive_loss_for_clip_proposal) * self.contrastive_weight
                 
             #distill_loss_value *= (self.bbox_head.clip_dim * 0.5)
+            if self.gt_only_damp_factor:
+                self.distill_loss_factor = self.distill_loss_factor * cat_distilled_feat.shape[0] / (400 + cat_distilled_feat.shape[0])
             distill_loss_value *= (self.bbox_head.clip_dim * self.distill_loss_factor)
             
             '''
