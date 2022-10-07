@@ -4,6 +4,8 @@ import warnings
 import mmcv
 import torch
 from mmcv.image import tensor2imgs
+import json
+import os
 
 from mmdet.core import bbox_mapping
 from ..builder import DETECTORS, build_backbone, build_head, build_neck
@@ -35,6 +37,7 @@ class RPN(BaseDetector):
         self.rpn_head = build_head(rpn_head)
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
+        self.bbox_save_path_root = self.test_cfg.get('bbox_save_path_root', False) if self.test_cfg is not None else False
 
     def extract_feat(self, img):
         """Extract features.
@@ -109,6 +112,25 @@ class RPN(BaseDetector):
         if rescale:
             for proposals, meta in zip(proposal_list, img_metas):
                 proposals[:, :4] /= proposals.new_tensor(meta['scale_factor'])
+        
+        # save the proposal per image
+        if self.bbox_save_path_root != None:
+            if not os.path.exists(self.bbox_save_path_root):
+                os.makedirs(self.bbox_save_path_root)
+            clear_file_name = img_metas[0]['ori_filename']
+            # handle Lvis situation
+            if '/' in clear_file_name:
+                clear_file_name = clear_file_name.split('/')[-1]
+                
+            file_name = os.path.join(self.bbox_save_path_root, '.'.join(clear_file_name.split('.')[:-1]) + '.json')
+            if os.path.exists(file_name):
+                return [proposal.cpu().numpy() for proposal in proposal_list]
+            
+            file = open(file_name, 'w')
+            result_json = {'image_id':int(clear_file_name.split('.')[0].strip('0')), 'score':proposals.cpu().tolist()}
+            file.write(json.dumps(result_json))
+            file.close()
+        
         if torch.onnx.is_in_onnx_export():
             return proposal_list
 
