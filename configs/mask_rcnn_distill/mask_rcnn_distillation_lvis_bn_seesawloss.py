@@ -8,5 +8,5 @@ model = dict(
                 type='SeesawLoss',
                 p=0.8,
                 q=2.0,
-                num_classes=866,
+                num_classes=1203,
                 loss_weight=1.0))))
