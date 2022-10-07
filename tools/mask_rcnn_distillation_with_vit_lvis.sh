@@ -149,35 +149,34 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #     #--resume-from=${WORK_DIR}/latest.pth
 
 ### v2 36e range scale, 3x reg, 0.5distillw 
-# ADDITIONAL_CONFIG="model.backbone.merge_step=['merge3'] model.rpn_head.loss_bbox.loss_weight=3.0 model.roi_head.bbox_head.loss_bbox.loss_weight=3.0"
-# WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_with_vit_lvis_base_range_scale_36e_distw05_regw3"
-# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
-# python -m torch.distributed.launch --nproc_per_node=2 \
-#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
-#     configs/mask_rcnn_distill/mask_rcnn_distillation_with_vit_lvis_base_range_scale_36e.py --launcher pytorch \
-#     --work-dir=${WORK_DIR} \
-#     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=0.5 optimizer_config.grad_clip.max_norm=10 \
-#     ${ADDITIONAL_CONFIG} \
-#     --resume-from=/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_with_vit_lvis_base_range_scale_distw05_regw3/epoch_16.pth
-#     #--resume-from=${WORK_DIR}/latest.pth
+ADDITIONAL_CONFIG="model.backbone.merge_step=['merge3'] model.rpn_head.loss_bbox.loss_weight=3.0 model.roi_head.bbox_head.loss_bbox.loss_weight=3.0"
+WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_with_vit_lvis_base_range_scale_36e_distw05_regw3"
+PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+python -m torch.distributed.launch --nproc_per_node=2 \
+    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+    configs/mask_rcnn_distill/mask_rcnn_distillation_with_vit_lvis_base_range_scale_36e.py --launcher pytorch \
+    --work-dir=${WORK_DIR} \
+    --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=0.5 optimizer_config.grad_clip.max_norm=10 \
+    ${ADDITIONAL_CONFIG} \
+    --resume-from=${WORK_DIR}/latest.pth
 
 ### 3xregw, 0.5distw, fix set scale
-ADDITIONAL_CONFIG="model.backbone.merge_step=['merge3'] model.rpn_head.loss_bbox.loss_weight=3.0 model.roi_head.bbox_head.loss_bbox.loss_weight=3.0"
-WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_with_vit_lvis_base_36e_3xregw_05xdistw"
-bash tools/new_dist_train.sh configs/mask_rcnn_distill/mask_rcnn_distillation_with_vit_lvis_base_36e.py 2 \
-${WORK_DIR} ./data \
---cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=0.5 optimizer_config.grad_clip.max_norm=10 \
- ${ADDITIONAL_CONFIG} \
-#--resume-from=${WORK_DIR}/latest.pth
+# ADDITIONAL_CONFIG="model.backbone.merge_step=['merge3'] model.rpn_head.loss_bbox.loss_weight=3.0 model.roi_head.bbox_head.loss_bbox.loss_weight=3.0"
+# WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_with_vit_lvis_base_36e_3xregw_05xdistw"
+# bash tools/new_dist_train.sh configs/mask_rcnn_distill/mask_rcnn_distillation_with_vit_lvis_base_36e.py 2 \
+# ${WORK_DIR} ./data \
+# --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=0.5 optimizer_config.grad_clip.max_norm=10 \
+#  ${ADDITIONAL_CONFIG} \
+# #--resume-from=${WORK_DIR}/latest.pth
 
 ### 3xregw, 0.5distw, fix set scale, open ln
-ADDITIONAL_CONFIG="model.backbone.merge_step=['merge3'] model.rpn_head.loss_bbox.loss_weight=3.0 model.roi_head.bbox_head.loss_bbox.loss_weight=3.0 model.vit_backbone_cfg.open_ln=True"
-WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_with_vit_lvis_base_36e_3xregw_05xdistw_lnopen"
-bash tools/new_dist_train.sh configs/mask_rcnn_distill/mask_rcnn_distillation_with_vit_lvis_base_36e.py 2 \
-${WORK_DIR} ./data \
---cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=0.5 optimizer_config.grad_clip.max_norm=10 \
- ${ADDITIONAL_CONFIG} \
-#--resume-from=${WORK_DIR}/latest.pth
+# ADDITIONAL_CONFIG="model.backbone.merge_step=['merge3'] model.rpn_head.loss_bbox.loss_weight=3.0 model.roi_head.bbox_head.loss_bbox.loss_weight=3.0 model.vit_backbone_cfg.open_ln=True"
+# WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_with_vit_lvis_base_36e_3xregw_05xdistw_lnopen"
+# bash tools/new_dist_train.sh configs/mask_rcnn_distill/mask_rcnn_distillation_with_vit_lvis_base_36e.py 2 \
+# ${WORK_DIR} ./data \
+# --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=0.5 optimizer_config.grad_clip.max_norm=10 \
+#  ${ADDITIONAL_CONFIG} \
+# #--resume-from=${WORK_DIR}/latest.pth
 
 
 
