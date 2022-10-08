@@ -98,7 +98,7 @@ class ClsFinetuner(BaseDetector):
         self.extra_patches_num = self.test_cfg.get('extra_patches_num', 3) if self.test_cfg is not None else 3
         # filter the clip proposal using the categories
         self.filter_clip_proposal_base_on_cates = self.test_cfg.get('filter_clip_proposal_base_on_cates', False) if self.test_cfg is not None else False
-        
+
         # for the following self.from_cate_name_to_gt_idx, self.from_gt_idx_to_cate_idx, self.base_cate_name 
         # if base_cate_name == None, then now is for coco dataset, otherwise is for LVIS dataset
         if base_cate_name == None:
@@ -140,7 +140,8 @@ class ClsFinetuner(BaseDetector):
         self.base_cate_gt_idx = [self.from_cate_name_to_gt_idx[name] for name in self.base_cate_name]
         # save the predicted cate and confidence
         self.save_cates_and_conf = self.test_cfg.get('save_cates_and_conf', False) if self.test_cfg is not None else False
-
+        # generate the feature
+        self.generate_gt_feat = self.test_cfg.get('generate_gt_feat', False) if self.test_cfg is not None else False
 
     def read_use_base_novel_clip(self, img_metas):
         file_name = img_metas[0]['ori_filename']
@@ -675,7 +676,7 @@ class ClsFinetuner(BaseDetector):
             file.close()
             
             # generate the gt feat
-            if len(gt_bboxes) != 0:
+            if self.generate_gt_feat and len(gt_bboxes) != 0:
                 x = self.extract_feat(img, gt_bboxes, cropped_patches, img_metas=img_metas)
                 # save the rand_bbox and the feat, img_metas
                 file = open(gt_file_path, 'w')
