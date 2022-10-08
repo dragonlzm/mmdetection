@@ -222,14 +222,14 @@ class ClsFinetuner(BaseDetector):
             remained_bbox = pregenerated_bbox
         
         # random select
-        print('before random select:', remained_bbox.shape)
+        #print('before random select:', remained_bbox.shape)
         if self.rand_select_subset and remained_bbox.shape[0] > num_of_rand_bboxes:
             random_choice = np.random.choice(remained_bbox.shape[0], num_of_rand_bboxes, replace=False)
             random_choice = torch.from_numpy(random_choice).cuda()
             remained_bbox = remained_bbox[random_choice]
         else:
             remained_bbox = remained_bbox[:num_of_rand_bboxes]
-        print('after random select:', remained_bbox.shape)
+        #print('after random select:', remained_bbox.shape)
         # return the bbox in xyxy in torch tensor 
         return remained_bbox
 
@@ -655,8 +655,7 @@ class ClsFinetuner(BaseDetector):
                             all_novel_idx = torch.logical_and(all_novel_idx, temp_idx)
                     
                     # filter the bboxes and feature(assuming the batch size is 1)
-                    #print('now_rand_bbox', now_rand_bbox.shape, now_rand_bbox[:5])
-                    print('before filter:', now_rand_bbox.shape)
+                    #print('before filter:', now_rand_bbox.shape)
                     x = [x[0][all_novel_idx]]
                     now_rand_bbox = now_rand_bbox[all_novel_idx]
                     
@@ -667,7 +666,7 @@ class ClsFinetuner(BaseDetector):
                 # now_rand_bbox = now_rand_bbox[confi_indices]
                 
                 if self.filter_clip_proposal_base_on_cates:
-                    print('after filter:', now_rand_bbox.shape)
+                    #print('after filter:', now_rand_bbox.shape)
                     # make the number of remaining bbox become self.num_of_rand_bboxes
                     x = [x[0][:300]]
                     now_rand_bbox = now_rand_bbox[:300]
