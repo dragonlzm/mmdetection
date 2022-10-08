@@ -142,6 +142,7 @@ class ClsFinetuner(BaseDetector):
         self.save_cates_and_conf = self.test_cfg.get('save_cates_and_conf', False) if self.test_cfg is not None else False
         # generate the feature
         self.generate_gt_feat = self.test_cfg.get('generate_gt_feat', False) if self.test_cfg is not None else False
+        self.rand_select_subset = self.test_cfg.get('rand_select_subset', False) if self.test_cfg is not None else False
 
     def read_use_base_novel_clip(self, img_metas):
         file_name = img_metas[0]['ori_filename']
@@ -220,9 +221,15 @@ class ClsFinetuner(BaseDetector):
         else:
             remained_bbox = pregenerated_bbox
         
-        # select the top 200 bboxes
-        remained_bbox = remained_bbox[:num_of_rand_bboxes]
-        
+        # random select
+        print('before random select:', remained_bbox.shape)
+        if self.rand_select_subset and remained_bbox.shape[0] > num_of_rand_bboxes:
+            random_choice = np.random.choice(remained_bbox.shape[0], num_of_rand_bboxes, replace=False)
+            random_choice = torch.from_numpy(random_choice).cuda()
+            remained_bbox = remained_bbox[random_choice]
+        else:
+            remained_bbox = remained_bbox[:num_of_rand_bboxes]
+        print('after random select:', remained_bbox.shape)
         # return the bbox in xyxy in torch tensor 
         return remained_bbox
 
@@ -603,6 +610,7 @@ class ClsFinetuner(BaseDetector):
             else:
                 # generate the random feat
                 now_rand_bbox = self.generate_rand_bboxes(img_metas, self.num_of_rand_bboxes)
+            
             x = self.extract_feat(img, [now_rand_bbox], cropped_patches, img_metas=img_metas)
             
             # filter the clip proposal base on the categories
@@ -644,12 +652,14 @@ class ClsFinetuner(BaseDetector):
                             all_novel_idx = (pred_idx != base_cate_idx)
                         else:
                             temp_idx = (pred_idx != base_cate_idx)
-                            torch.logical_and(all_novel_idx, temp_idx)
+                            all_novel_idx = torch.logical_and(all_novel_idx, temp_idx)
                     
                     # filter the bboxes and feature(assuming the batch size is 1)
                     #print('now_rand_bbox', now_rand_bbox.shape, now_rand_bbox[:5])
+                    print('before filter:', now_rand_bbox.shape)
                     x = [x[0][all_novel_idx]]
                     now_rand_bbox = now_rand_bbox[all_novel_idx]
+                    
                     
                 #sort the feat base on the confidence score
                 # _, confi_indices = torch.sort(now_rand_bbox[:, -2], descending=True)
@@ -657,6 +667,7 @@ class ClsFinetuner(BaseDetector):
                 # now_rand_bbox = now_rand_bbox[confi_indices]
                 
                 if self.filter_clip_proposal_base_on_cates:
+                    print('after filter:', now_rand_bbox.shape)
                     # make the number of remaining bbox become self.num_of_rand_bboxes
                     x = [x[0][:300]]
                     now_rand_bbox = now_rand_bbox[:300]
