@@ -553,12 +553,6 @@ class TransformerEmbeddingBBoxHead(BBoxHead):
                 x = self.relu(fc(x))
         x = x.unsqueeze(dim=0)
         
-        # batch_size, num_proposal, n_channels, nh, nw = x.shape
-        # x = x.transpose(0, 1).contiguous()
-        # x = x.flatten(2)
-        # if self.input_proj is not None:
-        #     x = self.input_proj(x)
-        
         # normalize the proposal
         img_h, img_w, _ = img_meta['img_shape']
         # remove the first ele in each bbox(the idx for image)

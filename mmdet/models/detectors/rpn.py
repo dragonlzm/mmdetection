@@ -114,7 +114,7 @@ class RPN(BaseDetector):
                 proposals[:, :4] /= proposals.new_tensor(meta['scale_factor'])
         
         # save the proposal per image
-        if self.bbox_save_path_root != None:
+        if self.bbox_save_path_root:
             if not os.path.exists(self.bbox_save_path_root):
                 os.makedirs(self.bbox_save_path_root)
             clear_file_name = img_metas[0]['ori_filename']
