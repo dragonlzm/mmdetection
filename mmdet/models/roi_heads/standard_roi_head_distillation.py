@@ -33,6 +33,8 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         self.distillation_loss = build_loss(self.distillation_loss_config)
         self.distill_loss_factor = self.train_cfg.get('distill_loss_factor', 1) if self.train_cfg is not None else 1
         self.use_contrast_distill = self.train_cfg.get('use_contrast_distill', False) if self.train_cfg is not None else False
+        self.rand_distill_bbox_factor = self.train_cfg.get('rand_distill_bbox_factor', 1.0) if self.train_cfg is not None else 1.0
+        
         self.contrastive_weight = self.train_cfg.get('contrastive_weight', 0.5) if self.train_cfg is not None else 0.5
         self.gt_bboxes_distill_weight = self.train_cfg.get('gt_bboxes_distill_weight', None) if self.train_cfg is not None else None
         # config for transformer head
@@ -472,6 +474,8 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                             rand_bbox_weight = rand_bbox_weight.unsqueeze(dim=-1).repeat([1,feat_dim])
                         else:
                             rand_bbox_weight = torch.ones(random_bbox.shape[0], feat_dim).cuda()
+                        
+                        rand_bbox_weight *= self.rand_distill_bbox_factor
                         
                         # otherwise the weight of the random_bbox will be 1
                         weight_per_img = torch.cat([torch.full((original_gt_num, feat_dim), gt_bbox_distill_weight).cuda(), rand_bbox_weight], dim=0)
