@@ -19,16 +19,16 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #ln -sf /project/nevatia_174/zhuoming/detection ./data
 
 # base_filtered gt weight = 1, 12epoch, use range scale, 0.5 distillation weight, 2x regression
-ADDITIONAL_CONFIG="model.rpn_head.loss_bbox.loss_weight=2.0 model.roi_head.bbox_head.loss_bbox.loss_weight=2.0"
-WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_lvis_base_per_rpn_proposal_weight_12e"
-PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
-python -m torch.distributed.launch --nproc_per_node=2 \
-    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
-    configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_base_per_rpn_proposal_weight_12e.py --launcher pytorch \
-    --work-dir=${WORK_DIR} \
-    --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=0.5 optimizer_config.grad_clip.max_norm=10 \
-    ${ADDITIONAL_CONFIG} \
-    #--resume-from=${WORK_DIR}/latest.pth
+# ADDITIONAL_CONFIG="model.rpn_head.loss_bbox.loss_weight=2.0 model.roi_head.bbox_head.loss_bbox.loss_weight=2.0"
+# WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_lvis_base_per_rpn_proposal_weight_12e"
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#     configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_base_per_rpn_proposal_weight_12e.py --launcher pytorch \
+#     --work-dir=${WORK_DIR} \
+#     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=0.5 optimizer_config.grad_clip.max_norm=10 \
+#     ${ADDITIONAL_CONFIG} \
+#     #--resume-from=${WORK_DIR}/latest.pth
 
 # base_filtered gt weight = 1, 12epoch, use range scale, 0.5 distillation weight, 2x regression
 # ADDITIONAL_CONFIG="model.rpn_head.loss_bbox.loss_weight=2.0 model.roi_head.bbox_head.loss_bbox.loss_weight=2.0"
@@ -41,6 +41,20 @@ python -m torch.distributed.launch --nproc_per_node=2 \
 #     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=0.5 optimizer_config.grad_clip.max_norm=10 \
 #     ${ADDITIONAL_CONFIG} \
 #     #--resume-from=${WORK_DIR}/latest.pth
+
+# base_filtered gt weight = 1, 12epoch, use range scale, 0.5 distillation weight, 2x regression
+ADDITIONAL_CONFIG="model.rpn_head.loss_bbox.loss_weight=2.0 model.roi_head.bbox_head.loss_bbox.loss_weight=2.0"
+WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_lvis_base_per_rpn_proposal_weight_500_12e_rebalanced"
+PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+python -m torch.distributed.launch --nproc_per_node=2 \
+    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+    configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_base_per_rpn_proposal_weight_500_12e.py --launcher pytorch \
+    --work-dir=${WORK_DIR} \
+    --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=0.5 optimizer_config.grad_clip.max_norm=10 \
+    ${ADDITIONAL_CONFIG} \
+    model.train_cfg.rcnn.rand_distill_bbox_factor=0.4 \
+    #--resume-from=${WORK_DIR}/latest.pth
+
 
 # test the model
 #CHECKPOINT_NAME="epoch_12.pth"
