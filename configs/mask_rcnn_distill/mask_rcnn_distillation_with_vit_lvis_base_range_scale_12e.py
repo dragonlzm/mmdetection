@@ -1,4 +1,4 @@
-_base_ = './mask_rcnn_distillation_with_vit_lvis_base_36e.py'
+_base_ = './mask_rcnn_distillation_with_vit_lvis_base_12e.py'
 
 # change the data pipeline
 img_norm_cfg = dict(

@@ -40,7 +40,7 @@ ${ADDITIONAL_CONFIG} \
 
 
 CHECKPOINT_NAME="latest.pth"
-bash tools/dist_test.sh configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_bn.py \
+bash tools/dist_test.sh configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_bn_seesawloss.py \
 ${WORK_DIR}/${CHECKPOINT_NAME} 2 --eval bbox segm \
 --eval-options jsonfile_prefix=${WORK_DIR}/base_and_novel
 
