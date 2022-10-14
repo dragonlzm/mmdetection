@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from json import load
+from typing import final
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
@@ -285,6 +286,7 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                  use_bg_vector=True,
                  filter_base_cate=None,
                  use_svd_conversion=None,
+                 mapping_after_dist=None,
                  conv_cfg=None,
                  norm_cfg=None,
                  init_cfg=None,
@@ -317,6 +319,7 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         self.use_bg_vector = use_bg_vector
         self.reg_with_mlp = reg_with_mlp
         self.use_svd_conversion = use_svd_conversion
+        self.mapping_after_dist = mapping_after_dist
 
         # add shared convs and fcs
         self.shared_convs, self.shared_fcs, last_layer_dim = \
@@ -436,15 +439,14 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                     in_features=final_reg_in_dim,
                     out_features=final_reg_out_dim)
             
-        # for _ in range(num_fcs - 1):
-        #     layers.append(
-        #         Sequential(
-        #             Linear(in_channels, feedforward_channels), self.activate,
-        #             nn.Dropout(ffn_drop)))
-        #     in_channels = feedforward_channels
-        # layers.append(Linear(feedforward_channels, embed_dims))
-        # layers.append(nn.Dropout(ffn_drop))
-        # self.layers = Sequential(*layers)
+        if self.mapping_after_dist == 'linear':
+            self.mapping_after_dist = build_linear_layer(self.cls_predictor_cfg,
+                                            in_features=self.clip_dim,
+                                            out_features=self.clip_dim)
+        elif self.mapping_after_dist == 'mlp':
+            self.mapping_after_dist = MLP(input_dim=self.clip_dim, hidden_dim=2*self.clip_dim, output_dim=self.clip_dim, num_layers=2)
+        else:
+            self.mapping_after_dist = None
 
         if init_cfg is None:
             self.init_cfg += [
@@ -454,7 +456,8 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                     override=[
                         dict(name='shared_fcs'),
                         dict(name='cls_fcs'),
-                        dict(name='reg_fcs')
+                        dict(name='reg_fcs'),
+                        dict(name='map_to_clip')
                     ])
             ]
 
@@ -589,18 +592,25 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         # normalize the image feat
         x_cls = x_cls / x_cls.norm(dim=-1, keepdim=True)
         
+        # add addtional mapping to seperate the vector for distillation 
+        # and vector for the regression
+        if self.mapping_after_dist != None:
+            final_x_cls = self.mapping_after_dist(x_cls)
+        else:
+            final_x_cls = x_cls
+        
         # cosine similarity as logits
         #logit_scale = self.logit_scale.exp()
-        fg_score = self.fc_cls_fg(x_cls)
+        fg_score = self.fc_cls_fg(final_x_cls)
         if self.use_bg_vector:
-            bg_score = self.fc_cls_bg(x_cls)
+            bg_score = self.fc_cls_bg(final_x_cls)
             cls_score = torch.cat([fg_score, bg_score], dim=-1)
         else:
             cls_score = fg_score
         
         # for testing
         if self.filter_base_cate != None:
-            base_score = self.fc_cls_base(x_cls)
+            base_score = self.fc_cls_base(final_x_cls)
             cls_score = torch.cat([cls_score, base_score], dim=-1)
         
         # for see-saw loss
