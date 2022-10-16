@@ -27,7 +27,7 @@ python -m torch.distributed.launch --nproc_per_node=2 \
     configs/mask_rcnn_distill/mask_rcnn_distillation_per_base_filtered_clip_proposal_weight.py --launcher pytorch \
     --work-dir=${WORK_DIR} \
     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
-    ${ADDITIONAL_CONFIG}
+    ${ADDITIONAL_CONFIG} \
     #--resume-from=${WORK_DIR}/latest.pth
 
 # base_filtered gt weight = 1, map after distill, mlp
