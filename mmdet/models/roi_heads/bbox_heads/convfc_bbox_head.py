@@ -287,6 +287,7 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                  filter_base_cate=None,
                  use_svd_conversion=None,
                  mapping_after_dist=None,
+                 normalize_bg_vec=False,
                  conv_cfg=None,
                  norm_cfg=None,
                  init_cfg=None,
@@ -320,6 +321,7 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         self.reg_with_mlp = reg_with_mlp
         self.use_svd_conversion = use_svd_conversion
         self.mapping_after_dist = mapping_after_dist
+        self.normalize_bg_vec = normalize_bg_vec
 
         # add shared convs and fcs
         self.shared_convs, self.shared_fcs, last_layer_dim = \
@@ -359,19 +361,23 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
             self.map_to_clip = build_linear_layer(self.cls_predictor_cfg,
                                             in_features=self.fc_out_channels,
                                             out_features=self.clip_dim)
-            
             if self.use_bg_vector:
                 if self.custom_cls_channels:
                     cls_channels = self.loss_cls.get_cls_channels(self.num_classes)
                     bg_out_features = cls_channels - self.num_classes
                 else:
                     bg_out_features = 1
-                self.fc_cls_bg = build_linear_layer(self.cls_predictor_cfg,
+                
+                if self.normalize_bg_vec:
+                    bg_predictor_cfg = dict(type='NormedLinear', tempearture=1)
+                else:
+                    bg_predictor_cfg = self.cls_predictor_cfg    
+                    
+                self.fc_cls_bg = build_linear_layer(bg_predictor_cfg,
                                                 in_features=self.clip_dim,
                                                 out_features=bg_out_features,
                                                 bias=False)
             self.fc_cls = None
-            
             self.fc_cls_fg = build_linear_layer(self.cls_predictor_cfg,
                                             in_features=self.clip_dim,
                                             out_features=self.num_classes,
