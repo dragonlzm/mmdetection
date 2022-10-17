@@ -201,7 +201,7 @@ class BBoxTestMixin:
                     bbox_pred[i],
                     img_shapes[i],
                     scale_factors[i],
-                    proposal_obj_score[i]
+                    proposal_obj_score[i],
                     rescale=rescale,
                     cfg=rcnn_test_cfg,
                     img_metas=img_metas,
