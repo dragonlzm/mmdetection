@@ -438,7 +438,13 @@ class BBoxHead(BaseModule):
                 cls_score, dim=-1) if cls_score is not None else None
         # merge the rpn objectness score with the confidence score
         if proposal_obj_score != None:
-            print(scores.shape, proposal_obj_score)
+            #print(scores.shape, proposal_obj_score.shape)
+            proposal_obj_score = proposal_obj_score.unsqueeze(dim=-1).repeat(1, self.num_classes)
+            #print('before multiple', scores)
+            scores[:, :self.num_classes] *= proposal_obj_score
+            #print('before sqrt', scores)
+            scores[:, :self.num_classes] = torch.pow(scores[:, :self.num_classes], 0.5)
+            #print('after sqrt', scores)
             
         # bbox_pred would be None in some detector when with_reg is False,
         # e.g. Grid R-CNN.
