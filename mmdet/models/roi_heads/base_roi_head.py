@@ -19,10 +19,12 @@ class BaseRoIHead(BaseModule, metaclass=ABCMeta):
                  train_cfg=None,
                  test_cfg=None,
                  pretrained=None,
+                 use_double_bbox_head=False,
                  init_cfg=None):
         super(BaseRoIHead, self).__init__(init_cfg)
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
+        self.use_double_bbox_head = use_double_bbox_head
         if shared_head is not None:
             if 'pretrained' not in shared_head:
                 shared_head.pretrained = pretrained
@@ -56,6 +58,7 @@ class BaseRoIHead(BaseModule, metaclass=ABCMeta):
         self.crop_size_modi_ratio = self.train_cfg.get('crop_size_modi_ratio', 1.5) if self.train_cfg is not None else 1.5
         self.pertrub_ratio = self.train_cfg.get('pertrub_ratio', 0.5) if self.train_cfg is not None else 0.5
         self.gt_only_damp_factor = self.train_cfg.get('gt_only_damp_factor', False) if self.train_cfg is not None else False
+        
     @property
     def with_bbox(self):
         """bool: whether the RoI head contains a `bbox_head`"""

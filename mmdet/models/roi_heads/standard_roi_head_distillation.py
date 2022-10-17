@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+from dis import dis
 from hashlib import new
 import torch
 import torch.nn as nn
@@ -41,13 +42,13 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         # config for transformer head
         self.use_proposal_for_distill = self.train_cfg.get('use_proposal_for_distill', False) if self.train_cfg is not None else False
         # if using double branch, generate another bbox head which do not have regression branch
-        self.use_double_bbox_head = self.train_cfg.get('use_double_bbox_head', False) if self.train_cfg is not None else False
         if self.use_double_bbox_head:
             dist_bbox_head_config = bbox_head
             dist_bbox_head_config['with_reg'] = False
+            dist_bbox_head_config['reg_with_cls_embedding'] = False
+            dist_bbox_head_config['use_bg_vector'] = False
             print('testing dist_bbox_head_config:', dist_bbox_head_config)
             self.dist_bbox_head = build_head(dist_bbox_head_config)
-
 
     def init_mask_head(self, mask_roi_extractor, mask_head):
         """Initialize ``mask_head``"""
@@ -198,7 +199,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             file.close()
         
         # obtain the feat for the distillation
-        if distilled_feat != None and gt_rand_rois != None:
+        if self.training and distilled_feat != None and gt_rand_rois != None:
             ### just for testing
             # before combine
             # print('before the combine:', gt_and_rand_bbox_feat.shape, len(distilled_feat), distilled_feat[0].shape, len(distill_ele_weight), distill_ele_weight[0].shape,
@@ -292,10 +293,33 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             else:
                 distill_loss_value *= (self.bbox_head.clip_dim * self.distill_loss_factor)
             
-            if self.use_double_bbox_head and not self.training:
-                ### the preliminary version of merging the score
-                ### in VILD it merge the score after softmax
+        if self.use_double_bbox_head and not self.training:
+            dist_cls_score, _, _ = self.dist_bbox_head(bbox_feats)
+            ### the preliminary version of merging the score
+            ### in VILD it merge the score after softmax
+            # if is not using the bg vector the cls_score and dist_cls_score will have the same size
+            if not self.bbox_head.use_bg_vector:
                 cls_score = torch.pow(cls_score, 0.5) * torch.pow(dist_cls_score, 0.5)
+            else:
+                # if do not use the additional base categories for filtering
+                # the size of the cls_score [num_cls + 1,clip_dim], 
+                # dist_cls_score will be [num_cls,clip_dim]
+                if not self.bbox_head.filter_base_cate:
+                    cls_score_fg = cls_score[:, :self.bbox_head.num_classes]
+                    cls_score_bg = cls_score[:, self.bbox_head.num_classes:]
+                    cls_score_fg = torch.pow(cls_score_fg, 0.5) * torch.pow(dist_cls_score, 0.5)
+                    cls_score = torch.cat([cls_score_fg, cls_score_bg], dim=-1)
+                else:
+                    cls_score_fg = cls_score[:, :self.bbox_head.num_classes]
+                    cls_score_bg = cls_score[:, self.bbox_head.num_classes:self.bbox_head.num_classes+1]
+                    cls_score_base = cls_score[:, self.bbox_head.num_classes+1:]
+                    dist_cls_score_fg = dist_cls_score[:, :self.bbox_head.num_classes]
+                    dist_cls_score_base = dist_cls_score[:, self.bbox_head.num_classes:]
+                    
+                    cls_score_fg = torch.pow(cls_score_fg, 0.5) * torch.pow(dist_cls_score_fg, 0.5)
+                    cls_score_base = torch.pow(cls_score_base, 0.5) * torch.pow(dist_cls_score_base, 0.5)
+                    cls_score = torch.cat([cls_score_fg, cls_score_bg, cls_score_base], dim=-1)
+                    
             '''
             # test the feat is matched or not
             gt_feat = [all_feats[:len(gt_lab)] for all_feats, gt_lab in zip(distilled_feat, gt_labels)]
