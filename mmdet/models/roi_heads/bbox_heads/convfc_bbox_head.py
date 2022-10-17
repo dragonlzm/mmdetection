@@ -595,14 +595,19 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         
         # map the vector from 1024 to clip dim
         x_cls = self.map_to_clip(x_cls)
-        # normalize the image feat
-        x_cls = x_cls / x_cls.norm(dim=-1, keepdim=True)
         
         # add addtional mapping to seperate the vector for distillation 
         # and vector for the regression
         if self.mapping_after_dist != None:
+            # the x_cls is unnormalized
             final_x_cls = self.mapping_after_dist(x_cls)
+            # normalize the image feat for returning and distillation
+            x_cls = x_cls / x_cls.norm(dim=-1, keepdim=True)
+            # normalize the image feat for classification
+            final_x_cls = final_x_cls / final_x_cls.norm(dim=-1, keepdim=True)
         else:
+            # normalize the image feat
+            x_cls = x_cls / x_cls.norm(dim=-1, keepdim=True)
             final_x_cls = x_cls
         
         # cosine similarity as logits

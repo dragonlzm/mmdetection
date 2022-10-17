@@ -29,6 +29,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         self.bbox_roi_extractor = build_roi_extractor(bbox_roi_extractor)
         self.bbox_head = build_head(bbox_head)
         self.avg_pool = nn.AvgPool2d(self.bbox_head.roi_feat_size)
+        
         self.distillation_loss_config = dict(type='L1Loss', loss_weight=1.0)
         self.distillation_loss = build_loss(self.distillation_loss_config)
         self.distill_loss_factor = self.train_cfg.get('distill_loss_factor', 1) if self.train_cfg is not None else 1
@@ -39,9 +40,14 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         self.gt_bboxes_distill_weight = self.train_cfg.get('gt_bboxes_distill_weight', None) if self.train_cfg is not None else None
         # config for transformer head
         self.use_proposal_for_distill = self.train_cfg.get('use_proposal_for_distill', False) if self.train_cfg is not None else False
-        # self.all_cosine_value = 0
-        # self.count = 0
-        # self.iter = 0
+        # if using double branch, generate another bbox head which do not have regression branch
+        self.use_double_bbox_head = self.train_cfg.get('use_double_bbox_head', False) if self.train_cfg is not None else False
+        if self.use_double_bbox_head:
+            dist_bbox_head_config = bbox_head
+            dist_bbox_head_config['with_reg'] = False
+            print('testing dist_bbox_head_config:', dist_bbox_head_config)
+            self.dist_bbox_head = build_head(dist_bbox_head_config)
+
 
     def init_mask_head(self, mask_roi_extractor, mask_head):
         """Initialize ``mask_head``"""
@@ -210,8 +216,11 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                 gt_and_rand_bbox_feat = torch.cat([torch.zeros([1] + list(gt_and_rand_bbox_feat.shape[1:])).cuda(), gt_and_rand_bbox_feat], dim=0)
                 distilled_feat =  [torch.zeros([1] + list(distilled_feat[0].shape[1:])).cuda()] + distilled_feat
                 distill_ele_weight =  [torch.zeros([1] + list(distill_ele_weight[0].shape[1:])).cuda()] + distill_ele_weight
-                
-            _, _, pred_feats = self.bbox_head(gt_and_rand_bbox_feat)
+            
+            if self.use_double_bbox_head:
+                dist_cls_score, _, pred_feats = self.dist_bbox_head(gt_and_rand_bbox_feat)
+            else:
+                _, _, pred_feats = self.bbox_head(gt_and_rand_bbox_feat)
             # normalize the distilled feat
             cat_distilled_feat = torch.cat(distilled_feat, dim=0)
             if distill_ele_weight:
@@ -283,6 +292,10 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             else:
                 distill_loss_value *= (self.bbox_head.clip_dim * self.distill_loss_factor)
             
+            if self.use_double_bbox_head and not self.training:
+                ### the preliminary version of merging the score
+                ### in VILD it merge the score after softmax
+                cls_score = torch.pow(cls_score, 0.5) * torch.pow(dist_cls_score, 0.5)
             '''
             # test the feat is matched or not
             gt_feat = [all_feats[:len(gt_lab)] for all_feats, gt_lab in zip(distilled_feat, gt_labels)]
