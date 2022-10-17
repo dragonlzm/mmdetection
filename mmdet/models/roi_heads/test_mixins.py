@@ -129,7 +129,13 @@ class BBoxTestMixin:
             rois = bbox2roi(proposals)
         else:
             rois = bbox2roi(proposals)
-
+        
+        merge_proposal_obj_score = rcnn_test_cfg.get('merge_proposal_obj_score', False) if rcnn_test_cfg is not None else False
+        if merge_proposal_obj_score:
+            proposal_obj_score = [ele[:, -1] for ele in proposals]
+        else:
+            proposal_obj_score = [None for ele in proposals]
+            
         if rois.shape[0] == 0:
             batch_size = len(proposals)
             det_bbox = rois.new_zeros(0, 5)
@@ -195,6 +201,7 @@ class BBoxTestMixin:
                     bbox_pred[i],
                     img_shapes[i],
                     scale_factors[i],
+                    proposal_obj_score[i]
                     rescale=rescale,
                     cfg=rcnn_test_cfg,
                     img_metas=img_metas,

@@ -372,6 +372,7 @@ class BBoxHead(BaseModule):
                    bbox_pred,
                    img_shape,
                    scale_factor,
+                   proposal_obj_score,
                    rescale=False,
                    cfg=None,
                    img_metas=None,
@@ -435,6 +436,10 @@ class BBoxHead(BaseModule):
         else:
             scores = F.softmax(
                 cls_score, dim=-1) if cls_score is not None else None
+        # merge the rpn objectness score with the confidence score
+        if proposal_obj_score != None:
+            print(scores.shape, proposal_obj_score)
+            
         # bbox_pred would be None in some detector when with_reg is False,
         # e.g. Grid R-CNN.
         if bbox_pred is not None:
