@@ -284,6 +284,7 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                  temperature=100,
                  reg_with_mlp=False,
                  use_bg_vector=True,
+                 use_zero_bg_vector=False,
                  filter_base_cate=None,
                  use_svd_conversion=None,
                  mapping_after_dist=None,
@@ -318,6 +319,7 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         self._temperature = temperature
         self.filter_base_cate = filter_base_cate
         self.use_bg_vector = use_bg_vector
+        self.use_zero_bg_vector = use_zero_bg_vector
         self.reg_with_mlp = reg_with_mlp
         self.use_svd_conversion = use_svd_conversion
         self.mapping_after_dist = mapping_after_dist
@@ -490,6 +492,13 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
             with torch.no_grad():
                 self.fc_cls_base.weight.copy_(self.base_load_value)
             for param in self.fc_cls_base.parameters():
+                param.requires_grad = False 
+                
+        # handle the zero bg
+        if self.use_zero_bg_vector:
+            with torch.no_grad():
+                nn.init.constant_(self.fc_cls_bg.weight, 0)  # zero embeddings
+            for param in self.fc_cls_bg.parameters():
                 param.requires_grad = False 
 
     def _add_conv_fc_branch(self,

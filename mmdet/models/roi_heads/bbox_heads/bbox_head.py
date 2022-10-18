@@ -228,8 +228,8 @@ class BBoxHead(BaseModule):
             else:
                 bbox_weights[:num_pos, :] = 1
         if num_neg > 0:
-            label_weights[-num_neg:] = 1.0
-
+            neg_weight = cfg.get('neg_weight', 1.0) if cfg is not None else 1.0
+            label_weights[-num_neg:] = neg_weight
         return labels, label_weights, bbox_targets, bbox_weights
 
     def get_targets(self,
@@ -430,6 +430,8 @@ class BBoxHead(BaseModule):
             
             cls_score = cls_score[novel_bg_idx]
             cls_score = cls_score[:, :bg_idx+1]
+            if proposal_obj_score != None:
+                proposal_obj_score = proposal_obj_score[novel_bg_idx]
         # some loss (Seesaw loss..) may have custom activation
         if self.custom_cls_channels:
             scores = self.loss_cls.get_activation(cls_score)
