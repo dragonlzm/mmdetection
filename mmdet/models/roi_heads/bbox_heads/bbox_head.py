@@ -309,7 +309,7 @@ class BBoxHead(BaseModule):
             bbox_weights = torch.cat(bbox_weights, 0)
         return labels, label_weights, bbox_targets, bbox_weights
 
-    def my_focal_loss(self, inputs, targets, gamma=0.5, reduction="mean"):
+    def my_focal_loss(self, inputs, targets, label_weights, gamma=0.5, reduction="mean", avg_factor=None, reduction_override=None):
         """Inspired by RetinaNet implementation"""
         if targets.numel() == 0 and reduction == "mean":
             return input.sum() * 0.0  # connect the gradient
