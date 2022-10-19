@@ -13,6 +13,28 @@ from mmdet.models.builder import HEADS, build_loss
 from mmdet.models.losses import accuracy
 from mmdet.models.utils import build_linear_layer
 
+def my_focal_loss(self, inputs, targets, gamma=0.5, reduction="mean"):
+    """Inspired by RetinaNet implementation"""
+    if targets.numel() == 0 and reduction == "mean":
+        return input.sum() * 0.0  # connect the gradient
+    
+    # focal scaling
+    ce_loss = F.cross_entropy(inputs, targets, reduction="none")
+    p = F.softmax(inputs, dim=-1)
+    p_t = p[torch.arange(p.size(0)).to(p.device), targets]  # get prob of target class
+    loss = ce_loss * ((1 - p_t) ** gamma)
+
+    # bg loss weight
+    if self.cls_loss_weight is not None:
+        loss_weight = torch.ones(loss.size(0)).to(p.device)
+        loss_weight[targets == self.num_classes] = self.cls_loss_weight[-1].item()
+        loss = loss * loss_weight
+
+    if reduction == "mean":
+        loss = loss.mean()
+
+    return loss
+
 
 @HEADS.register_module()
 class BBoxHead(BaseModule):
@@ -63,7 +85,10 @@ class BBoxHead(BaseModule):
         self.combine_reg_and_cls_embedding = combine_reg_and_cls_embedding
 
         self.bbox_coder = build_bbox_coder(bbox_coder)
-        self.loss_cls = build_loss(loss_cls)
+        if loss_cls == 'my_focal_loss':
+            self.loss_cls = my_focal_loss
+        else:
+            self.loss_cls = build_loss(loss_cls)
         self.loss_bbox = build_loss(loss_bbox)
         
         # add for use sigmoid loss
@@ -477,14 +502,14 @@ class BBoxHead(BaseModule):
             if hasattr(self, 'filter_base_cate') and self.filter_base_cate != None:
                 bboxes = bboxes[novel_bg_idx]
             # add the empty bg prediction for the sigmoid_cls model
-            if self.use_sigmoid_cls:
-                # Add a dummy background class to the backend when using sigmoid
-                # remind that we set FG labels to [0, num_class-1] since mmdet v2.0
-                # BG cat_id: num_class
-                # the shape of score should be torch.Size([1000, 66])
-                num_pred, num_classes = scores.shape
-                padding = scores.new_zeros(num_pred, 1)
-                scores = torch.cat([scores, padding], dim=-1)  
+            # if self.use_sigmoid_cls:
+            #     # Add a dummy background class to the backend when using sigmoid
+            #     # remind that we set FG labels to [0, num_class-1] since mmdet v2.0
+            #     # BG cat_id: num_class
+            #     # the shape of score should be torch.Size([1000, 66])
+            #     num_pred, num_classes = scores.shape
+            #     padding = scores.new_zeros(num_pred, 1)
+            #     scores = torch.cat([scores, padding], dim=-1)  
             
             # save the prediction before the NMS
             if bbox_save_path_root != None:

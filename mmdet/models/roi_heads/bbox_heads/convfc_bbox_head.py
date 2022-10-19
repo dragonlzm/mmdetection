@@ -606,7 +606,6 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         x_cls = self.map_to_clip(x_cls)
         
         # add addtional mapping to seperate the vector for distillation 
-        # and vector for the regression
         if self.mapping_after_dist != None:
             # the x_cls is unnormalized
             final_x_cls = self.mapping_after_dist(x_cls)
@@ -618,6 +617,14 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
             # normalize the image feat
             x_cls = x_cls / x_cls.norm(dim=-1, keepdim=True)
             final_x_cls = x_cls
+        
+        # x_cls = x_cls / x_cls.norm(dim=-1, keepdim=True)
+        # if self.mapping_after_dist != None:
+        #     # the x_cls is unnormalized
+        #     final_x_cls = self.mapping_after_dist(x_cls)
+        # else:
+        #     final_x_cls = x_cls
+                
         
         # cosine similarity as logits
         #logit_scale = self.logit_scale.exp()
