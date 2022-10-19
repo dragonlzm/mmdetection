@@ -293,33 +293,9 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             else:
                 distill_loss_value *= (self.bbox_head.clip_dim * self.distill_loss_factor)
             
-        if self.use_double_bbox_head and not self.training:
-            dist_cls_score, _, _ = self.dist_bbox_head(bbox_feats)
-            ### the preliminary version of merging the score
-            ### in VILD it merge the score after softmax
-            # if is not using the bg vector the cls_score and dist_cls_score will have the same size
-            if not self.bbox_head.use_bg_vector:
-                cls_score = torch.pow(cls_score, 0.5) * torch.pow(dist_cls_score, 0.5)
-            else:
-                # if do not use the additional base categories for filtering
-                # the size of the cls_score [num_cls + 1,clip_dim], 
-                # dist_cls_score will be [num_cls,clip_dim]
-                if not self.bbox_head.filter_base_cate:
-                    cls_score_fg = cls_score[:, :self.bbox_head.num_classes]
-                    cls_score_bg = cls_score[:, self.bbox_head.num_classes:]
-                    cls_score_fg = torch.pow(cls_score_fg, 0.5) * torch.pow(dist_cls_score, 0.5)
-                    cls_score = torch.cat([cls_score_fg, cls_score_bg], dim=-1)
-                else:
-                    cls_score_fg = cls_score[:, :self.bbox_head.num_classes]
-                    cls_score_bg = cls_score[:, self.bbox_head.num_classes:self.bbox_head.num_classes+1]
-                    cls_score_base = cls_score[:, self.bbox_head.num_classes+1:]
-                    dist_cls_score_fg = dist_cls_score[:, :self.bbox_head.num_classes]
-                    dist_cls_score_base = dist_cls_score[:, self.bbox_head.num_classes:]
-                    
-                    cls_score_fg = torch.pow(cls_score_fg, 0.5) * torch.pow(dist_cls_score_fg, 0.5)
-                    cls_score_base = torch.pow(cls_score_base, 0.5) * torch.pow(dist_cls_score_base, 0.5)
-                    cls_score = torch.cat([cls_score_fg, cls_score_bg, cls_score_base], dim=-1)
-                    
+            if self.use_double_bbox_head and not self.training:
+                dist_cls_score, _, _ = self.dist_bbox_head(bbox_feats)
+
             '''
             # test the feat is matched or not
             gt_feat = [all_feats[:len(gt_lab)] for all_feats, gt_lab in zip(distilled_feat, gt_labels)]
@@ -342,7 +318,10 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             self.total += max_id.shape[0]
             print('accumulated acc:', self.match_count / self.total)'''
 
-        if distilled_feat != None and gt_rand_rois != None:
+        if self.use_double_bbox_head and not self.training:
+            bbox_results = dict(
+                cls_score=cls_score, bbox_pred=bbox_pred, bbox_feats=bbox_feats, dist_cls_score=dist_cls_score)
+        elif distilled_feat != None and gt_rand_rois != None:
             bbox_results = dict(
                 cls_score=cls_score, bbox_pred=bbox_pred, bbox_feats=bbox_feats, distill_loss_value=dict(distill_loss_value=distill_loss_value))
         else:

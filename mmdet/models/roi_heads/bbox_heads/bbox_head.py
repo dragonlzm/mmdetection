@@ -399,6 +399,7 @@ class BBoxHead(BaseModule):
                    img_shape,
                    scale_factor,
                    proposal_obj_score,
+                   dist_cls_score,
                    rescale=False,
                    cfg=None,
                    img_metas=None,
@@ -458,12 +459,14 @@ class BBoxHead(BaseModule):
             cls_score = cls_score[:, :bg_idx+1]
             if proposal_obj_score != None:
                 proposal_obj_score = proposal_obj_score[novel_bg_idx]
+                proposal_obj_score = proposal_obj_score[:, :bg_idx]
         # some loss (Seesaw loss..) may have custom activation
         if self.custom_cls_channels:
             scores = self.loss_cls.get_activation(cls_score)
         else:
             scores = F.softmax(
                 cls_score, dim=-1) if cls_score is not None else None
+        
         # merge the rpn objectness score with the confidence score
         if proposal_obj_score != None:
             #print(scores.shape, proposal_obj_score.shape)
@@ -473,7 +476,28 @@ class BBoxHead(BaseModule):
             #print('before sqrt', scores)
             scores[:, :self.num_classes] = torch.pow(scores[:, :self.num_classes], 0.5)
             #print('after sqrt', scores)
-            
+         
+        ## if merging the score we completely following the google implemetation
+        ## which remove the bg vector before doing the softmax
+        ## therefore the above softmax function do not be used 
+        if dist_cls_score != None:
+            ### the preliminary version of merging the score
+            ### in VILD it merge the score after softmax
+            # if is not using the bg vector the cls_score and dist_cls_score will have the same size
+            if not self.use_bg_vector:
+                dist_cls_score = F.softmax(dist_cls_score, dim=-1)
+                scores = torch.pow(scores, 0.5) * torch.pow(dist_cls_score, 0.5)
+            else:
+                # if do not use the additional base categories for filtering
+                # the size of the cls_score [num_cls + 1,clip_dim], 
+                # dist_cls_score will be [num_cls,clip_dim]
+                cls_score_fg = cls_score[:, :self.num_classes]
+                cls_score_bg = cls_score[:, self.num_classes:]
+                cls_score_fg = F.softmax(cls_score_fg, dim=-1)
+                dist_cls_score = F.softmax(dist_cls_score, dim=-1)
+                cls_score_fg = torch.pow(cls_score_fg, 0.5) * torch.pow(dist_cls_score, 0.5)
+                scores = torch.cat([cls_score_fg, cls_score_bg], dim=-1)
+
         # bbox_pred would be None in some detector when with_reg is False,
         # e.g. Grid R-CNN.
         if bbox_pred is not None:

@@ -168,7 +168,11 @@ class BBoxTestMixin:
         bbox_pred = bbox_results['bbox_pred']
         rois = rois.split(num_proposals_per_img, 0)
         cls_score = cls_score.split(num_proposals_per_img, 0)
-
+        if self.use_double_bbox_head and not self.training:
+            dist_cls_score = bbox_results['dist_cls_score']
+            dist_cls_score = cls_score.split(num_proposals_per_img, 0)
+        else:
+            dist_cls_score = (None, ) * len(proposals)
         # some detector with_reg is False, bbox_pred will be None
         if bbox_pred is not None:
             # TODO move this to a sabl_roi_head
@@ -202,6 +206,7 @@ class BBoxTestMixin:
                     img_shapes[i],
                     scale_factors[i],
                     proposal_obj_score[i],
+                    dist_cls_score[i],
                     rescale=rescale,
                     cfg=rcnn_test_cfg,
                     img_metas=img_metas,
