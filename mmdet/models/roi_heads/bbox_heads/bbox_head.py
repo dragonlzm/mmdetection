@@ -85,7 +85,7 @@ class BBoxHead(BaseModule):
         self.combine_reg_and_cls_embedding = combine_reg_and_cls_embedding
 
         self.bbox_coder = build_bbox_coder(bbox_coder)
-        if loss_cls == 'my_focal_loss':
+        if loss_cls['type'] == 'my_focal_loss':
             self.loss_cls = my_focal_loss
         else:
             self.loss_cls = build_loss(loss_cls)
