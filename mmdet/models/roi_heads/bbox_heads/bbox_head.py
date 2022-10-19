@@ -13,28 +13,6 @@ from mmdet.models.builder import HEADS, build_loss
 from mmdet.models.losses import accuracy
 from mmdet.models.utils import build_linear_layer
 
-def my_focal_loss(self, inputs, targets, gamma=0.5, reduction="mean"):
-    """Inspired by RetinaNet implementation"""
-    if targets.numel() == 0 and reduction == "mean":
-        return input.sum() * 0.0  # connect the gradient
-    
-    # focal scaling
-    ce_loss = F.cross_entropy(inputs, targets, reduction="none")
-    p = F.softmax(inputs, dim=-1)
-    p_t = p[torch.arange(p.size(0)).to(p.device), targets]  # get prob of target class
-    loss = ce_loss * ((1 - p_t) ** gamma)
-
-    # bg loss weight
-    if self.cls_loss_weight is not None:
-        loss_weight = torch.ones(loss.size(0)).to(p.device)
-        loss_weight[targets == self.num_classes] = self.cls_loss_weight[-1].item()
-        loss = loss * loss_weight
-
-    if reduction == "mean":
-        loss = loss.mean()
-
-    return loss
-
 
 @HEADS.register_module()
 class BBoxHead(BaseModule):
@@ -86,7 +64,8 @@ class BBoxHead(BaseModule):
 
         self.bbox_coder = build_bbox_coder(bbox_coder)
         if loss_cls['type'] == 'my_focal_loss':
-            self.loss_cls = my_focal_loss
+            self.loss_cls = self.my_focal_loss
+            self.cls_loss_weight = 0.2
         else:
             self.loss_cls = build_loss(loss_cls)
         self.loss_bbox = build_loss(loss_bbox)
@@ -329,6 +308,28 @@ class BBoxHead(BaseModule):
             bbox_targets = torch.cat(bbox_targets, 0)
             bbox_weights = torch.cat(bbox_weights, 0)
         return labels, label_weights, bbox_targets, bbox_weights
+
+    def my_focal_loss(self, inputs, targets, gamma=0.5, reduction="mean"):
+        """Inspired by RetinaNet implementation"""
+        if targets.numel() == 0 and reduction == "mean":
+            return input.sum() * 0.0  # connect the gradient
+        
+        # focal scaling
+        ce_loss = F.cross_entropy(inputs, targets, reduction="none")
+        p = F.softmax(inputs, dim=-1)
+        p_t = p[torch.arange(p.size(0)).to(p.device), targets]  # get prob of target class
+        loss = ce_loss * ((1 - p_t) ** gamma)
+
+        # bg loss weight
+        if self.cls_loss_weight is not None:
+            loss_weight = torch.ones(loss.size(0)).to(p.device)
+            loss_weight[targets == self.num_classes] = self.cls_loss_weight
+            loss = loss * loss_weight
+
+        if reduction == "mean":
+            loss = loss.mean()
+
+        return loss
 
     @force_fp32(apply_to=('cls_score', 'bbox_pred'))
     def loss(self,
