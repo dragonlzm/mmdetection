@@ -457,9 +457,11 @@ class BBoxHead(BaseModule):
             
             cls_score = cls_score[novel_bg_idx]
             cls_score = cls_score[:, :bg_idx+1]
+            if dist_cls_score != None:
+                dist_cls_score = dist_cls_score[novel_bg_idx]
+                dist_cls_score = dist_cls_score[:, :bg_idx]
             if proposal_obj_score != None:
                 proposal_obj_score = proposal_obj_score[novel_bg_idx]
-                proposal_obj_score = proposal_obj_score[:, :bg_idx]
         # some loss (Seesaw loss..) may have custom activation
         if self.custom_cls_channels:
             scores = self.loss_cls.get_activation(cls_score)

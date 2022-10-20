@@ -293,9 +293,6 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             else:
                 distill_loss_value *= (self.bbox_head.clip_dim * self.distill_loss_factor)
             
-            if self.use_double_bbox_head and not self.training:
-                dist_cls_score, _, _ = self.dist_bbox_head(bbox_feats)
-
             '''
             # test the feat is matched or not
             gt_feat = [all_feats[:len(gt_lab)] for all_feats, gt_lab in zip(distilled_feat, gt_labels)]
@@ -319,6 +316,7 @@ class StandardRoIHeadDistill(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
             print('accumulated acc:', self.match_count / self.total)'''
 
         if self.use_double_bbox_head and not self.training:
+            dist_cls_score, _, _ = self.dist_bbox_head(bbox_feats)
             bbox_results = dict(
                 cls_score=cls_score, bbox_pred=bbox_pred, bbox_feats=bbox_feats, dist_cls_score=dist_cls_score)
         elif distilled_feat != None and gt_rand_rois != None:
