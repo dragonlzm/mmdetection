@@ -1,23 +1,25 @@
 _base_ = './mask_rcnn_distillation_with_transformer_per_base_filtered_clip_proposal_weight_bn65.py'
 
-classes = ('airplane', 'bus', 'cat', 'dog', 'cow', 
-        'elephant', 'umbrella', 'tie', 'snowboard', 
-        'skateboard', 'cup', 'knife', 'cake', 'couch', 
-        'keyboard', 'sink', 'scissors')
-
-data = dict(
-    train=dict(classes=classes),
-    val=dict(classes=classes, eval_filter_empty_gt=True),
-    test=dict(classes=classes, eval_filter_empty_gt=True))
-
 # model settings
 model = dict(
     roi_head=dict(
-        bbox_head=dict(num_classes=17,
-                       fg_vec_cfg=dict(fixed_param=True, 
-                                       #load_path='/data/zhuoming/detection/embeddings/base_finetuned_17cates.pt')),
-                                       #load_path='/data2/lwll/zhuoming/detection/embeddings/base_finetuned_17cates.pt')),
-                                       load_path='data/embeddings/base_finetuned_17cates.pt')),
-        mask_head=dict(num_classes=17)))
-
-#evaluation = dict(interval=1, metric=['bbox', 'segm'])
+        bbox_head=dict(
+            fc_out_channels=1024,
+            encoder=dict(
+                transformerlayers=dict(
+                    attn_cfgs=[
+                        dict(
+                            type='MultiheadAttention',
+                            embed_dims=1024,
+                            num_heads=8,
+                            dropout=0.1)
+                    ],
+                    ffn_cfgs=dict(
+                            type='FFN',
+                            embed_dims=1024,
+                            feedforward_channels=2048,
+                            num_fcs=2,
+                            ffn_drop=0.1,
+                            act_cfg=dict(type='ReLU', inplace=True),
+                    ),
+                    operation_order=('self_attn', 'norm', 'ffn', 'norm'))))))
