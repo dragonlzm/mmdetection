@@ -2,7 +2,7 @@ _base_ = './cls_finetuner_clip_voc_base15_split1_all_train.py'
 
 data_root = 'data/coco/'
 
-classes = ('bird', 'bus', 'cow', 'motorbike', 'sofa')
+classes = ('boat', 'cat', 'motorbike', 'sheep', 'sofa')
 
 data = dict(
     train=dict(classes=classes),
@@ -11,5 +11,5 @@ data = dict(
 
 model = dict(
     rpn_head=dict(
-        cate_names=['bird', 'bus', 'cow', 'motorbike', 'sofa']    
+        cate_names=['boat', 'cat', 'motorbike', 'sheep', 'sofa']    
         ))
