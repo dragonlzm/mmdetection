@@ -55,12 +55,32 @@ class VOCDataset(XMLDataset):
         if not isinstance(metric, str):
             assert len(metric) == 1
             metric = metric[0]
-        allowed_metrics = ['mAP', 'recall']
+        allowed_metrics = ['mAP', 'recall', 'gt_acc']
         if metric not in allowed_metrics:
             raise KeyError(f'metric {metric} is not supported')
         annotations = [self.get_ann_info(i) for i in range(len(self))]
         eval_results = OrderedDict()
         iou_thrs = [iou_thr] if isinstance(iou_thr, float) else iou_thr
+        
+        if metric == 'gt_acc':
+            over_all_acc, s_acc, m_acc, l_acc, person_acc, overall_entropy, all_cos_score = self.calc_gt_acc(results)
+            eval_results['over_all_acc'] = over_all_acc
+            eval_results['s_acc'] = s_acc
+            eval_results['m_acc'] = m_acc
+            eval_results['l_acc'] = l_acc
+            eval_results['person_acc'] = person_acc
+            eval_results['overall_entropy'] = overall_entropy
+            eval_results['all_cos_score'] = all_cos_score
+
+            log_msg = f'\n over_all_acc\t{over_all_acc:.4f}' + \
+                f'\n s_acc\t{s_acc:.4f}' + \
+                f'\n m_acc\t{m_acc:.4f}' + \
+                f'\n l_acc\t{l_acc:.4f}' + \
+                f'\n person_acc\t{person_acc:.4f}' + \
+                f'\n overall_entropy\t{overall_entropy:.4f}' + \
+                f'\n all_cos_score\t{all_cos_score:.4f}'
+            print_log(log_msg, logger=logger)
+        
         if metric == 'mAP':
             assert isinstance(iou_thrs, list)
             if self.year == 2007:
@@ -103,3 +123,86 @@ class VOCDataset(XMLDataset):
                 for i, num in enumerate(proposal_nums):
                     eval_results[f'AR@{num}'] = ar[i]
         return eval_results
+
+    def calc_gt_acc(self, results):
+        all_gts = 0
+        correct_num = 0
+        gt_num_over_scales = np.array([0,0,0])
+        corr_num_over_scales = np.array([0,0,0])
+        person_gt_num = 0
+        person_correct_num = 0
+        
+        all_entropy = 0
+        all_max_score = []
+        
+        all_cos_score = 0
+
+        for ele in results:
+            pred_res = torch.from_numpy(ele[0])
+            gt_res = torch.from_numpy(ele[1])
+            scale_info = torch.from_numpy(ele[2])
+            entro_result = torch.from_numpy(ele[3])
+            max_score = torch.from_numpy(ele[4])
+            cos_score = torch.from_numpy(ele[5])
+
+            all_max_score.append(max_score)
+            # if -1 in the gt_res it means, it using the random bbox for prediction
+            gt_num = pred_res.shape[0]
+            all_gts += gt_num
+            if -1 not in gt_res:
+                # calculate the acc over all scale
+                matched_res = (pred_res == gt_res)
+                correct_num += matched_res.sum().item()
+
+                # calculate the acc over different scale 
+                s_pred = pred_res[scale_info==0]
+                s_gt = gt_res[scale_info==0]
+                m_pred = pred_res[scale_info==1]
+                m_gt = gt_res[scale_info==1]
+                l_pred = pred_res[scale_info==2]
+                l_gt = gt_res[scale_info==2]
+
+                # deal with small, median and large
+                gt_num_over_scales[0] += s_pred.shape[0]
+                gt_num_over_scales[1] += m_pred.shape[0]
+                gt_num_over_scales[2] += l_pred.shape[0]
+
+                corr_num_over_scales[0] += (s_pred == s_gt).sum().item()
+                corr_num_over_scales[1] += (m_pred == m_gt).sum().item()
+                corr_num_over_scales[2] += (l_pred == l_gt).sum().item()
+
+                # deal with the person categories
+                person_pred = pred_res[gt_res==0]
+                person_gt = gt_res[gt_res==0]
+                person_gt_num += person_pred.shape[0]
+                person_correct_num += (person_pred == person_gt).sum().item()
+
+            # aggregate the entropy
+            all_entropy += entro_result.sum().item()
+            all_cos_score += cos_score.sum().item()
+
+        if -1 not in gt_res:
+            over_all_acc = correct_num / all_gts
+            acc_over_scales = corr_num_over_scales / gt_num_over_scales
+            s_acc = acc_over_scales[0]
+            m_acc = acc_over_scales[1]
+            l_acc = acc_over_scales[2]
+            person_acc = person_correct_num / person_gt_num
+        else:
+            over_all_acc, s_acc, m_acc, l_acc, person_acc = 0, 0, 0, 0, 0
+
+        all_entropy = all_entropy / all_gts
+        all_cos_score = all_cos_score / all_gts
+
+        # distri visualization
+        all_max_score = torch.cat(all_max_score).cpu().numpy()
+        #print(all_max_score.shape)
+        if self.visualization_path != None:
+            sns.displot(all_max_score, kde=True)
+            #plt.show()
+            file_name = str(time.time()) + '.png'
+            # create path if path is not exist
+            if not os.path.exists(self.visualization_path):
+                os.makedirs(self.visualization_path)            
+            plt.savefig(os.path.join(self.visualization_path, file_name))
+        return over_all_acc, s_acc, m_acc, l_acc, person_acc, all_entropy, all_cos_score
