@@ -1,23 +1,16 @@
 _base_ = './cls_finetuner_clip_full_coco.py'
 
-data_root = 'data/coco/'
+model = dict(
+    rpn_head=dict(num_classes=15,
+        cate_names=['aeroplane', 'bicycle', 'boat', 'bottle', 'car',
+                         'cat', 'chair', 'diningtable', 'dog', 'horse',
+                         'person', 'pottedplant', 'sheep', 'train',
+                         'tvmonitor']))
 
 classes = ('aeroplane', 'bicycle', 'boat', 'bottle', 'car',
                          'cat', 'chair', 'diningtable', 'dog', 'horse',
                          'person', 'pottedplant', 'sheep', 'train',
                          'tvmonitor')
-
-data = dict(
-    train=dict(classes=classes),
-    val=dict(classes=classes),
-    test=dict(classes=classes))
-
-model = dict(
-    rpn_head=dict(
-        cate_names=['aeroplane', 'bicycle', 'boat', 'bottle', 'car',
-                         'cat', 'chair', 'diningtable', 'dog', 'horse',
-                         'person', 'pottedplant', 'sheep', 'train',
-                         'tvmonitor']))
 
 # dataset settings
 dataset_type = 'VOCDataset'
@@ -50,6 +43,7 @@ test_pipeline = [
         ])
 ]
 data = dict(
+    _delete_=True,
     samples_per_gpu=2,
     workers_per_gpu=2,
     train=dict(
@@ -62,17 +56,20 @@ data = dict(
                 data_root + 'VOC2012/ImageSets/Main/trainval.txt'
             ],
             img_prefix=[data_root + 'VOC2007/', data_root + 'VOC2012/'],
-            pipeline=train_pipeline)),
+            pipeline=train_pipeline,
+            classes=classes)),
     val=dict(
         type=dataset_type,
         ann_file=data_root + 'VOC2007/ImageSets/Main/test.txt',
         img_prefix=data_root + 'VOC2007/',
-        pipeline=test_pipeline),
+        pipeline=test_pipeline,
+        classes=classes),
     test=dict(
         type=dataset_type,
         ann_file=data_root + 'VOC2007/ImageSets/Main/test.txt',
         img_prefix=data_root + 'VOC2007/',
-        pipeline=test_pipeline))
+        pipeline=test_pipeline,
+        classes=classes))
 evaluation = dict(interval=1, metric='mAP')
 
 
