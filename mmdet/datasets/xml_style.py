@@ -128,12 +128,12 @@ class XMLDataset(CustomDataset):
                 h = bbox[3] - bbox[1]
                 if w < self.min_size or h < self.min_size:
                     ignore = True
-            if difficult or ignore:
-                bboxes_ignore.append(bbox)
-                labels_ignore.append(label)
-            else:
-                bboxes.append(bbox)
-                labels.append(label)
+            # if difficult or ignore:
+            #     bboxes_ignore.append(bbox)
+            #     labels_ignore.append(label)
+            # else:
+            bboxes.append(bbox)
+            labels.append(label)
         if not bboxes:
             bboxes = np.zeros((0, 4))
             labels = np.zeros((0, ))
