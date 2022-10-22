@@ -6,6 +6,12 @@ from mmcv.utils import print_log
 from mmdet.core import eval_map, eval_recalls
 from .builder import DATASETS
 from .xml_style import XMLDataset
+import torch
+import numpy as np
+import os
+import seaborn as sns
+import matplotlib.pyplot as plt
+import time
 
 
 @DATASETS.register_module()
@@ -138,6 +144,8 @@ class VOCDataset(XMLDataset):
         all_cos_score = 0
 
         for ele in results:
+            if torch.is_tensor(ele):
+                continue
             pred_res = torch.from_numpy(ele[0])
             gt_res = torch.from_numpy(ele[1])
             scale_info = torch.from_numpy(ele[2])
