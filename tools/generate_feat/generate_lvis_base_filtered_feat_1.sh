@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --partition=gpu 
-#SBATCH --gres=gpu:v100:2
+#SBATCH --gres=gpu:a40:2
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=30GB
@@ -10,7 +10,7 @@
 
 module purge
 module load gcc/8.3.0
-#module load cuda/10.1.243
+module load cuda-toolkit/11.1
 #./program
 
 cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
