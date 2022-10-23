@@ -81,10 +81,6 @@ class ClsFinetuner(BaseDetector):
         self.num_of_rand_bboxes = self.test_cfg.get('num_of_rand_bboxes', 100) if self.test_cfg is not None else 100
         self.generate_bbox_feat = self.test_cfg.get('generate_bbox_feat', False) if self.test_cfg is not None else False
         self.generate_mix_gt_feat = self.test_cfg.get('generate_mix_gt_feat', False) if self.test_cfg is not None else False
-        if self.generate_bbox_feat or self.generate_mix_gt_feat:
-            torch.manual_seed(42)
-            random.seed(42)
-            np.random.seed(42)
         self.feat_save_path = self.test_cfg.get('feat_save_path', None) if self.test_cfg is not None else None
         self.use_pregenerated_proposal = self.test_cfg.get('use_pregenerated_proposal', None) if self.test_cfg is not None else None
         self.iou_calculator = BboxOverlaps2D()
@@ -143,6 +139,11 @@ class ClsFinetuner(BaseDetector):
         # generate the feature
         self.generate_gt_feat = self.test_cfg.get('generate_gt_feat', False) if self.test_cfg is not None else False
         self.rand_select_subset = self.test_cfg.get('rand_select_subset', False) if self.test_cfg is not None else False
+
+        if self.generate_bbox_feat or self.generate_mix_gt_feat or self.rand_select_subset:
+            torch.manual_seed(42)
+            random.seed(42)
+            np.random.seed(42)
 
     def read_use_base_novel_clip(self, img_metas):
         file_name = img_metas[0]['ori_filename']
