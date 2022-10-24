@@ -39,7 +39,8 @@ ${CHECKPOINT} 2 \
 --cfg-options data.test.ann_file=data/lvis_v1/annotations/lvis_v1_train.json \
 model.test_cfg.generate_bbox_feat=True model.test_cfg.feat_save_path=${FEAT_SAVE_PATH_ROOT} \
 model.test_cfg.use_pregenerated_proposal=${BBOX_SAVE_PATH_ROOT} \
-model.test_cfg.num_of_rand_bboxes=500 model.test_cfg.save_cates_and_conf=True model.test_cfg.rand_select_subset=True
+model.test_cfg.num_of_rand_bboxes=500 model.test_cfg.save_cates_and_conf=True model.test_cfg.rand_select_subset=True \
+model.test_cfg.generate_gt_feat=True
 
 
 # # 1
