@@ -632,7 +632,7 @@ class ClsFinetuner(BaseDetector):
                 os.makedirs(random_save_root)
             
             # if the file has been created, skip this image
-            if os.path.exists(gt_file_path) and os.path.exists(random_file_path):
+            if (not self.generate_gt_feat and os.path.exists(random_file_path)) or (self.generate_gt_feat and os.path.exists(gt_file_path) and os.path.exists(random_file_path)):
                 return [np.zeros((1,5))]
             
             if self.use_pregenerated_proposal != None:
