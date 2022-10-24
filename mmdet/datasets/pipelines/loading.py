@@ -621,9 +621,9 @@ class LoadCLIPFeat:
         # for VOC dataset
         if file_name.startswith('JPEGImages'):
             file_name = file_name.split('/')[-1]
-            if 'VOC2007' in img_metas[0]['filename']:
+            if 'VOC2007' in results['filename']:
                 file_name = os.path.join('VOC2007', file_name)
-            elif 'VOC2012' in img_metas[0]['filename']:
+            elif 'VOC2012' in results['filename']:
                 file_name = os.path.join('VOC2012', file_name)            
             
         file_name = '.'.join(file_name.split('.')[:-1]) + '.json'
