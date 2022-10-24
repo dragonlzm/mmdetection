@@ -6,7 +6,7 @@ from unittest import result
 from isort import file
 from pyparsing import rest_of_line
 import torch
-
+import os
 import mmcv
 import numpy as np
 import pycocotools.mask as maskUtils
@@ -618,6 +618,14 @@ class LoadCLIPFeat:
         file_name = results['img_info']['filename']
         if file_name.startswith('train2017'):
             file_name = file_name.split('/')[-1]
+        # for VOC dataset
+        if file_name.startswith('JPEGImages'):
+            file_name = file_name.split('/')[-1]
+            if 'VOC2007' in img_metas[0]['filename']:
+                file_name = os.path.join('VOC2007', file_name)
+            elif 'VOC2012' in img_metas[0]['filename']:
+                file_name = os.path.join('VOC2012', file_name)            
+            
         file_name = '.'.join(file_name.split('.')[:-1]) + '.json'
 
         #### load the gt feat

@@ -150,6 +150,13 @@ class ClsFinetuner(BaseDetector):
         # for lvis dataset
         if file_name.startswith('train2017'):
             file_name = file_name.split('/')[-1]
+        # for VOC dataset
+        if file_name.startswith('JPEGImages'):
+            file_name = file_name.split('/')[-1]
+            if 'VOC2007' in img_metas[0]['filename']:
+                file_name = os.path.join('VOC2007', file_name)
+            elif 'VOC2012' in img_metas[0]['filename']:
+                file_name = os.path.join('VOC2012', file_name)
         pregenerate_prop_path = os.path.join(self.use_base_novel_clip, '.'.join(file_name.split('.')[:-1]) + '.json')
         pregenerated_bbox = json.load(open(pregenerate_prop_path))
         
@@ -200,6 +207,13 @@ class ClsFinetuner(BaseDetector):
         # for lvis dataset
         if file_name.startswith('train2017'):
             file_name = file_name.split('/')[-1]
+        # for VOC dataset
+        if file_name.startswith('JPEGImages'):
+            file_name = file_name.split('/')[-1]
+            if 'VOC2007' in img_metas[0]['filename']:
+                file_name = os.path.join('VOC2007', file_name)
+            elif 'VOC2012' in img_metas[0]['filename']:
+                file_name = os.path.join('VOC2012', file_name)
         file_name = os.path.join(self.use_pregenerated_proposal, '.'.join(file_name.split('.')[:-1]) + '.json')
         # read the random bbox, the loaded bbox is xyxy format
         pregenerated_bbox = json.load(open(file_name))['score']
@@ -546,6 +560,13 @@ class ClsFinetuner(BaseDetector):
             # for lvis dataset
             if file_name.startswith('train2017'):
                 file_name = file_name.split('/')[-1]
+            # for VOC dataset
+            if file_name.startswith('JPEGImages'):
+                file_name = file_name.split('/')[-1]
+                if 'VOC2007' in img_metas[0]['filename']:
+                    file_name = os.path.join('VOC2007', file_name)
+                elif 'VOC2012' in img_metas[0]['filename']:
+                    file_name = os.path.join('VOC2012', file_name)
             file_name = file_name.split('.')[0] + '.json'
             
             gt_file_path = os.path.join(gt_save_root, file_name)
@@ -582,23 +603,33 @@ class ClsFinetuner(BaseDetector):
         if self.generate_bbox_feat:
             # obtain the gt file path
             gt_save_root = os.path.join(self.feat_save_path, 'gt')
-            if not os.path.exists(gt_save_root):
-                os.makedirs(gt_save_root)
             #file_name = img_metas[0]['ori_filename'].split('.')[0] + '.json'
             file_name = img_metas[0]['ori_filename']
             # for lvis dataset
             if file_name.startswith('train2017'):
                 file_name = file_name.split('/')[-1]
+            # for VOC dataset
+            if file_name.startswith('JPEGImages'):
+                file_name = file_name.split('/')[-1]
+                if 'VOC2007' in img_metas[0]['filename']:
+                    file_name = os.path.join('VOC2007', file_name)
+                elif 'VOC2012' in img_metas[0]['filename']:
+                    file_name = os.path.join('VOC2012', file_name)
             file_name = file_name.split('.')[0] + '.json'
             
             gt_file_path = os.path.join(gt_save_root, file_name)
+            gt_save_root = '/'.join(gt_file_path.split('/')[:-1])
+            if not os.path.exists(gt_save_root):
+                os.makedirs(gt_save_root)
+            
             
             # obtain the random file path
             random_save_root = os.path.join(self.feat_save_path, 'random')
+            #file_name = img_metas[0]['ori_filename'].split('.')[0] + '.json'
+            random_file_path = os.path.join(random_save_root, file_name)
+            random_save_root = '/'.join(random_file_path.split('/')[:-1])
             if not os.path.exists(random_save_root):
                 os.makedirs(random_save_root)
-            #file_name = img_metas[0]['ori_filename'].split('.')[0] + '.json'
-            random_file_path = os.path.join(random_save_root, file_name)      
             
             # if the file has been created, skip this image
             if os.path.exists(gt_file_path) and os.path.exists(random_file_path):
