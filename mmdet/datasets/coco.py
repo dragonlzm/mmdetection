@@ -693,7 +693,7 @@ class CocoDataset(CustomDataset):
                 break
 
             # eval each class splits
-            if self.eval_on_splits is not None:
+            if self.eval_on_splits:
                 class_splits = COCO_SPLIT
                 for split_name in class_splits.keys():
                     split_cat_ids = [
@@ -713,29 +713,30 @@ class CocoDataset(CustomDataset):
                         False,
                         logger,
                         split_name=split_name + ' ')
-            # eval all classes
-            self._evaluate_by_class_split(cocoGt, cocoDt, iou_type,
-                                          proposal_nums, iou_thrs,
-                                          self.cat_ids, metric, metric_items,
-                                          eval_results, classwise, logger)
+            else:
+                # eval all classes
+                self._evaluate_by_class_split(cocoGt, cocoDt, iou_type,
+                                            proposal_nums, iou_thrs,
+                                            self.cat_ids, metric, metric_items,
+                                            eval_results, classwise, logger)
 
         if tmp_dir is not None:
             tmp_dir.cleanup()
         return eval_results
 
     def _evaluate_by_class_split(self,
-                                 cocoGt: object,
-                                 cocoDt: object,
-                                 iou_type: str,
-                                 proposal_nums: Sequence[int],
-                                 iou_thrs: Union[float, Sequence[float]],
-                                 cat_ids: List[int],
-                                 metric: str,
-                                 metric_items: Union[str, List[str]],
-                                 eval_results: Dict,
-                                 classwise: bool,
-                                 logger: object,
-                                 split_name: str = '') -> Dict:
+                                 cocoGt,
+                                 cocoDt,
+                                 iou_type,
+                                 proposal_nums,
+                                 iou_thrs,
+                                 cat_ids,
+                                 metric,
+                                 metric_items,
+                                 eval_results,
+                                 classwise,
+                                 logger,
+                                 split_name = ''):
         """Evaluation a split of classes in COCO protocol.
 
         Args:
