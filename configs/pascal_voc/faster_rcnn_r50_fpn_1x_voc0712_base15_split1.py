@@ -16,11 +16,6 @@ data = dict(
 # model settings
 model = dict(
     roi_head=dict(
-        bbox_head=dict(num_classes=15)))
-
-# model settings
-model = dict(
-    roi_head=dict(
         bbox_head=dict(
             num_shared_convs=4,
             reg_class_agnostic=True,

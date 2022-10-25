@@ -23,7 +23,7 @@ for category_id in from_cate_id_to_image_id:
 # select the category id of novel categories, evenly
 selected_img_list = []
 for novel_id in novel_cate_id:
-    novel_img_list = from_cate_id_to_image_id[category_id]
+    novel_img_list = from_cate_id_to_image_id[novel_id]
     count = 0
     for image_id in novel_img_list:
         if image_id not in selected_img_list:

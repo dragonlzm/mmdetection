@@ -220,13 +220,13 @@ class ClsFinetuner(BaseDetector):
         pregenerated_bbox = json.load(open(file_name))['score']
         pregenerated_bbox = torch.tensor(pregenerated_bbox).cuda()
         
-        # filter the small bboxes
-        w_smaller_than_36 = (pregenerated_bbox[:, 2] - pregenerated_bbox[:, 0]) < 36
-        h_smaller_than_36 = (pregenerated_bbox[:, 3] - pregenerated_bbox[:, 1]) < 36
-        pregenerated_bbox[w_smaller_than_36, 2] = pregenerated_bbox[w_smaller_than_36, 0] + 36
-        pregenerated_bbox[h_smaller_than_36, 3] = pregenerated_bbox[h_smaller_than_36, 1] + 36
+        # # filter the small bboxes
+        # w_smaller_than_36 = (pregenerated_bbox[:, 2] - pregenerated_bbox[:, 0]) < 36
+        # h_smaller_than_36 = (pregenerated_bbox[:, 3] - pregenerated_bbox[:, 1]) < 36
+        # pregenerated_bbox[w_smaller_than_36, 2] = pregenerated_bbox[w_smaller_than_36, 0] + 36
+        # pregenerated_bbox[h_smaller_than_36, 3] = pregenerated_bbox[h_smaller_than_36, 1] + 36
         
-        # scale the bbox to the size of the image
+        # # scale the bbox to the size of the image
         pregenerated_bbox[:, :4] *= pregenerated_bbox.new_tensor(img_metas[0]['scale_factor'])
         
         if self.filter_low_iou_bboxes and gt_bboxes[0].shape[0] != 0:
@@ -623,7 +623,6 @@ class ClsFinetuner(BaseDetector):
             if not os.path.exists(gt_save_root):
                 os.makedirs(gt_save_root)
             
-            
             # obtain the random file path
             random_save_root = os.path.join(self.feat_save_path, 'random')
             #file_name = img_metas[0]['ori_filename'].split('.')[0] + '.json'
@@ -649,14 +648,17 @@ class ClsFinetuner(BaseDetector):
             # for experiments(imagenet ranking)
             if self.experiment_mode:
                 ### get the objectness ranking
-                print('now_rand_bbox', now_rand_bbox)
+                #print('now_rand_bbox', now_rand_bbox)
                 _, objectness_indices = torch.sort(now_rand_bbox[:, -1], descending=True)
+                #print('objectness_indices', objectness_indices)
                 #get the objectness rank for each bbox
                 all_objectness_rank = []
                 for i in range(now_rand_bbox.shape[0]):
                     now_pos = (objectness_indices == i).nonzero(as_tuple=True)
-                    now_pos = now_pos[0][0][0].item()
+                    #print('now_pos', now_pos)
+                    now_pos = now_pos[0][0].item()
                     all_objectness_rank.append(now_pos)
+                #print('all_objectness_rank', all_objectness_rank)
                 all_objectness_rank = torch.tensor(all_objectness_rank).unsqueeze(dim=-1).cuda()
                 
                 ### get the base ranking
@@ -668,17 +670,19 @@ class ClsFinetuner(BaseDetector):
                 # get the max confidence categories
                 max_val, pred_idx = torch.max(pred_after_sigmoid, dim=1)
                 _, base_indices = torch.sort(max_val, descending=True)
+                #print('base_indices', base_indices)
                 #get the base rank for each bbox
                 all_base_rank = []
                 for i in range(now_rand_bbox.shape[0]):
                     now_pos = (base_indices == i).nonzero(as_tuple=True)
-                    now_pos = now_pos[0][0][0].item()
-                    all_base_rank.append(now_pos)  
+                    now_pos = now_pos[0][0].item()
+                    all_base_rank.append(now_pos)
+                #print('all_base_rank', all_base_rank)
                 all_base_rank = torch.tensor(all_base_rank).unsqueeze(dim=-1).cuda()
                 
                 ### save the result ranking
                 # scale back the bbox 
-                origin_bbox = now_rand_bbox[:, :4] / img_metas[0]['scale_factor']
+                origin_bbox = now_rand_bbox[:, :4] / torch.from_numpy(img_metas[0]['scale_factor']).cuda()
                 final_res = torch.cat([origin_bbox, all_objectness_rank, all_base_rank], dim=-1)
                 
                 file = open(random_file_path, 'w')
