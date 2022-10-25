@@ -94,6 +94,7 @@ class ClsFinetuner(BaseDetector):
         self.extra_patches_num = self.test_cfg.get('extra_patches_num', 3) if self.test_cfg is not None else 3
         # filter the clip proposal using the categories
         self.filter_clip_proposal_base_on_cates = self.test_cfg.get('filter_clip_proposal_base_on_cates', False) if self.test_cfg is not None else False
+        self.experiment_mode = self.test_cfg.get('experiment_mode', False) if self.test_cfg is not None else False
 
         # for the following self.from_cate_name_to_gt_idx, self.from_gt_idx_to_cate_idx, self.base_cate_name 
         # if base_cate_name == None, then now is for coco dataset, otherwise is for LVIS dataset
@@ -644,6 +645,51 @@ class ClsFinetuner(BaseDetector):
                 now_rand_bbox = self.generate_rand_bboxes(img_metas, self.num_of_rand_bboxes)
             
             x = self.extract_feat(img, [now_rand_bbox], cropped_patches, img_metas=img_metas)
+            
+            # for experiments(imagenet ranking)
+            if self.experiment_mode:
+                ### get the objectness ranking
+                print('now_rand_bbox', now_rand_bbox)
+                _, objectness_indices = torch.sort(now_rand_bbox[:, -1], descending=True)
+                #get the objectness rank for each bbox
+                all_objectness_rank = []
+                for i in range(now_rand_bbox.shape[0]):
+                    now_pos = (objectness_indices == i).nonzero(as_tuple=True)
+                    now_pos = now_pos[0][0][0].item()
+                    all_objectness_rank.append(now_pos)
+                all_objectness_rank = torch.tensor(all_objectness_rank).unsqueeze(dim=-1).cuda()
+                
+                ### get the base ranking
+                sigmoid = nn.Sigmoid()
+                # forward of this head requires img_metas
+                outs = self.rpn_head.forward(x, img_metas)
+                # get the classsification score
+                pred_after_sigmoid = sigmoid(outs[0])
+                # get the max confidence categories
+                max_val, pred_idx = torch.max(pred_after_sigmoid, dim=1)
+                _, base_indices = torch.sort(max_val, descending=True)
+                #get the base rank for each bbox
+                all_base_rank = []
+                for i in range(now_rand_bbox.shape[0]):
+                    now_pos = (base_indices == i).nonzero(as_tuple=True)
+                    now_pos = now_pos[0][0][0].item()
+                    all_base_rank.append(now_pos)  
+                all_base_rank = torch.tensor(all_base_rank).unsqueeze(dim=-1).cuda()
+                
+                ### save the result ranking
+                # scale back the bbox 
+                origin_bbox = now_rand_bbox[:, :4] / img_metas[0]['scale_factor']
+                final_res = torch.cat([origin_bbox, all_objectness_rank, all_base_rank], dim=-1)
+                
+                file = open(random_file_path, 'w')
+
+                #print('random', now_rand_bbox[:, -2])
+                result_json = {'res':final_res.cpu().tolist()}
+                #print('testing random json', result_json)
+                file.write(json.dumps(result_json))
+                file.close()
+                return [torch.zeros(10, 4)]
+            
             
             # filter the clip proposal base on the categories
             if self.filter_clip_proposal_base_on_cates or self.save_cates_and_conf:

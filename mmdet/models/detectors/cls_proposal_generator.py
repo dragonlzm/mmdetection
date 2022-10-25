@@ -99,11 +99,13 @@ class ClsProposalGenerator(BaseDetector):
         self.bbox_save_path_root = self.test_cfg.get('bbox_save_path_root', None) if self.test_cfg is not None else None
         
         self.least_conf_bbox = self.test_cfg.get('least_conf_bbox', False) if self.test_cfg is not None else False
+        self.use_sigmoid_for_cos = self.test_cfg.get('use_sigmoid_for_cos', False) if self.test_cfg is not None else False
 
         print('parameters:', 'anchor_generator["scales"]', anchor_generator['scales'], "anchor_generator['ratios']", anchor_generator['ratios'],
             "anchor_generator['strides']", anchor_generator['strides'], "self.paded_proposal_num", self.paded_proposal_num, "self.min_entropy", self.min_entropy,
             "self.nms_on_all_anchors", self.nms_on_all_anchors, "self.nms_threshold", self.nms_threshold,
-            'self.bbox_save_path_root', self.bbox_save_path_root, 'self.least_conf_bbox', self.least_conf_bbox)
+            'self.bbox_save_path_root', self.bbox_save_path_root, 'self.least_conf_bbox', self.least_conf_bbox, 'self.use_sigmoid_for_cos',
+            self.use_sigmoid_for_cos)
 
     def crop_img_to_patches(self, imgs, gt_bboxes, img_metas):
         # handle the test config
@@ -358,6 +360,7 @@ class ClsProposalGenerator(BaseDetector):
             # the len(pred_logits) == batch_size, with each ele in [num_anchors, num_cates]
             pred_logits = self.rpn_head.simple_test_bboxes(result_list, gt_labels, img_metas, gt_bboxes)
             softmax = nn.Softmax(dim=1)
+            sigmoid = nn.Sigmoid()
             # prepare for nms
             nms=dict(type='nms', iou_threshold=self.nms_threshold)
 
@@ -365,7 +368,12 @@ class ClsProposalGenerator(BaseDetector):
                 proposal_for_all_imgs = []
                 for logits_per_img, anchor_per_img, img_info in zip(pred_logits, anchors_for_each_img, img_metas):
                     h, w, _ = img_info['img_shape']
-                    pred_prob = softmax(logits_per_img)
+                    if self.use_sigmoid_for_cos:
+                        #print('before sigmoid:', logits_per_img)
+                        pred_prob = sigmoid(logits_per_img)
+                        #print('after sigmoid:', pred_prob)
+                    else:
+                        pred_prob = softmax(logits_per_img)
                     if not self.min_entropy:
                         max_pred_prob = torch.max(pred_prob, dim=1)
                         max_score_per_anchor = max_pred_prob[0]
