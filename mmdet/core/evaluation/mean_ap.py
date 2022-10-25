@@ -303,7 +303,7 @@ def eval_map(det_results,
              logger=None,
              tpfp_fn=None,
              nproc=4,
-             use_legacy_coordinate: bool = False) -> Tuple[List, List[Dict]]:
+             use_legacy_coordinate: bool = False):
     """Evaluate mAP of a dataset.
 
     :func:`eval_map` in mmdet predefines the names of classes and thus not
