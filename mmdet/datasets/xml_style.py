@@ -26,6 +26,7 @@ class XMLDataset(CustomDataset):
                  min_size=None,
                  img_subdir='JPEGImages',
                  ann_subdir='Annotations',
+                 eval_on_splits=False,
                  **kwargs):
         assert self.CLASSES or kwargs.get(
             'classes', None), 'CLASSES in `XMLDataset` can not be None.'
@@ -34,6 +35,7 @@ class XMLDataset(CustomDataset):
         super(XMLDataset, self).__init__(**kwargs)
         self.cat2label = {cat: i for i, cat in enumerate(self.CLASSES)}
         self.min_size = min_size
+        self.eval_on_splits = eval_on_splits
 
     def load_annotations(self, ann_file):
         """Load annotation from XML style ann_file.

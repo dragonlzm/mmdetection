@@ -13,6 +13,17 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import time
 
+VOC_SPLIT = dict(
+    ALL_CLASSES=('aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car',
+               'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse',
+               'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train',
+               'tvmonitor'),
+    NOVEL_CLASSES=('bird', 'bus', 'cow', 'motorbike', 'sofa'),
+    BASE_CLASSES=('aeroplane', 'bicycle', 'boat', 'bottle', 'car',
+                         'cat', 'chair', 'diningtable', 'dog', 'horse',
+                         'person', 'pottedplant', 'sheep', 'train',
+                         'tvmonitor'))
+
 
 @DATASETS.register_module()
 class VOCDataset(XMLDataset):
@@ -101,9 +112,10 @@ class VOCDataset(XMLDataset):
                 # we should use the legacy coordinate system in mmdet 1.x,
                 # which means w, h should be computed as 'x2 - x1 + 1` and
                 # `y2 - y1 + 1`
-                mean_ap, _ = eval_map(
+                mean_ap, ap_results = eval_map(
                     results,
                     annotations,
+                    classes=self.CLASSES,
                     scale_ranges=None,
                     iou_thr=iou_thr,
                     dataset=ds_name,
@@ -111,6 +123,23 @@ class VOCDataset(XMLDataset):
                     use_legacy_coordinate=True)
                 mean_aps.append(mean_ap)
                 eval_results[f'AP{int(iou_thr * 100):02d}'] = round(mean_ap, 3)
+                
+                # calculate evaluate results of different class splits
+                if self.eval_on_splits is not None:
+                    class_splits = VOC_SPLIT
+                    class_splits_mean_aps = {k: [] for k in class_splits.keys()}
+                    for k in class_splits.keys():
+                        aps = [
+                            cls_results['ap']
+                            for i, cls_results in enumerate(ap_results)
+                            if self.CLASSES[i] in class_splits[k]
+                        ]
+                        class_splits_mean_ap = np.array(aps).mean().item()
+                        class_splits_mean_aps[k].append(class_splits_mean_ap)
+                        eval_results[
+                            f'{k}: AP{int(iou_thr * 100):02d}'] = round(
+                                class_splits_mean_ap, 3)
+                
             eval_results['mAP'] = sum(mean_aps) / len(mean_aps)
         elif metric == 'recall':
             gt_bboxes = [ann['bboxes'] for ann in annotations]

@@ -296,17 +296,21 @@ def get_cls_results(det_results, annotations, class_id):
 
 def eval_map(det_results,
              annotations,
+             classes,
              scale_ranges=None,
              iou_thr=0.5,
              dataset=None,
              logger=None,
              tpfp_fn=None,
              nproc=4,
-             use_legacy_coordinate=False):
+             use_legacy_coordinate: bool = False) -> Tuple[List, List[Dict]]:
     """Evaluate mAP of a dataset.
 
+    :func:`eval_map` in mmdet predefines the names of classes and thus not
+    supports report map results of arbitrary class splits.
+
     Args:
-        det_results (list[list]): [[cls1_det, cls2_det, ...], ...].
+        det_results (list[list[np.ndarray]] | list[tuple[np.ndarray]]):
             The outer list indicates images, and the inner list indicates
             per-class detected bboxes.
         annotations (list[dict]): Ground truth annotations where each item of
@@ -316,6 +320,7 @@ def eval_map(det_results,
             - `labels`: numpy array of shape (n, )
             - `bboxes_ignore` (optional): numpy array of shape (k, 4)
             - `labels_ignore` (optional): numpy array of shape (k, )
+        classes (list[str]): Names of class.
         scale_ranges (list[tuple] | None): Range of scales to be evaluated,
             in the format [(min1, max1), (min2, max2), ...]. A range of
             (32, 64) means the area range between (32**2, 64**2).
@@ -323,12 +328,12 @@ def eval_map(det_results,
         iou_thr (float): IoU threshold to be considered as matched.
             Default: 0.5.
         dataset (list[str] | str | None): Dataset name or dataset classes,
-            there are minor differences in metrics for different datsets, e.g.
+            there are minor differences in metrics for different datasets, e.g.
             "voc07", "imagenet_det", etc. Default: None.
-        logger (logging.Logger | str | None): The way to print the mAP
+        logger (logging.Logger | None): The way to print the mAP
             summary. See `mmcv.utils.print_log()` for details. Default: None.
-        tpfp_fn (callable | None): The function used to determine true/
-            false positives. If None, :func:`tpfp_default` is used as default
+        tpfp_fn (callable | None): The function used to determine true false
+            positives. If None, :func:`tpfp_default` is used as default
             unless dataset is 'det' or 'vid' (:func:`tpfp_imagenet` in this
             case). If it is given as a function, then this function is used
             to evaluate tp & fp. Default None.
@@ -340,13 +345,9 @@ def eval_map(det_results,
             Default: False.
 
     Returns:
-        tuple: (mAP, [dict, dict, ...])
+        tuple: (list, [dict, dict, ...])
     """
     assert len(det_results) == len(annotations)
-    if not use_legacy_coordinate:
-        extra_length = 0.
-    else:
-        extra_length = 1.
 
     num_imgs = len(det_results)
     num_scales = len(scale_ranges) if scale_ranges is not None else 1
@@ -370,7 +371,6 @@ def eval_map(det_results,
             raise ValueError(
                 f'tpfp_fn has to be a function or None, but got {tpfp_fn}')
 
-        # compute tp and fp for each image with multiple processes
         tpfp = pool.starmap(
             tpfp_fn,
             zip(cls_dets, cls_gts, cls_gts_ignore,
@@ -385,8 +385,8 @@ def eval_map(det_results,
             if area_ranges is None:
                 num_gts[0] += bbox.shape[0]
             else:
-                gt_areas = (bbox[:, 2] - bbox[:, 0] + extra_length) * (
-                    bbox[:, 3] - bbox[:, 1] + extra_length)
+                gt_areas = (bbox[:, 2] - bbox[:, 0]) * (
+                    bbox[:, 3] - bbox[:, 1])
                 for k, (min_area, max_area) in enumerate(area_ranges):
                     num_gts[k] += np.sum((gt_areas >= min_area)
                                          & (gt_areas < max_area))
@@ -436,7 +436,7 @@ def eval_map(det_results,
         mean_ap = np.array(aps).mean().item() if aps else 0.0
 
     print_map_summary(
-        mean_ap, eval_results, dataset, area_ranges, logger=logger)
+        mean_ap, eval_results, classes, area_ranges, logger=logger)
 
     return mean_ap, eval_results
 
