@@ -21,6 +21,30 @@ import matplotlib.pyplot as plt
 import time
 import os
 
+COCO_SPLIT = dict(
+    ALL_CLASSES=('person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 
+                    'train', 'truck', 'boat', 'bench', 'bird', 'cat', 'dog', 
+                    'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe', 
+                    'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee', 
+                    'skis', 'snowboard', 'kite', 'skateboard', 'surfboard', 'bottle', 
+                    'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple', 
+                    'sandwich', 'orange', 'broccoli', 'carrot', 'pizza', 'donut', 
+                    'cake', 'chair', 'couch', 'bed', 'toilet', 'tv', 'laptop', 'mouse', 
+                    'remote', 'keyboard', 'microwave', 'oven', 'toaster', 'sink', 
+                    'refrigerator', 'book', 'clock', 'vase', 'scissors', 'toothbrush'),
+    NOVEL_CLASSES=('airplane', 'bus', 'cat', 'dog', 'cow', 
+                    'elephant', 'umbrella', 'tie', 'snowboard', 
+                    'skateboard', 'cup', 'knife', 'cake', 'couch', 
+                    'keyboard', 'sink', 'scissors'),
+    BASE_CLASSES=('person', 'bicycle', 'car', 'motorcycle', 'train', 
+                    'truck', 'boat', 'bench', 'bird', 'horse', 'sheep', 
+                    'bear', 'zebra', 'giraffe', 'backpack', 'handbag', 
+                    'suitcase', 'frisbee', 'skis', 'kite', 'surfboard', 
+                    'bottle', 'fork', 'spoon', 'bowl', 'banana', 'apple', 
+                    'sandwich', 'orange', 'broccoli', 'carrot', 'pizza', 
+                    'donut', 'chair', 'bed', 'toilet', 'tv', 'laptop', 
+                    'mouse', 'remote', 'microwave', 'oven', 'toaster', 
+                    'refrigerator', 'book', 'clock', 'vase', 'toothbrush'))
 
 @DATASETS.register_module()
 class CocoDataset(CustomDataset):
@@ -668,100 +692,166 @@ class CocoDataset(CustomDataset):
                     level=logging.ERROR)
                 break
 
-            cocoEval = COCOeval(cocoGt, cocoDt, iou_type)
-            cocoEval.params.catIds = self.cat_ids
-            cocoEval.params.imgIds = self.img_ids
-            cocoEval.params.maxDets = list(proposal_nums)
-            cocoEval.params.iouThrs = iou_thrs
-            # mapping of cocoEval.stats
-            coco_metric_names = {
-                'mAP': 0,
-                'mAP_50': 1,
-                'mAP_75': 2,
-                'mAP_s': 3,
-                'mAP_m': 4,
-                'mAP_l': 5,
-                'AR@100': 6,
-                'AR@300': 7,
-                'AR@1000': 8,
-                'AR_s@1000': 9,
-                'AR_m@1000': 10,
-                'AR_l@1000': 11
-            }
-            if metric_items is not None:
-                for metric_item in metric_items:
-                    if metric_item not in coco_metric_names:
-                        raise KeyError(
-                            f'metric item {metric_item} is not supported')
-
-            if metric == 'proposal':
-                cocoEval.params.useCats = 0
-                cocoEval.evaluate()
-                cocoEval.accumulate()
-                cocoEval.summarize()
-                if metric_items is None:
-                    metric_items = [
-                        'AR@100', 'AR@300', 'AR@1000', 'AR_s@1000',
-                        'AR_m@1000', 'AR_l@1000'
+            # eval each class splits
+            if self.eval_on_splits is not None:
+                class_splits = COCO_SPLIT
+                for split_name in class_splits.keys():
+                    split_cat_ids = [
+                        self.cat_ids[i] for i in range(len(self.CLASSES))
+                        if self.CLASSES[i] in class_splits[split_name]
                     ]
+                    self._evaluate_by_class_split(
+                        cocoGt,
+                        cocoDt,
+                        iou_type,
+                        proposal_nums,
+                        iou_thrs,
+                        split_cat_ids,
+                        metric,
+                        metric_items,
+                        eval_results,
+                        False,
+                        logger,
+                        split_name=split_name + ' ')
+            # eval all classes
+            self._evaluate_by_class_split(cocoGt, cocoDt, iou_type,
+                                          proposal_nums, iou_thrs,
+                                          self.cat_ids, metric, metric_items,
+                                          eval_results, classwise, logger)
 
-                for item in metric_items:
-                    val = float(
-                        f'{cocoEval.stats[coco_metric_names[item]]:.3f}')
-                    eval_results[item] = val
-            else:
-                cocoEval.evaluate()
-                cocoEval.accumulate()
-                cocoEval.summarize()
-                if classwise:  # Compute per-category AP
-                    # Compute per-category AP
-                    # from https://github.com/facebookresearch/detectron2/
-                    precisions = cocoEval.eval['precision']
-                    # precision: (iou, recall, cls, area range, max dets)
-                    assert len(self.cat_ids) == precisions.shape[2]
-
-                    results_per_category = []
-                    for idx, catId in enumerate(self.cat_ids):
-                        # area range index 0: all area ranges
-                        # max dets index -1: typically 100 per image
-                        nm = self.coco.loadCats(catId)[0]
-                        precision = precisions[:, :, idx, 0, -1]
-                        precision = precision[precision > -1]
-                        if precision.size:
-                            ap = np.mean(precision)
-                        else:
-                            ap = float('nan')
-                        results_per_category.append(
-                            (f'{nm["name"]}', f'{float(ap):0.3f}'))
-
-                    num_columns = min(6, len(results_per_category) * 2)
-                    results_flatten = list(
-                        itertools.chain(*results_per_category))
-                    headers = ['category', 'AP'] * (num_columns // 2)
-                    results_2d = itertools.zip_longest(*[
-                        results_flatten[i::num_columns]
-                        for i in range(num_columns)
-                    ])
-                    table_data = [headers]
-                    table_data += [result for result in results_2d]
-                    table = AsciiTable(table_data)
-                    print_log('\n' + table.table, logger=logger)
-
-                if metric_items is None:
-                    metric_items = [
-                        'mAP', 'mAP_50', 'mAP_75', 'mAP_s', 'mAP_m', 'mAP_l'
-                    ]
-
-                for metric_item in metric_items:
-                    key = f'{metric}_{metric_item}'
-                    val = float(
-                        f'{cocoEval.stats[coco_metric_names[metric_item]]:.3f}'
-                    )
-                    eval_results[key] = val
-                ap = cocoEval.stats[:6]
-                eval_results[f'{metric}_mAP_copypaste'] = (
-                    f'{ap[0]:.3f} {ap[1]:.3f} {ap[2]:.3f} {ap[3]:.3f} '
-                    f'{ap[4]:.3f} {ap[5]:.3f}')
         if tmp_dir is not None:
             tmp_dir.cleanup()
         return eval_results
+
+    def _evaluate_by_class_split(self,
+                                 cocoGt: object,
+                                 cocoDt: object,
+                                 iou_type: str,
+                                 proposal_nums: Sequence[int],
+                                 iou_thrs: Union[float, Sequence[float]],
+                                 cat_ids: List[int],
+                                 metric: str,
+                                 metric_items: Union[str, List[str]],
+                                 eval_results: Dict,
+                                 classwise: bool,
+                                 logger: object,
+                                 split_name: str = '') -> Dict:
+        """Evaluation a split of classes in COCO protocol.
+
+        Args:
+            cocoGt (object): coco object with ground truth annotations.
+            cocoDt (object): coco object with detection results.
+            iou_type (str): Type of IOU.
+            proposal_nums (Sequence[int]): Number of proposals.
+            iou_thrs (float | Sequence[float]): Thresholds of IoU.
+            cat_ids (list[int]): Class ids of classes to be evaluated.
+            metric (str): Metrics to be evaluated.
+            metric_items (str | list[str]): Metric items that will
+                be returned. If not specified, ``['AR@100', 'AR@300',
+                'AR@1000', 'AR_s@1000', 'AR_m@1000', 'AR_l@1000' ]`` will be
+                used when ``metric=='proposal'``, ``['mAP', 'mAP_50', 'mAP_75',
+                'mAP_s', 'mAP_m', 'mAP_l']`` will be used when
+                ``metric=='bbox'``.
+            eval_results (dict[str, float]): COCO style evaluation metric.
+            classwise (bool): Whether to evaluating the AP for each class.
+            split_name (str): Name of split. Default:''.
+
+        Returns:
+            dict[str, float]: COCO style evaluation metric.
+        """
+        cocoEval = COCOeval(cocoGt, cocoDt, iou_type)
+        cocoEval.params.imgIds = self.img_ids
+        cocoEval.params.maxDets = list(proposal_nums)
+        cocoEval.params.iouThrs = iou_thrs
+
+        cocoEval.params.catIds = cat_ids
+        # mapping of cocoEval.stats
+        coco_metric_names = {
+            'mAP': 0,
+            'mAP_50': 1,
+            'mAP_75': 2,
+            'mAP_s': 3,
+            'mAP_m': 4,
+            'mAP_l': 5,
+            'AR@100': 6,
+            'AR@300': 7,
+            'AR@1000': 8,
+            'AR_s@1000': 9,
+            'AR_m@1000': 10,
+            'AR_l@1000': 11
+        }
+        if metric_items is not None:
+            for metric_item in metric_items:
+                if metric_item not in coco_metric_names:
+                    raise KeyError(
+                        f'metric item {metric_item} is not supported')
+        if split_name is not None:
+            print_log(f'\n evaluation of {split_name} class', logger=logger)
+        if metric == 'proposal':
+            cocoEval.params.useCats = 0
+            cocoEval.evaluate()
+            cocoEval.accumulate()
+            cocoEval.summarize()
+            if metric_items is None:
+                metric_items = [
+                    'AR@100', 'AR@300', 'AR@1000', 'AR_s@1000', 'AR_m@1000',
+                    'AR_l@1000'
+                ]
+
+            for item in metric_items:
+                val = float(f'{cocoEval.stats[coco_metric_names[item]]:.3f}')
+                eval_results[split_name + item] = val
+        else:
+            cocoEval.evaluate()
+            cocoEval.accumulate()
+            cocoEval.summarize()
+            if classwise:  # Compute per-category AP
+                # Compute per-category AP
+                # from https://github.com/facebookresearch/detectron2/
+                precisions = cocoEval.eval['precision']
+                # precision: (iou, recall, cls, area range, max dets)
+                assert len(self.cat_ids) == precisions.shape[2], \
+                    f'{self.cat_ids},{precisions.shape}'
+
+                results_per_category = []
+                for idx, catId in enumerate(self.cat_ids):
+                    # area range index 0: all area ranges
+                    # max dets index -1: typically 100 per image
+                    nm = self.coco.loadCats(catId)[0]
+                    precision = precisions[:, :, idx, 0, -1]
+                    precision = precision[precision > -1]
+                    if precision.size:
+                        ap = np.mean(precision)
+                    else:
+                        ap = float('nan')
+                    results_per_category.append(
+                        (f'{nm["name"]}', f'{float(ap):0.3f}'))
+
+                num_columns = min(6, len(results_per_category) * 2)
+                results_flatten = list(itertools.chain(*results_per_category))
+                headers = [split_name + 'category', split_name + 'AP'] * (
+                    num_columns // 2)
+                results_2d = itertools.zip_longest(*[
+                    results_flatten[i::num_columns] for i in range(num_columns)
+                ])
+                table_data = [headers]
+                table_data += [result for result in results_2d]
+                table = AsciiTable(table_data)
+                print_log('\n' + table.table, logger=logger)
+
+            if metric_items is None:
+                metric_items = [
+                    'mAP', 'mAP_50', 'mAP_75', 'mAP_s', 'mAP_m', 'mAP_l'
+                ]
+
+            for metric_item in metric_items:
+                key = f'{metric}_{metric_item}'
+                val = float(
+                    f'{cocoEval.stats[coco_metric_names[metric_item]]:.3f}')
+                eval_results[split_name + key] = val
+            ap = cocoEval.stats[:6]
+            eval_results[split_name + f'{metric}_mAP_copypaste'] = (
+                f'{ap[0]:.3f} {ap[1]:.3f} {ap[2]:.3f} {ap[3]:.3f} '
+                f'{ap[4]:.3f} {ap[5]:.3f}')
+
+            return eval_results

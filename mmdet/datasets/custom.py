@@ -70,7 +70,8 @@ class CustomDataset(Dataset):
                  patches_file=None,
                  eval_filter_empty_gt=False,
                  visualization_path=None,
-                 copy_and_paste=False):
+                 copy_and_paste=False,
+                 eval_on_splits=False):
         self.ann_file = ann_file
         self.data_root = data_root
         self.img_prefix = img_prefix
@@ -82,6 +83,7 @@ class CustomDataset(Dataset):
         self.patches_file = patches_file
         self.visualization_path = visualization_path
         self.copy_and_paste = copy_and_paste
+        self.eval_on_splits = eval_on_splits
         
 
         # join paths if data_root is specified

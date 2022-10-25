@@ -17,6 +17,7 @@ data = dict(
 model = dict(
     roi_head=dict(
         bbox_head=dict(
+            type='ConvFCBBoxHead',
             num_shared_convs=4,
             reg_class_agnostic=True,
             num_classes=15)))

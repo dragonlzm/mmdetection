@@ -68,11 +68,13 @@ for image_id in from_image_id_to_bbox:
 
 import matplotlib.pyplot as plt
 #plt.scatter(x, y, s=area, c=colors, alpha=0.5)
-plt.scatter(novel_list_obj_rank, novel_list_base_rank, s=1, c='red', alpha=0.5)
-plt.scatter(base_list_obj_rank, base_list_base_rank, s=1, c='green', alpha=0.3)
+plt.scatter(novel_list_obj_rank, novel_list_base_rank, s=0.1, c='red', alpha=0.5)
+plt.scatter(base_list_obj_rank, base_list_base_rank, s=0.1, c='green', alpha=0.5)
+
 #plt.title('distribution of base prediction, conf vs iou')
 #file_name = 'obj_rank_vs_base_rank_' + str(image_id) + '.png'
-file_name = 'obj_rank_vs_base_rank_all.pdf'
+file_name = 'obj_rank_vs_base_rank_all_red_first.png'
+#file_name = 'obj_rank_vs_base_rank_all_green_first.png'
 plt.title(file_name)
 #plt.title('distribution of valid prediction, conf vs max(iop, iog)')
 #plt.title('distribution of invalid prediction')
