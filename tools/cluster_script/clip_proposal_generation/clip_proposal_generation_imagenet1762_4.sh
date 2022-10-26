@@ -23,15 +23,15 @@ BBOX_SAVE_PATH_ROOT="data/coco/clip_proposal/32_32_512_imagenet1762"
 JSONFILE_PREFIX="data/test/cls_proposal_generator_coco/cls_proposal_generator_coco_with_imagenet1762_name"
 
 
-# 1
-bash tools/dist_test.sh \
-${CONFIG_FILE} \
-${CHECKPOINT} 2 \
---eval=proposal_fast \
---eval-options jsonfile_prefix=${JSONFILE_PREFIX}_1 \
---cfg-options model.anchor_generator.strides=[32] model.anchor_generator.scales=[1,2,4,8,16] model.test_cfg.nms_on_all_anchors=True \
-model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=False model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
-data.test.ann_file=data/coco/annotations/instances_train2017_0_8000.json model.test_cfg.use_sigmoid_for_cos=True
+# # 1
+# bash tools/dist_test.sh \
+# ${CONFIG_FILE} \
+# ${CHECKPOINT} 2 \
+# --eval=proposal_fast \
+# --eval-options jsonfile_prefix=${JSONFILE_PREFIX}_1 \
+# --cfg-options model.anchor_generator.strides=[32] model.anchor_generator.scales=[1,2,4,8,16] model.test_cfg.nms_on_all_anchors=True \
+# model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=False model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
+# data.test.ann_file=data/coco/annotations/instances_train2017_0_8000.json model.test_cfg.use_sigmoid_for_cos=True
 
 # # 2
 # bash tools/dist_test.sh \
@@ -54,15 +54,15 @@ data.test.ann_file=data/coco/annotations/instances_train2017_0_8000.json model.t
 # model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=False model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
 # data.test.ann_file=data/coco/annotations/instances_train2017_16000_24000.json model.test_cfg.use_sigmoid_for_cos=True
 
-# # 4
-# bash tools/dist_test.sh \
-# ${CONFIG_FILE} \
-# ${CHECKPOINT} 2 \
-# --eval=proposal_fast \
-# --eval-options jsonfile_prefix=${JSONFILE_PREFIX}_4 \
-# --cfg-options model.anchor_generator.strides=[32] model.anchor_generator.scales=[1,2,4,8,16] model.test_cfg.nms_on_all_anchors=True \
-# model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=False model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
-# data.test.ann_file=data/coco/annotations/instances_train2017_24000_32000.json model.test_cfg.use_sigmoid_for_cos=True
+# 4
+bash tools/dist_test.sh \
+${CONFIG_FILE} \
+${CHECKPOINT} 2 \
+--eval=proposal_fast \
+--eval-options jsonfile_prefix=${JSONFILE_PREFIX}_4 \
+--cfg-options model.anchor_generator.strides=[32] model.anchor_generator.scales=[1,2,4,8,16] model.test_cfg.nms_on_all_anchors=True \
+model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=False model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
+data.test.ann_file=data/coco/annotations/instances_train2017_24000_32000.json model.test_cfg.use_sigmoid_for_cos=True
 
 # # 5
 # bash tools/dist_test.sh \
