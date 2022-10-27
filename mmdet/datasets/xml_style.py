@@ -124,12 +124,12 @@ class XMLDataset(CustomDataset):
                 int(float(bnd_box.find('ymax').text))
             ]
             ignore = False
-            if self.min_size:
-                assert not self.test_mode
-                w = bbox[2] - bbox[0]
-                h = bbox[3] - bbox[1]
-                if w < self.min_size or h < self.min_size:
-                    ignore = True
+            # if self.min_size:
+            #     assert not self.test_mode
+            #     w = bbox[2] - bbox[0]
+            #     h = bbox[3] - bbox[1]
+            #     if w < self.min_size or h < self.min_size:
+            #         ignore = True
             # if difficult or ignore:
             #     bboxes_ignore.append(bbox)
             #     labels_ignore.append(label)

@@ -1,14 +1,36 @@
-_base_ = './faster_rcnn_r50_fpn_1x_voc0712_base15_split1.py'
+_base_ = './faster_rcnn_r50_fpn_1x_voc0712_base15_split1_fewshot_setting_schecdule.py'
 
 # model settings
 model = dict(
     backbone=dict(
+        _delete_=True,
+        type='ResNet',
         depth=101,
-        init_cfg=dict(type='Pretrained', checkpoint='torchvision://resnet101')))
+        num_stages=4,
+        out_indices=(0, 1, 2, 3),
+        frozen_stages=1,
+        norm_cfg=dict(type='BN', requires_grad=False),
+        norm_eval=True,
+        style='caffe',        
+        init_cfg=dict(type='Pretrained', checkpoint='open-mmlab://detectron2/resnet101_caffe')),
+    neck=dict(
+        _delete_=True,
+        type='FPN',
+        in_channels=[256, 512, 1024, 2048],
+        out_channels=256,
+        num_outs=5,
+        init_cfg=[
+            dict(
+                type='Caffe2Xavier',
+                override=dict(type='Caffe2Xavier', name='lateral_convs')),
+            dict(
+                type='Caffe2Xavier',
+                override=dict(type='Caffe2Xavier', name='fpn_convs'))
+        ]))
 
 # dataset settings
 img_norm_cfg = dict(
-    mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
+    mean=[103.530, 116.280, 123.675], std=[1.0, 1.0, 1.0], to_rgb=False)
 train_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='LoadAnnotations', with_bbox=True),
@@ -46,11 +68,3 @@ data = dict(
     train=dict(dataset=dict(pipeline=train_pipeline)),
     val=dict(pipeline=test_pipeline),
     test=dict(pipeline=test_pipeline))
-
-# optimizer
-optimizer = dict(type='SGD', lr=0.005, momentum=0.9, weight_decay=0.0001)
-# learning policy
-# actual epoch = 3 * 3 = 9
-lr_config = dict(policy='step', step=[5,6])
-# runtime settings
-runner = dict(type='EpochBasedRunner', max_epochs=7)  # actual epoch = 4 * 3 = 12
