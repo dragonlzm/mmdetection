@@ -22,7 +22,6 @@ CHECKPOINT="data/exp_res/cls_finetuner_clip_base48_all_train/latest.pth"
 BBOX_SAVE_PATH_ROOT="data/coco/clip_proposal/32_32_512_imagenet1762"
 JSONFILE_PREFIX="data/test/cls_proposal_generator_coco/cls_proposal_generator_coco_with_imagenet1762_name"
 
-
 # 1
 bash tools/dist_test.sh \
 ${CONFIG_FILE} \
