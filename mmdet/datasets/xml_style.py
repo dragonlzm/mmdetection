@@ -26,7 +26,7 @@ class XMLDataset(CustomDataset):
                  min_size=None,
                  img_subdir='JPEGImages',
                  ann_subdir='Annotations',
-                 eval_on_splits=False,
+                 eval_on_splits=None,
                  **kwargs):
         assert self.CLASSES or kwargs.get(
             'classes', None), 'CLASSES in `XMLDataset` can not be None.'

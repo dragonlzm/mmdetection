@@ -13,16 +13,36 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import time
 
-VOC_SPLIT = dict(
+VOC_SPLIT1 = dict(
     ALL_CLASSES=('aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car',
                'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse',
                'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train',
                'tvmonitor'),
     NOVEL_CLASSES=('bird', 'bus', 'cow', 'motorbike', 'sofa'),
     BASE_CLASSES=('aeroplane', 'bicycle', 'boat', 'bottle', 'car',
-                         'cat', 'chair', 'diningtable', 'dog', 'horse',
-                         'person', 'pottedplant', 'sheep', 'train',
-                         'tvmonitor'))
+                    'cat', 'chair', 'diningtable', 'dog', 'horse',
+                    'person', 'pottedplant', 'sheep', 'train',
+                    'tvmonitor'))
+
+VOC_SPLIT2 = dict(
+    ALL_CLASSES=('aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car',
+               'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse',
+               'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train',
+               'tvmonitor'),
+    NOVEL_CLASSES=('aeroplane', 'bottle', 'cow', 'horse', 'sofa'),
+    BASE_CLASSES=('bicycle', 'bird', 'boat', 'bus', 'car', 'cat',
+                    'chair', 'diningtable', 'dog', 'motorbike', 'person',
+                    'pottedplant', 'sheep', 'train', 'tvmonitor'))
+
+VOC_SPLIT3 = dict(
+    ALL_CLASSES=('aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car',
+               'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse',
+               'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train',
+               'tvmonitor'),
+    NOVEL_CLASSES=('boat', 'cat', 'motorbike', 'sheep', 'sofa'),
+    BASE_CLASSES=('aeroplane', 'bicycle', 'bird', 'bottle', 'bus',
+                    'car', 'chair', 'cow', 'diningtable', 'dog', 'horse',
+                    'person', 'pottedplant', 'train', 'tvmonitor'))
 
 
 @DATASETS.register_module()
@@ -126,7 +146,12 @@ class VOCDataset(XMLDataset):
                 
                 # calculate evaluate results of different class splits
                 if self.eval_on_splits is not None:
-                    class_splits = VOC_SPLIT
+                    if self.eval_on_splits == 'split1':
+                        class_splits = VOC_SPLIT1
+                    elif self.eval_on_splits == 'split2':
+                        class_splits = VOC_SPLIT2
+                    else:
+                        class_splits = VOC_SPLIT3
                     class_splits_mean_aps = {k: [] for k in class_splits.keys()}
                     for k in class_splits.keys():
                         aps = [
