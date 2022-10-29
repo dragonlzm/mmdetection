@@ -54,25 +54,25 @@ BBOX_SAVE_PATH_ROOT="data/coco/clip_proposal/32_32_512_fewshot"
 #     model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=True model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
 #     data.test.ann_file=data/coco/annotations/instances_train2017_16000_24000.json 
 
-# 4
-bash tools/dist_test.sh \
-${CONFIG_FILE} \
-${CHECK_POINT} 2 \
---eval=proposal_fast \
---options jsonfile_prefix=${JSONFILE_PREFIX}_4 \
---cfg-options model.anchor_generator.strides=[32] model.anchor_generator.scales=[1,2,4,8,16] model.test_cfg.nms_on_all_anchors=True \
-    model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=True model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
-    data.test.ann_file=data/coco/annotations/instances_train2017_24000_32000.json 
-
-# # 5
+# # 4
 # bash tools/dist_test.sh \
 # ${CONFIG_FILE} \
 # ${CHECK_POINT} 2 \
 # --eval=proposal_fast \
-# --options jsonfile_prefix=${JSONFILE_PREFIX}_5 \
+# --options jsonfile_prefix=${JSONFILE_PREFIX}_4 \
 # --cfg-options model.anchor_generator.strides=[32] model.anchor_generator.scales=[1,2,4,8,16] model.test_cfg.nms_on_all_anchors=True \
 #     model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=True model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
-#     data.test.ann_file=data/coco/annotations/instances_train2017_32000_40000.json 
+#     data.test.ann_file=data/coco/annotations/instances_train2017_24000_32000.json 
+
+# 5
+bash tools/dist_test.sh \
+${CONFIG_FILE} \
+${CHECK_POINT} 2 \
+--eval=proposal_fast \
+--options jsonfile_prefix=${JSONFILE_PREFIX}_5 \
+--cfg-options model.anchor_generator.strides=[32] model.anchor_generator.scales=[1,2,4,8,16] model.test_cfg.nms_on_all_anchors=True \
+    model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=True model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
+    data.test.ann_file=data/coco/annotations/instances_train2017_32000_40000.json 
 
 # # 6
 # bash tools/dist_test.sh \
