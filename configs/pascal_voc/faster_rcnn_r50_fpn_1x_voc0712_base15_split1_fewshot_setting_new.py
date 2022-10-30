@@ -200,10 +200,11 @@ lr_config = dict(
     warmup='linear',
     warmup_iters=100,
     warmup_ratio=0.001,
-    step=[48000, 64000])
-runner = dict(type='IterBasedRunner', max_iters=72000)
+    step=[24000, 32000])
+runner = dict(type='IterBasedRunner', max_iters=36000)
 
-checkpoint_config = dict(interval=16000)
+# 2*4
+checkpoint_config = dict(interval=8000)
 optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(type='GradientCumulativeOptimizerHook', 
                         cumulative_iters=2,
