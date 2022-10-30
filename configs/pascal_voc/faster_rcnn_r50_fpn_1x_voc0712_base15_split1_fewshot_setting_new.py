@@ -162,7 +162,10 @@ test_pipeline = [
             dict(type='Collect', keys=['img'])
         ])
 ]
-# classes splits are predefined in FewShotVOCDataset
+classes = ('aeroplane', 'bicycle', 'boat', 'bottle', 'car',
+            'cat', 'chair', 'diningtable', 'dog', 'horse',
+            'person', 'pottedplant', 'sheep', 'train',
+            'tvmonitor')
 data = dict(
     samples_per_gpu=2,
     workers_per_gpu=2,
@@ -173,17 +176,20 @@ data = dict(
                 data_root + 'VOC2012/ImageSets/Main/trainval.txt'
             ],
             img_prefix=[data_root + 'VOC2007/', data_root + 'VOC2012/'],
-            pipeline=train_pipeline),
+            pipeline=train_pipeline,
+            classes=classes),
     val=dict(
         type=dataset_type,
         ann_file=data_root + 'VOC2007/ImageSets/Main/test.txt',
         img_prefix=data_root + 'VOC2007/',
-        pipeline=test_pipeline),
+        pipeline=test_pipeline,
+        classes=classes),
     test=dict(
         type=dataset_type,
         ann_file=data_root + 'VOC2007/ImageSets/Main/test.txt',
         img_prefix=data_root + 'VOC2007/',
-        pipeline=test_pipeline))
+        pipeline=test_pipeline,
+        classes=classes))
 evaluation = dict(interval=16000, metric='mAP')
 
 
