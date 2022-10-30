@@ -742,7 +742,7 @@ class ClsFinetuner(BaseDetector):
                 
                 # add the confidence score (the score after softmax for the max confidence score) replace the original score
                 if now_rand_bbox.shape[-1] == 5:
-                    objectness_score = now_rand_bbox[:, -1]
+                    objectness_score = now_rand_bbox.clone()[:, -1]
                     objectness_score = objectness_score.unsqueeze(dim=-1)
                     now_rand_bbox[:, -1] = max_val
                 elif now_rand_bbox.shape[-1] == 4:
