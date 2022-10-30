@@ -127,6 +127,32 @@ class ClsFinetuner(BaseDetector):
                                     'donut', 'chair', 'bed', 'toilet', 'tv', 'laptop', 
                                     'mouse', 'remote', 'microwave', 'oven', 'toaster', 
                                     'refrigerator', 'book', 'clock', 'vase', 'toothbrush')
+        elif base_cate_name == 'coco_base_only':
+            self.from_cate_name_to_gt_idx = {'person': 0, 'bicycle': 1, 'car': 2, 'motorcycle': 3, 'airplane': 4, 'bus': 5, 'train': 6, 'truck': 7, 
+                                            'boat': 8, 'traffic light': 9, 'fire hydrant': 10, 'stop sign': 11, 'parking meter': 12, 'bench': 13, 
+                                            'bird': 14, 'cat': 15, 'dog': 16, 'horse': 17, 'sheep': 18, 'cow': 19, 'elephant': 20, 'bear': 21, 
+                                            'zebra': 22, 'giraffe': 23, 'backpack': 24, 'umbrella': 25, 'handbag': 26, 'tie': 27, 'suitcase': 28, 
+                                            'frisbee': 29, 'skis': 30, 'snowboard': 31, 'sports ball': 32, 'kite': 33, 'baseball bat': 34, 'baseball glove': 35, 
+                                            'skateboard': 36, 'surfboard': 37, 'tennis racket': 38, 'bottle': 39, 'wine glass': 40, 'cup': 41, 'fork': 42, 
+                                            'knife': 43, 'spoon': 44, 'bowl': 45, 'banana': 46, 'apple': 47, 'sandwich': 48, 'orange': 49, 'broccoli': 50, 
+                                            'carrot': 51, 'hot dog': 52, 'pizza': 53, 'donut': 54, 'cake': 55, 'chair': 56, 'couch': 57, 'potted plant': 58, 
+                                            'bed': 59, 'dining table': 60, 'toilet': 61, 'tv': 62, 'laptop': 63, 'mouse': 64, 'remote': 65, 'keyboard': 66, 
+                                            'cell phone': 67, 'microwave': 68, 'oven': 69, 'toaster': 70, 'sink': 71, 'refrigerator': 72, 'book': 73, 'clock': 74, 
+                                            'vase': 75, 'scissors': 76, 'teddy bear': 77, 'hair drier': 78, 'toothbrush': 79}
+            self.from_gt_idx_to_cate_idx = {0: 1, 1: 2, 2: 3, 3: 4, 4: 7, 5: 8, 6: 9, 7: 15, 8: 16, 9: 19, 10: 20, 11: 23, 12: 24, 
+                                            13: 25, 14: 27, 15: 31, 16: 33, 17: 34, 18: 35, 19: 38, 20: 42, 21: 44, 22: 48, 23: 50, 
+                                            24: 51, 25: 52, 26: 53, 27: 54, 28: 55, 29: 56, 30: 57, 31: 59, 32: 60, 33: 62, 34: 65, 
+                                            35: 70, 36: 72, 37: 73, 38: 74, 39: 75, 40: 78, 41: 79, 42: 80, 43: 82, 44: 84, 45: 85, 
+                                            46: 86, 47: 90}
+            self.base_cate_name = ('person', 'bicycle', 'car', 'motorcycle', 'train', 
+                                    'truck', 'boat', 'bench', 'bird', 'horse', 'sheep', 
+                                    'bear', 'zebra', 'giraffe', 'backpack', 'handbag', 
+                                    'suitcase', 'frisbee', 'skis', 'kite', 'surfboard', 
+                                    'bottle', 'fork', 'spoon', 'bowl', 'banana', 'apple', 
+                                    'sandwich', 'orange', 'broccoli', 'carrot', 'pizza', 
+                                    'donut', 'chair', 'bed', 'toilet', 'tv', 'laptop', 
+                                    'mouse', 'remote', 'microwave', 'oven', 'toaster', 
+                                    'refrigerator', 'book', 'clock', 'vase', 'toothbrush')            
         else:
             # for lvis dataset
             self.base_cate_name = base_cate_name
@@ -716,8 +742,11 @@ class ClsFinetuner(BaseDetector):
                 
                 # add the confidence score (the score after softmax for the max confidence score) replace the original score
                 if now_rand_bbox.shape[-1] == 5:
+                    objectness_score = now_rand_bbox[:, -1]
+                    objectness_score = objectness_score.unsqueeze(dim=-1)
                     now_rand_bbox[:, -1] = max_val
                 elif now_rand_bbox.shape[-1] == 4:
+                    objectness_score = None
                     now_rand_bbox = torch.cat([now_rand_bbox, max_val.unsqueeze(dim=-1)], dim=-1)
                 else:
                     print('now_rand_bbox.shape[1] is not equal to 4 or 5')
@@ -725,6 +754,10 @@ class ClsFinetuner(BaseDetector):
                 # add the max confidence coco cate id (convert from the gt idx to the coco id)
                 all_coco_idx = torch.tensor([self.from_gt_idx_to_cate_idx[ele.item()] for ele in pred_idx]).cuda()
                 now_rand_bbox = torch.cat([now_rand_bbox, all_coco_idx.unsqueeze(dim=-1)], dim=-1)
+                
+                # append the objectness_score
+                if objectness_score is not None:
+                    now_rand_bbox = torch.cat([now_rand_bbox, objectness_score], dim=-1)
 
                 if self.filter_clip_proposal_base_on_cates:
                     # get the idx which is not predicted as base categories

@@ -206,6 +206,7 @@ runner = dict(type='IterBasedRunner', max_iters=36000)
 # 2*4
 checkpoint_config = dict(interval=8000)
 optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
+# simulating 4*4
 optimizer_config = dict(type='GradientCumulativeOptimizerHook', 
                         cumulative_iters=2,
                         grad_clip=None)
