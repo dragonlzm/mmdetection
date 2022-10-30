@@ -184,49 +184,6 @@ data = dict(
         ann_file=data_root + 'VOC2007/ImageSets/Main/test.txt',
         img_prefix=data_root + 'VOC2007/',
         pipeline=test_pipeline))
-
-data = dict(
-    samples_per_gpu=2,
-    workers_per_gpu=2,
-    train=dict(
-        type='FewShotVOCDataset',
-        save_dataset=False,
-        ann_cfg=[
-            dict(
-                type='ann_file',
-                ann_file=data_root + 'VOC2007/ImageSets/Main/trainval.txt'),
-            dict(
-                type='ann_file',
-                ann_file=data_root + 'VOC2012/ImageSets/Main/trainval.txt')
-        ],
-        img_prefix=data_root,
-        pipeline=train_pipeline,
-        classes=None,
-        use_difficult=True,
-        instance_wise=False),
-    val=dict(
-        type='FewShotVOCDataset',
-        ann_cfg=[
-            dict(
-                type='ann_file',
-                ann_file=data_root + 'VOC2007/ImageSets/Main/test.txt')
-        ],
-        img_prefix=data_root,
-        pipeline=test_pipeline,
-        classes=None,
-    ),
-    test=dict(
-        type='FewShotVOCDataset',
-        ann_cfg=[
-            dict(
-                type='ann_file',
-                ann_file=data_root + 'VOC2007/ImageSets/Main/test.txt')
-        ],
-        img_prefix=data_root,
-        pipeline=test_pipeline,
-        test_mode=True,
-        classes=None,
-    ))
 evaluation = dict(interval=16000, metric='mAP')
 
 
