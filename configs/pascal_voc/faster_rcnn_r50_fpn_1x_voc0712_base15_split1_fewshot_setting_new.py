@@ -227,7 +227,7 @@ data = dict(
         test_mode=True,
         classes=None,
     ))
-evaluation = dict(interval=3000, metric='mAP')
+evaluation = dict(interval=16000, metric='mAP')
 
 
 
@@ -237,9 +237,10 @@ lr_config = dict(
     warmup='linear',
     warmup_iters=100,
     warmup_ratio=0.001,
-    step=[12000, 16000])
-runner = dict(type='IterBasedRunner', max_iters=18000)
-checkpoint_config = dict(interval=9000)
+    step=[48000, 64000])
+runner = dict(type='IterBasedRunner', max_iters=72000)
+
+checkpoint_config = dict(interval=16000)
 optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(type='GradientCumulativeOptimizerHook', 
                         cumulative_iters=4,
