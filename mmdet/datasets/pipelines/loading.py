@@ -619,13 +619,18 @@ class LoadCLIPFeat:
         if file_name.startswith('train2017'):
             file_name = file_name.split('/')[-1]
         # for VOC dataset
-        if file_name.startswith('JPEGImages'):
+        elif file_name.startswith('JPEGImages'):
             file_name = file_name.split('/')[-1]
             if 'VOC2007' in results['filename']:
                 file_name = os.path.join('VOC2007', file_name)
             elif 'VOC2012' in results['filename']:
-                file_name = os.path.join('VOC2012', file_name)            
-            
+                file_name = os.path.join('VOC2012', file_name)   
+        # for VOC fewshot dataset
+        elif 'JPEGImages' in file_name:
+            file_name = file_name.split('/')
+            file_name.pop(1)
+            file_name = '/'.join(file_name)     
+
         file_name = '.'.join(file_name.split('.')[:-1]) + '.json'
 
         #### load the gt feat
