@@ -19,7 +19,8 @@ from .wider_face import WIDERFaceDataset
 from .xml_style import XMLDataset
 from .collate import multi_pipeline_collate_fn
 from .coco_few_shot import FewShotCocoDataset, FewShotCocoCopyDataset, FewShotCocoDefaultDataset
-from .coco_few_shot_base import BaseFewShotDataset
+from .few_shot_base import BaseFewShotDataset
+from .voc_fewshot import FewShotVOCDataset
 
 __all__ = [
     'CustomDataset', 'XMLDataset', 'CocoDataset', 'DeepFashionDataset',
@@ -32,5 +33,6 @@ __all__ = [
     'QueryAwareDataset', 'InfiniteSampler', 'InfiniteGroupSampler', 
     'DistributedInfiniteSampler', 'DistributedInfiniteGroupSampler',
     'multi_pipeline_collate_fn', 'FewShotCocoDataset', 'FewShotCocoCopyDataset', 
-    'FewShotCocoDefaultDataset', 'BaseFewShotDataset', 'get_copy_dataset_type'
+    'FewShotCocoDefaultDataset', 'BaseFewShotDataset', 'get_copy_dataset_type',
+    'FewShotVOCDataset'
 ]

@@ -166,30 +166,50 @@ classes = ('aeroplane', 'bicycle', 'boat', 'bottle', 'car',
             'cat', 'chair', 'diningtable', 'dog', 'horse',
             'person', 'pottedplant', 'sheep', 'train',
             'tvmonitor')
+# classes splits are predefined in FewShotVOCDataset
+data_root = 'data/VOCdevkit/'
 data = dict(
     samples_per_gpu=2,
     workers_per_gpu=2,
     train=dict(
-            type=dataset_type,
-            ann_file=[
-                data_root + 'VOC2007/ImageSets/Main/trainval.txt',
-                data_root + 'VOC2012/ImageSets/Main/trainval.txt'
-            ],
-            img_prefix=[data_root + 'VOC2007/', data_root + 'VOC2012/'],
-            pipeline=train_pipeline,
-            classes=classes),
+        type='FewShotVOCDataset',
+        save_dataset=False,
+        ann_cfg=[
+            dict(
+                type='ann_file',
+                ann_file=data_root + 'VOC2007/ImageSets/Main/trainval.txt'),
+            dict(
+                type='ann_file',
+                ann_file=data_root + 'VOC2012/ImageSets/Main/trainval.txt')
+        ],
+        img_prefix=data_root,
+        pipeline=train_pipeline,
+        classes=classes,
+        use_difficult=True,
+        instance_wise=False),
     val=dict(
-        type=dataset_type,
-        ann_file=data_root + 'VOC2007/ImageSets/Main/test.txt',
-        img_prefix=data_root + 'VOC2007/',
+        type='FewShotVOCDataset',
+        ann_cfg=[
+            dict(
+                type='ann_file',
+                ann_file=data_root + 'VOC2007/ImageSets/Main/test.txt')
+        ],
+        img_prefix=data_root,
         pipeline=test_pipeline,
-        classes=classes),
+        classes=classes,
+    ),
     test=dict(
-        type=dataset_type,
-        ann_file=data_root + 'VOC2007/ImageSets/Main/test.txt',
-        img_prefix=data_root + 'VOC2007/',
+        type='FewShotVOCDataset',
+        ann_cfg=[
+            dict(
+                type='ann_file',
+                ann_file=data_root + 'VOC2007/ImageSets/Main/test.txt')
+        ],
+        img_prefix=data_root,
         pipeline=test_pipeline,
-        classes=classes))
+        test_mode=True,
+        classes=classes,
+    ))
 evaluation = dict(interval=16000, metric='mAP')
 
 

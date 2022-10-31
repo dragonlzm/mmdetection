@@ -13,7 +13,7 @@ from .builder import DATASETS
 from .coco import CocoDataset
 from terminaltables import AsciiTable
 
-from .coco_few_shot_base import BaseFewShotDataset
+from .few_shot_base import BaseFewShotDataset
 
 # pre-defined classes split for few shot setting
 COCO_SPLIT = dict(
