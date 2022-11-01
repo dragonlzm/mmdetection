@@ -19,8 +19,12 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 
 CONFIG_FILE="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection/configs/cls_proposal_generator/cls_proposal_generator_lvis.py"
 JSONFILE_PREFIX="data/test/cls_proposal_generator_coco/results_lvis_32_32_512"
-BBOX_SAVE_PATH_ROOT="data/coco/clip_proposal/lvis_32_32_512"
-CHECKPOINT="data/exp_res/cls_finetuner_clip_lvis_base_train_over_sample_v2/epoch_18.pth"
+# BBOX_SAVE_PATH_ROOT="data/coco/clip_proposal/lvis_32_32_512"
+# CHECKPOINT="data/exp_res/cls_finetuner_clip_lvis_base_train_over_sample_v2/epoch_18.pth"
+
+# generate proposal with new checkpoint 
+BBOX_SAVE_PATH_ROOT="data/detection/lvis_v1/clip_proposal/lvis_32_32_512_new_checkpoint"
+CHECKPOINT="data/exp_res/cls_finetuner_clip_lvis_base_train_gt_and_100_rand_embedding_v2/epoch_18.pth"
 
 # 1
 # PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
