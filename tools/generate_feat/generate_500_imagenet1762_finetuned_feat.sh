@@ -30,7 +30,7 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 
 ## generate imagenet1762_finetuned feature
 #1
-bash tools/dist_test.sh \
+bash tools/dist_test_23.sh \
 configs/cls_finetuner/cls_finetuner_clip_base48_all_train.py \
 data/exp_res/cls_finetuner_clip_base48_all_train/epoch_12.pth 2 \
 --eval=gt_acc \
@@ -39,10 +39,10 @@ data/exp_res/cls_finetuner_clip_base48_all_train/epoch_12.pth 2 \
 model.test_cfg.generate_bbox_feat=True model.test_cfg.feat_save_path=data/coco/clip_proposal_feat/imagenet1762_finetuned \
 model.test_cfg.use_pregenerated_proposal=data/coco/clip_proposal/32_32_512_imagenet1762 \
 model.test_cfg.num_of_rand_bboxes=500 model.test_cfg.save_cates_and_conf=True model.test_cfg.rand_select_subset=True \
-model.base_cate_name='coco_base_only'
+data.test.eval_filter_empty_gt=True model.base_cate_name='coco_base_only' 
 
 #2
-bash tools/dist_test.sh \
+bash tools/dist_test_23.sh \
 configs/cls_finetuner/cls_finetuner_clip_base48_all_train.py \
 data/exp_res/cls_finetuner_clip_base48_all_train/epoch_12.pth 2 \
 --eval=gt_acc \
@@ -51,10 +51,10 @@ data/exp_res/cls_finetuner_clip_base48_all_train/epoch_12.pth 2 \
 model.test_cfg.generate_bbox_feat=True model.test_cfg.feat_save_path=data/coco/clip_proposal_feat/imagenet1762_finetuned \
 model.test_cfg.use_pregenerated_proposal=data/coco/clip_proposal/32_32_512_imagenet1762 \
 model.test_cfg.num_of_rand_bboxes=500 model.test_cfg.save_cates_and_conf=True model.test_cfg.rand_select_subset=True \
-model.base_cate_name='coco_base_only'
+data.test.eval_filter_empty_gt=True model.base_cate_name='coco_base_only' 
 
 #3
-bash tools/dist_test.sh \
+bash tools/dist_test_23.sh \
 configs/cls_finetuner/cls_finetuner_clip_base48_all_train.py \
 data/exp_res/cls_finetuner_clip_base48_all_train/epoch_12.pth 2 \
 --eval=gt_acc \
@@ -63,10 +63,10 @@ data/exp_res/cls_finetuner_clip_base48_all_train/epoch_12.pth 2 \
 model.test_cfg.generate_bbox_feat=True model.test_cfg.feat_save_path=data/coco/clip_proposal_feat/imagenet1762_finetuned \
 model.test_cfg.use_pregenerated_proposal=data/coco/clip_proposal/32_32_512_imagenet1762 \
 model.test_cfg.num_of_rand_bboxes=500 model.test_cfg.save_cates_and_conf=True model.test_cfg.rand_select_subset=True \
-model.base_cate_name='coco_base_only'
+data.test.eval_filter_empty_gt=True model.base_cate_name='coco_base_only' 
 
 #4
-bash tools/dist_test.sh \
+bash tools/dist_test_23.sh \
 configs/cls_finetuner/cls_finetuner_clip_base48_all_train.py \
 data/exp_res/cls_finetuner_clip_base48_all_train/epoch_12.pth 2 \
 --eval=gt_acc \
@@ -75,10 +75,10 @@ data/exp_res/cls_finetuner_clip_base48_all_train/epoch_12.pth 2 \
 model.test_cfg.generate_bbox_feat=True model.test_cfg.feat_save_path=data/coco/clip_proposal_feat/imagenet1762_finetuned \
 model.test_cfg.use_pregenerated_proposal=data/coco/clip_proposal/32_32_512_imagenet1762 \
 model.test_cfg.num_of_rand_bboxes=500 model.test_cfg.save_cates_and_conf=True model.test_cfg.rand_select_subset=True \
-model.base_cate_name='coco_base_only'
+data.test.eval_filter_empty_gt=True model.base_cate_name='coco_base_only' 
 
 #5
-bash tools/dist_test_double.sh \
+bash tools/dist_test_23_double.sh \
 configs/cls_finetuner/cls_finetuner_clip_base48_all_train.py \
 data/exp_res/cls_finetuner_clip_base48_all_train/epoch_12.pth 2 \
 --eval=gt_acc \
@@ -87,11 +87,11 @@ data/exp_res/cls_finetuner_clip_base48_all_train/epoch_12.pth 2 \
 model.test_cfg.generate_bbox_feat=True model.test_cfg.feat_save_path=data/coco/clip_proposal_feat/imagenet1762_finetuned \
 model.test_cfg.use_pregenerated_proposal=data/coco/clip_proposal/32_32_512_imagenet1762 \
 model.test_cfg.num_of_rand_bboxes=500 model.test_cfg.save_cates_and_conf=True model.test_cfg.rand_select_subset=True \
-model.base_cate_name='coco_base_only'
+data.test.eval_filter_empty_gt=True model.base_cate_name='coco_base_only' 
 
 
 #6
-bash tools/dist_test_double.sh \
+bash tools/dist_test_23_double.sh \
 configs/cls_finetuner/cls_finetuner_clip_base48_all_train.py \
 data/exp_res/cls_finetuner_clip_base48_all_train/epoch_12.pth 2 \
 --eval=gt_acc \
@@ -100,11 +100,11 @@ data/exp_res/cls_finetuner_clip_base48_all_train/epoch_12.pth 2 \
 model.test_cfg.generate_bbox_feat=True model.test_cfg.feat_save_path=data/coco/clip_proposal_feat/imagenet1762_finetuned \
 model.test_cfg.use_pregenerated_proposal=data/coco/clip_proposal/32_32_512_imagenet1762 \
 model.test_cfg.num_of_rand_bboxes=500 model.test_cfg.save_cates_and_conf=True model.test_cfg.rand_select_subset=True \
-model.base_cate_name='coco_base_only'
+data.test.eval_filter_empty_gt=True model.base_cate_name='coco_base_only' 
 
 
 #7
-bash tools/dist_test_double.sh \
+bash tools/dist_test_23_double.sh \
 configs/cls_finetuner/cls_finetuner_clip_base48_all_train.py \
 data/exp_res/cls_finetuner_clip_base48_all_train/epoch_12.pth 2 \
 --eval=gt_acc \
@@ -113,10 +113,10 @@ data/exp_res/cls_finetuner_clip_base48_all_train/epoch_12.pth 2 \
 model.test_cfg.generate_bbox_feat=True model.test_cfg.feat_save_path=data/coco/clip_proposal_feat/imagenet1762_finetuned \
 model.test_cfg.use_pregenerated_proposal=data/coco/clip_proposal/32_32_512_imagenet1762 \
 model.test_cfg.num_of_rand_bboxes=500 model.test_cfg.save_cates_and_conf=True model.test_cfg.rand_select_subset=True \
-model.base_cate_name='coco_base_only'
+data.test.eval_filter_empty_gt=True model.base_cate_name='coco_base_only' 
 
 #8
-bash tools/dist_test_double.sh \
+bash tools/dist_test_23_double.sh \
 configs/cls_finetuner/cls_finetuner_clip_base48_all_train.py \
 data/exp_res/cls_finetuner_clip_base48_all_train/epoch_12.pth 2 \
 --eval=gt_acc \
@@ -125,7 +125,7 @@ data/exp_res/cls_finetuner_clip_base48_all_train/epoch_12.pth 2 \
 model.test_cfg.generate_bbox_feat=True model.test_cfg.feat_save_path=data/coco/clip_proposal_feat/imagenet1762_finetuned \
 model.test_cfg.use_pregenerated_proposal=data/coco/clip_proposal/32_32_512_imagenet1762 \
 model.test_cfg.num_of_rand_bboxes=500 model.test_cfg.save_cates_and_conf=True model.test_cfg.rand_select_subset=True \
-model.base_cate_name='coco_base_only'
+data.test.eval_filter_empty_gt=True model.base_cate_name='coco_base_only' 
 
 
 
@@ -140,7 +140,7 @@ data/exp_res/cls_finetuner_clip_base48_all_train/epoch_12.pth 2 \
 model.test_cfg.generate_bbox_feat=True model.test_cfg.feat_save_path=data/coco/clip_proposal_feat/imagenet1762_finetuned \
 model.test_cfg.use_pregenerated_proposal=data/coco/clip_proposal/32_32_512_imagenet1762 \
 model.test_cfg.num_of_rand_bboxes=500 model.test_cfg.save_cates_and_conf=True model.test_cfg.rand_select_subset=True \
-model.base_cate_name='coco_base_only'
+data.test.eval_filter_empty_gt=True model.base_cate_name='coco_base_only' 
 
 #10
 bash tools/dist_test_23.sh \
@@ -152,7 +152,7 @@ data/exp_res/cls_finetuner_clip_base48_all_train/epoch_12.pth 2 \
 model.test_cfg.generate_bbox_feat=True model.test_cfg.feat_save_path=data/coco/clip_proposal_feat/imagenet1762_finetuned \
 model.test_cfg.use_pregenerated_proposal=data/coco/clip_proposal/32_32_512_imagenet1762 \
 model.test_cfg.num_of_rand_bboxes=500 model.test_cfg.save_cates_and_conf=True model.test_cfg.rand_select_subset=True \
-model.base_cate_name='coco_base_only'
+data.test.eval_filter_empty_gt=True model.base_cate_name='coco_base_only' 
 
 #11
 bash tools/dist_test_23.sh \
@@ -164,7 +164,7 @@ data/exp_res/cls_finetuner_clip_base48_all_train/epoch_12.pth 2 \
 model.test_cfg.generate_bbox_feat=True model.test_cfg.feat_save_path=data/coco/clip_proposal_feat/imagenet1762_finetuned \
 model.test_cfg.use_pregenerated_proposal=data/coco/clip_proposal/32_32_512_imagenet1762 \
 model.test_cfg.num_of_rand_bboxes=500 model.test_cfg.save_cates_and_conf=True model.test_cfg.rand_select_subset=True \
-model.base_cate_name='coco_base_only'
+data.test.eval_filter_empty_gt=True model.base_cate_name='coco_base_only' 
 
 
 
@@ -179,7 +179,7 @@ data/exp_res/cls_finetuner_clip_base48_all_train/epoch_12.pth 2 \
 model.test_cfg.generate_bbox_feat=True model.test_cfg.feat_save_path=data/coco/clip_proposal_feat/imagenet1762_finetuned \
 model.test_cfg.use_pregenerated_proposal=data/coco/clip_proposal/32_32_512_imagenet1762 \
 model.test_cfg.num_of_rand_bboxes=500 model.test_cfg.save_cates_and_conf=True model.test_cfg.rand_select_subset=True \
-model.base_cate_name='coco_base_only'
+data.test.eval_filter_empty_gt=True model.base_cate_name='coco_base_only'  
 
 #13
 bash tools/dist_test_23_double.sh \
@@ -191,7 +191,7 @@ data/exp_res/cls_finetuner_clip_base48_all_train/epoch_12.pth 2 \
 model.test_cfg.generate_bbox_feat=True model.test_cfg.feat_save_path=data/coco/clip_proposal_feat/imagenet1762_finetuned \
 model.test_cfg.use_pregenerated_proposal=data/coco/clip_proposal/32_32_512_imagenet1762 \
 model.test_cfg.num_of_rand_bboxes=500 model.test_cfg.save_cates_and_conf=True model.test_cfg.rand_select_subset=True \
-model.base_cate_name='coco_base_only'
+data.test.eval_filter_empty_gt=True model.base_cate_name='coco_base_only' 
 
 #14
 bash tools/dist_test_23_double.sh \
@@ -203,7 +203,7 @@ data/exp_res/cls_finetuner_clip_base48_all_train/epoch_12.pth 2 \
 model.test_cfg.generate_bbox_feat=True model.test_cfg.feat_save_path=data/coco/clip_proposal_feat/imagenet1762_finetuned \
 model.test_cfg.use_pregenerated_proposal=data/coco/clip_proposal/32_32_512_imagenet1762 \
 model.test_cfg.num_of_rand_bboxes=500 model.test_cfg.save_cates_and_conf=True model.test_cfg.rand_select_subset=True \
-model.base_cate_name='coco_base_only'
+data.test.eval_filter_empty_gt=True model.base_cate_name='coco_base_only' 
 
 #15
 bash tools/dist_test_23_double.sh \
@@ -215,7 +215,7 @@ data/exp_res/cls_finetuner_clip_base48_all_train/epoch_12.pth 2 \
 model.test_cfg.generate_bbox_feat=True model.test_cfg.feat_save_path=data/coco/clip_proposal_feat/imagenet1762_finetuned \
 model.test_cfg.use_pregenerated_proposal=data/coco/clip_proposal/32_32_512_imagenet1762 \
 model.test_cfg.num_of_rand_bboxes=500 model.test_cfg.save_cates_and_conf=True model.test_cfg.rand_select_subset=True \
-model.base_cate_name='coco_base_only'
+data.test.eval_filter_empty_gt=True model.base_cate_name='coco_base_only' 
 
 
 # remain
@@ -228,4 +228,4 @@ data/exp_res/cls_finetuner_clip_base48_all_train/epoch_12.pth 2 \
 model.test_cfg.generate_bbox_feat=True model.test_cfg.feat_save_path=data/coco/clip_proposal_feat/imagenet1762_finetuned \
 model.test_cfg.use_pregenerated_proposal=data/coco/clip_proposal/32_32_512_imagenet1762 \
 model.test_cfg.num_of_rand_bboxes=500 model.test_cfg.save_cates_and_conf=True model.test_cfg.rand_select_subset=True \
-model.base_cate_name='coco_base_only'
+data.test.eval_filter_empty_gt=True model.base_cate_name='coco_base_only' 
