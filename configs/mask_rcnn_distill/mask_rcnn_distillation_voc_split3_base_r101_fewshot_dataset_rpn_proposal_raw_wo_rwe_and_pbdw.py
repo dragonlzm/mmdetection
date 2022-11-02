@@ -21,11 +21,7 @@ data = dict(train=dict(pipeline=train_pipeline))
 # model settings
 model = dict(
     roi_head=dict(
-        bbox_head=dict(fg_vec_cfg=dict(fixed_param=True,
-                        load_path='data/embeddings/raw_voc_split3_15cates.pt'))))
-
-# model settings
-model = dict(
-    roi_head=dict(
         bbox_head=dict(
-            reg_with_cls_embedding=False)))
+            reg_with_cls_embedding=False,
+            fg_vec_cfg=dict(fixed_param=True,
+                        load_path='data/embeddings/raw_voc_split3_15cates.pt'))))

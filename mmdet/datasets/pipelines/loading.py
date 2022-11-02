@@ -596,7 +596,9 @@ class LoadCLIPFeat:
                  filter_iop=False,
                  max_filter_num=100,
                  load_rand_bbox_weight=False,
-                 use_mix_gt_feat=False):
+                 use_mix_gt_feat=False,
+                 use_objectness_as_weight=False,
+                 use_base_discount_objectness=False):
         self.file_path_prefix = file_path_prefix
         self.use_mix_gt_feat = use_mix_gt_feat
         # the path should like this
@@ -612,6 +614,8 @@ class LoadCLIPFeat:
         self.filter_iop = filter_iop
         self.max_filter_num = max_filter_num
         self.load_rand_bbox_weight = load_rand_bbox_weight
+        self.use_objectness_as_weight = use_objectness_as_weight
+        self.use_base_discount_objectness = use_base_discount_objectness
 
     def __call__(self, results):
         '''load the pre-extracted CLIP feat'''
@@ -716,9 +720,18 @@ class LoadCLIPFeat:
             rand_bbox = rand_bbox[:self.select_fixed_subset]
         
         if self.load_rand_bbox_weight:
-            if rand_bbox.shape[-1] == 5:
-                print('the clip random feat is the old version, please use the new version')
-            rand_bbox_weights = rand_bbox[:, 4]            
+            # the version for open vocabulary
+            if rand_bbox.shape[-1] == 7:
+                if self.use_objectness_as_weight:
+                    rand_bbox_weights = rand_bbox[:, 6]
+                elif self.use_base_discount_objectness:
+                    rand_bbox_weights = (1 - rand_bbox[:, 4]) * rand_bbox[:, 6]
+                else:
+                    rand_bbox_weights = rand_bbox[:, 4] 
+            else:
+                if rand_bbox.shape[-1] == 5:
+                    print('the clip random feat is the old version, please use the new version')
+                rand_bbox_weights = rand_bbox[:, 4]            
             
         if rand_bbox.shape[-1] >= 5:
             rand_bbox = rand_bbox[:, :4]
