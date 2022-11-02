@@ -343,6 +343,11 @@ class ClsFinetuner(BaseDetector):
         y = tl_y
         w = br_x - tl_x
         h = br_y - tl_y
+        # deal with some special case in rpn proposal which width or highth is smaller than 1
+        if w < 10.0:
+            w = 10.0
+        if h < 10.0:
+            h = 10.0
 
         empty_patch = np.zeros((self.extra_patches_num * math.ceil(h) + 1, self.extra_patches_num * math.ceil(w) + 1, 3))
         if self.target_patch_loca == 'center':
@@ -384,6 +389,13 @@ class ClsFinetuner(BaseDetector):
         y = tl_y
         w = br_x - tl_x
         h = br_y - tl_y
+        # deal with some special case in rpn proposal which width or highth is smaller than 1
+        if w < 10.0:
+            w = 10.0
+        if h < 10.0:
+            h = 10.0        
+        
+        
         # change the bbox location by changing the top left position
         # bbox change direction
         x_direction_sign = random.randint(-1,1)
