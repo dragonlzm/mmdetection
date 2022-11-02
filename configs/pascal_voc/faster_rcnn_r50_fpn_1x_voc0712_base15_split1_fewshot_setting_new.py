@@ -210,9 +210,7 @@ data = dict(
         test_mode=True,
         classes=classes,
     ))
-evaluation = dict(interval=16000, metric='mAP')
-
-
+evaluation = dict(interval=9000, metric='mAP')
 
 # training schedule
 lr_config = dict(
@@ -224,7 +222,7 @@ lr_config = dict(
 runner = dict(type='IterBasedRunner', max_iters=36000)
 
 # 2*4
-checkpoint_config = dict(interval=8000)
+checkpoint_config = dict(interval=9000)
 optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
 # simulating 4*4
 optimizer_config = dict(type='GradientCumulativeOptimizerHook', 

@@ -228,4 +228,4 @@ data/exp_res/cls_finetuner_clip_base48_all_train/epoch_12.pth 2 \
 model.test_cfg.generate_bbox_feat=True model.test_cfg.feat_save_path=data/coco/clip_proposal_feat/imagenet1762_finetuned \
 model.test_cfg.use_pregenerated_proposal=data/coco/clip_proposal/32_32_512_imagenet1762 \
 model.test_cfg.num_of_rand_bboxes=500 model.test_cfg.save_cates_and_conf=True model.test_cfg.rand_select_subset=True \
-data.test.eval_filter_empty_gt=True model.base_cate_name='coco_base_only' 
+data.test.eval_filter_empty_gt=False model.base_cate_name='coco_base_only' 
