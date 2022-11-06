@@ -725,7 +725,7 @@ class LoadCLIPFeat:
                 if self.use_objectness_as_weight:
                     rand_bbox_weights = rand_bbox[:, 6]
                 elif self.use_base_discount_objectness:
-                    rand_bbox_weights = (1 - rand_bbox[:, 4]) * rand_bbox[:, 6]
+                    rand_bbox_weights = (1 - rand_bbox[:, 4] * 0.5) * rand_bbox[:, 6]
                 else:
                     rand_bbox_weights = rand_bbox[:, 4] 
             else:
