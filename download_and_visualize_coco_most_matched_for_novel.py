@@ -1,4 +1,4 @@
-# this script aims to visualize the lvis dataset, include the filtering with base
+# this script aims to visualize the coco dataset, include the filtering with base
 
 import json
 import torch
