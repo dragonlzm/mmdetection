@@ -64,14 +64,18 @@ for info in gt_content['images']:
 save_root = '/home/zhuoming/coco_visualization_most_matched_base_and_novel'
 proposal_path_root = '/data/zhuoming/detection/coco/clip_proposal/32_32_512'
 
+# save_root = '/home/zhuoming/coco_visualization_most_matched_base_and_novel_rpn_proposal'
+# proposal_path_root = '/data/zhuoming/detection/coco/rpn_proposal/mask_rcnn_r50_fpn_2x_coco_2gpu_base48_reg_class_agno'
+
 count = 0
 for i, image_id in enumerate(from_image_id_to_annotation):
+    base_gt_bboxes = torch.tensor(from_image_id_to_annotation[image_id]['base'])
     novel_gt_bboxes = torch.tensor(from_image_id_to_annotation[image_id]['novel'])
     if novel_gt_bboxes.shape[0] == 0:
         continue
     else:
         count += 1
-    if count > 100:
+    if count > 10:
         break
 
     #download the image
@@ -117,21 +121,47 @@ for i, image_id in enumerate(from_image_id_to_annotation):
         match = False
         #all_predicted_cate = all_proposals[:, -1]
         for novel_bbox in novel_gt_bboxes:
-            novel_bbox_cate_id = novel_bbox[-1]
-            #print('novel_bbox', novel_bbox)
             xyxy_gt = torch.tensor([[novel_bbox[0], novel_bbox[1], novel_bbox[0] + novel_bbox[2], 
                                 novel_bbox[1] + novel_bbox[3]]])
-            #print('xyxy_gt', xyxy_gt)
             real_iou = iou_calculator(xyxy_gt, all_proposals[:, :4])
+            # leave the iou value only when the iou larger than 0
+            iou_idx_over_zero = (real_iou > 0)
+            #real_iou = real_iou[real_iou > 0]
             # select the top 10 for each gt bboxes
-            value, idx = torch.topk(real_iou, 10)
-            #iou_over_05 = (real_iou >= 0.1)
-            #remain_proposal = all_proposals[iou_over_05.squeeze(dim=0)]
-            remain_proposal = all_proposals[idx.squeeze(dim=0)]
+            if torch.sum(iou_idx_over_zero) == 0:
+                continue
+            elif torch.sum(iou_idx_over_zero) < 10:
+                remain_proposal = all_proposals[iou_idx_over_zero.squeeze(dim=0)]
+            else:
+                value, idx = torch.topk(real_iou, 10)
+                remain_proposal = all_proposals[idx.squeeze(dim=0)]
             
             for box in remain_proposal:
                 rect = patches.Rectangle((box[0], box[1]),box[2]-box[0],box[3]-box[1],linewidth=1,edgecolor='r',facecolor='none')
                 ax.add_patch(rect)    
+
+    # if base_gt_bboxes.shape[0] != 0:
+    #     match = False
+    #     #all_predicted_cate = all_proposals[:, -1]
+    #     for base_bbox in base_gt_bboxes:
+    #         xyxy_gt = torch.tensor([[base_bbox[0], base_bbox[1], base_bbox[0] + base_bbox[2], 
+    #                             base_bbox[1] + base_bbox[3]]])
+    #         real_iou = iou_calculator(xyxy_gt, all_proposals[:, :4])
+    #         # leave the iou value only when the iou larger than 0
+    #         iou_idx_over_zero = (real_iou > 0)
+    #         #real_iou = real_iou[real_iou > 0]
+    #         # select the top 10 for each gt bboxes
+    #         if torch.sum(iou_idx_over_zero) == 0:
+    #             continue
+    #         elif torch.sum(iou_idx_over_zero) < 10:
+    #             remain_proposal = all_proposals[iou_idx_over_zero.squeeze(dim=0)]
+    #         else:
+    #             value, idx = torch.topk(real_iou, 10)
+    #             remain_proposal = all_proposals[idx.squeeze(dim=0)]
+            
+    #         for box in remain_proposal:
+    #             rect = patches.Rectangle((box[0], box[1]),box[2]-box[0],box[3]-box[1],linewidth=1,edgecolor='r',facecolor='none')
+    #             ax.add_patch(rect)    
 
     print_path = os.path.join(save_root, 'printed')
     if not os.path.exists(print_path):
