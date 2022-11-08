@@ -24,3 +24,8 @@ train_pipeline = [
 
 data = dict(
     train=dict(pipeline=train_pipeline))
+
+
+lr_config = dict(policy='step', step=[14,16])
+# runtime settings
+runner = dict(type='EpochBasedRunner', max_epochs=18)  # actual epoch = 4 * 3 = 12
