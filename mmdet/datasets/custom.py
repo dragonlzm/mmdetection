@@ -71,7 +71,7 @@ class CustomDataset(Dataset):
                  eval_filter_empty_gt=False,
                  visualization_path=None,
                  copy_and_paste=False,
-                 eval_on_splits=False):
+                 eval_on_splits=None):
         self.ann_file = ann_file
         self.data_root = data_root
         self.img_prefix = img_prefix

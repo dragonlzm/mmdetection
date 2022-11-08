@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 import time
 import os
 
-COCO_SPLIT = dict(
+ZEROSHOT_COCO_SPLIT = dict(
     ALL_CLASSES=('person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 
                     'train', 'truck', 'boat', 'bench', 'bird', 'cat', 'dog', 
                     'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe', 
@@ -45,6 +45,39 @@ COCO_SPLIT = dict(
                     'donut', 'chair', 'bed', 'toilet', 'tv', 'laptop', 
                     'mouse', 'remote', 'microwave', 'oven', 'toaster', 
                     'refrigerator', 'book', 'clock', 'vase', 'toothbrush'))
+
+FEWSHOT_COCO_SPLIT = dict(
+    ALL_CLASSES=('person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
+                    'train', 'truck', 'boat', 'traffic light', 'fire hydrant',
+                    'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog',
+                    'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe',
+                    'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee',
+                    'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat',
+                    'baseball glove', 'skateboard', 'surfboard', 'tennis racket',
+                    'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl',
+                    'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot',
+                    'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch',
+                    'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop',
+                    'mouse', 'remote', 'keyboard', 'cell phone', 'microwave',
+                    'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock',
+                    'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush'),
+    NOVEL_CLASSES=('person', 'bicycle', 'car', 'motorcycle', 
+                    'airplane', 'bus', 'train', 'boat', 'bird', 'cat', 
+                    'dog', 'horse', 'sheep', 'cow', 'bottle', 'chair', 
+                    'couch', 'potted plant', 'dining table', 'tv'),
+    BASE_CLASSES=('truck', 'traffic light', 'fire hydrant', 'stop sign', 
+                    'parking meter', 'bench', 'elephant', 'bear', 'zebra', 
+                    'giraffe', 'backpack', 'umbrella', 'handbag', 'tie', 
+                    'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball', 
+                    'kite', 'baseball bat', 'baseball glove', 'skateboard', 
+                    'surfboard', 'tennis racket', 'wine glass', 'cup', 'fork', 
+                    'knife', 'spoon', 'bowl', 'banana', 'apple', 'sandwich', 
+                    'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 
+                    'cake', 'bed', 'toilet', 'laptop', 'mouse', 'remote', 'keyboard', 
+                    'cell phone', 'microwave', 'oven', 'toaster', 'sink', 
+                    'refrigerator', 'book', 'clock', 'vase', 'scissors', 
+                    'teddy bear', 'hair drier', 'toothbrush'))
+
 
 @DATASETS.register_module()
 class CocoDataset(CustomDataset):
@@ -693,8 +726,11 @@ class CocoDataset(CustomDataset):
                 break
 
             # eval each class splits
-            if self.eval_on_splits:
-                class_splits = COCO_SPLIT
+            if self.eval_on_splits is not None:
+                if self.eval_on_splits == 'zeroshot':
+                    class_splits = ZEROSHOT_COCO_SPLIT
+                else:
+                    class_splits = FEWSHOT_COCO_SPLIT
                 for split_name in class_splits.keys():
                     split_cat_ids = [
                         self.cat_ids[i] for i in range(len(self.CLASSES))
