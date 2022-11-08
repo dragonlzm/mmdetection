@@ -36,6 +36,8 @@ data = dict(
                 val=dict(classes=classes),
                 test=dict(classes=classes))
 
+evaluation = dict(interval=1, metric=['bbox'])
+
 # model settings
 model = dict(
     _delete_=True,
