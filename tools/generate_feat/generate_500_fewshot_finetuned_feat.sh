@@ -233,3 +233,16 @@ model.test_cfg.use_pregenerated_proposal=data/coco/clip_proposal/32_32_512_fewsh
 model.test_cfg.num_of_rand_bboxes=500 model.test_cfg.save_cates_and_conf=True model.test_cfg.rand_select_subset=True \
 data.test.eval_filter_empty_gt=True
 
+# generate the gt only
+bash tools/dist_test.sh \
+configs/cls_finetuner/cls_finetuner_clip_full_coco.py \
+data/cls_finetuner/cls_finetuner_clip_base60_all_train/epoch_12.pth 3 \
+--eval=gt_acc \
+--eval-options jsonfile_prefix=data/coco/clip_proposal_feat/base_finetuned/extract_feat \
+--cfg-options data.test.ann_file=data/coco/annotations/instances_train2017.json  data.test.img_prefix=data/coco/train2017/ \
+model.test_cfg.generate_bbox_feat=False model.test_cfg.generate_gt_feat=True \
+model.test_cfg.feat_save_path=data/coco/clip_proposal_feat/fewshot_finetuned \
+model.test_cfg.use_pregenerated_proposal=data/coco/clip_proposal/32_32_512_fewshot \
+model.test_cfg.num_of_rand_bboxes=500 model.test_cfg.save_cates_and_conf=True model.test_cfg.rand_select_subset=True \
+data.test.eval_filter_empty_gt=True
+
