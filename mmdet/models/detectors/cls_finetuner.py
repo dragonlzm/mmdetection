@@ -589,6 +589,54 @@ class ClsFinetuner(BaseDetector):
         img = img.unsqueeze(dim=0)
         img_metas = [img_metas]
         
+        # generate the gt only
+        if not self.generate_bbox_feat and self.generate_gt_feat:
+            # obtain the gt file path
+            gt_save_root = os.path.join(self.feat_save_path, 'gt')
+            #file_name = img_metas[0]['ori_filename'].split('.')[0] + '.json'
+            file_name = img_metas[0]['ori_filename']
+            # for lvis dataset
+            if file_name.startswith('train2017'):
+                file_name = file_name.split('/')[-1]
+            # for VOC dataset
+            if file_name.startswith('JPEGImages'):
+                file_name = file_name.split('/')[-1]
+                if 'VOC2007' in img_metas[0]['filename']:
+                    file_name = os.path.join('VOC2007', file_name)
+                elif 'VOC2012' in img_metas[0]['filename']:
+                    file_name = os.path.join('VOC2012', file_name)
+            file_name = file_name.split('.')[0] + '.json'
+            
+            gt_file_path = os.path.join(gt_save_root, file_name)
+            gt_save_root = '/'.join(gt_file_path.split('/')[:-1])
+            if not os.path.exists(gt_save_root):
+                os.makedirs(gt_save_root)
+                
+            # if the file has been created, skip this image
+            if os.path.exists(gt_file_path):
+                return [np.zeros((1,5))]                
+            
+            
+            # handle the image metas
+            my_img_meta = img_metas[0]
+            my_img_meta['scale_factor'] = my_img_meta['scale_factor'].tolist()
+            my_img_meta['img_norm_cfg']['mean'] = my_img_meta['img_norm_cfg']['mean'].tolist()
+            my_img_meta['img_norm_cfg']['std'] = my_img_meta['img_norm_cfg']['std'].tolist()
+        
+            # generate the gt feat
+            if len(gt_bboxes) != 0:
+                x = self.extract_feat(img, gt_bboxes, cropped_patches, img_metas=img_metas)
+                # save the rand_bbox and the feat, img_metas
+                file = open(gt_file_path, 'w')
+                #print(type(gt_bboxes), type(gt_labels))
+                #print('gt', x[0].shape, gt_bboxes[0].shape, gt_labels[0].shape)
+                result_json = {'feat':x[0].cpu().tolist() if len(x)!=0 else [], 'bbox':gt_bboxes[0].cpu().tolist() if len(gt_bboxes)!=0 else [], 'gt_labels':gt_labels[0].cpu().tolist() if len(gt_labels)!=0 else [], 'img_metas':my_img_meta}
+                #print('testing gt json', result_json)
+                file.write(json.dumps(result_json))
+                file.close()
+                
+            return [torch.zeros(10, 4)]        
+        
         if self.generate_mix_gt_feat:
             # obtain the gt file path
             gt_save_root = os.path.join(self.feat_save_path, 'mix_gt')

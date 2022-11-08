@@ -30,9 +30,9 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 
 ## generate fewshot_finetuned feature
 #1
-bash tools/dist_test_23.sh \
+bash tools/dist_test.sh \
 configs/cls_finetuner/cls_finetuner_clip_full_coco.py \
-data/cls_finetuner/cls_finetuner_clip_base60_all_train/epoch_12.pth 2 \
+data/cls_finetuner/cls_finetuner_clip_base60_all_train/epoch_12.pth 3 \
 --eval=gt_acc \
 --eval-options jsonfile_prefix=data/coco/clip_proposal_feat/base_finetuned/extract_feat \
 --cfg-options data.test.ann_file=data/coco/annotations/instances_train2017_0_8000.json  data.test.img_prefix=data/coco/train2017/ \
@@ -42,9 +42,9 @@ model.test_cfg.num_of_rand_bboxes=500 model.test_cfg.save_cates_and_conf=True mo
 data.test.eval_filter_empty_gt=True
 
 #2
-bash tools/dist_test_23.sh \
+bash tools/dist_test.sh \
 configs/cls_finetuner/cls_finetuner_clip_full_coco.py \
-data/cls_finetuner/cls_finetuner_clip_base60_all_train/epoch_12.pth 2 \
+data/cls_finetuner/cls_finetuner_clip_base60_all_train/epoch_12.pth 3 \
 --eval=gt_acc \
 --eval-options jsonfile_prefix=data/coco/clip_proposal_feat/base_finetuned/extract_feat \
 --cfg-options data.test.ann_file=data/coco/annotations/instances_train2017_8000_16000.json  data.test.img_prefix=data/coco/train2017/ \
@@ -54,9 +54,9 @@ model.test_cfg.num_of_rand_bboxes=500 model.test_cfg.save_cates_and_conf=True mo
 data.test.eval_filter_empty_gt=True
 
 #3
-bash tools/dist_test_23.sh \
+bash tools/dist_test.sh \
 configs/cls_finetuner/cls_finetuner_clip_full_coco.py \
-data/cls_finetuner/cls_finetuner_clip_base60_all_train/epoch_12.pth 2 \
+data/cls_finetuner/cls_finetuner_clip_base60_all_train/epoch_12.pth 3 \
 --eval=gt_acc \
 --eval-options jsonfile_prefix=data/coco/clip_proposal_feat/base_finetuned/extract_feat \
 --cfg-options data.test.ann_file=data/coco/annotations/instances_train2017_16000_24000.json  data.test.img_prefix=data/coco/train2017/ \
@@ -66,9 +66,9 @@ model.test_cfg.num_of_rand_bboxes=500 model.test_cfg.save_cates_and_conf=True mo
 data.test.eval_filter_empty_gt=True
 
 #4
-bash tools/dist_test_23.sh \
+bash tools/dist_test.sh \
 configs/cls_finetuner/cls_finetuner_clip_full_coco.py \
-data/cls_finetuner/cls_finetuner_clip_base60_all_train/epoch_12.pth 2 \
+data/cls_finetuner/cls_finetuner_clip_base60_all_train/epoch_12.pth 3 \
 --eval=gt_acc \
 --eval-options jsonfile_prefix=data/coco/clip_proposal_feat/base_finetuned/extract_feat \
 --cfg-options data.test.ann_file=data/coco/annotations/instances_train2017_24000_32000.json  data.test.img_prefix=data/coco/train2017/ \
@@ -83,7 +83,7 @@ data.test.eval_filter_empty_gt=True
 #5
 bash tools/dist_test.sh \
 configs/cls_finetuner/cls_finetuner_clip_full_coco.py \
-data/cls_finetuner/cls_finetuner_clip_base60_all_train/epoch_12.pth 2 \
+data/cls_finetuner/cls_finetuner_clip_base60_all_train/epoch_12.pth 3 \
 --eval=gt_acc \
 --eval-options jsonfile_prefix=data/coco/clip_proposal_feat/base_finetuned/extract_feat \
 --cfg-options data.test.ann_file=data/coco/annotations/instances_train2017_32000_40000.json  data.test.img_prefix=data/coco/train2017/ \
@@ -96,7 +96,7 @@ data.test.eval_filter_empty_gt=True
 #6
 bash tools/dist_test.sh \
 configs/cls_finetuner/cls_finetuner_clip_full_coco.py \
-data/cls_finetuner/cls_finetuner_clip_base60_all_train/epoch_12.pth 2 \
+data/cls_finetuner/cls_finetuner_clip_base60_all_train/epoch_12.pth 3 \
 --eval=gt_acc \
 --eval-options jsonfile_prefix=data/coco/clip_proposal_feat/base_finetuned/extract_feat \
 --cfg-options data.test.ann_file=data/coco/annotations/instances_train2017_40000_48000.json  data.test.img_prefix=data/coco/train2017/ \
@@ -109,7 +109,7 @@ data.test.eval_filter_empty_gt=True
 #7
 bash tools/dist_test.sh \
 configs/cls_finetuner/cls_finetuner_clip_full_coco.py \
-data/cls_finetuner/cls_finetuner_clip_base60_all_train/epoch_12.pth 2 \
+data/cls_finetuner/cls_finetuner_clip_base60_all_train/epoch_12.pth 3 \
 --eval=gt_acc \
 --eval-options jsonfile_prefix=data/coco/clip_proposal_feat/base_finetuned/extract_feat \
 --cfg-options data.test.ann_file=data/coco/annotations/instances_train2017_48000_56000.json  data.test.img_prefix=data/coco/train2017/ \
@@ -121,7 +121,7 @@ data.test.eval_filter_empty_gt=True
 #8
 bash tools/dist_test.sh \
 configs/cls_finetuner/cls_finetuner_clip_full_coco.py \
-data/cls_finetuner/cls_finetuner_clip_base60_all_train/epoch_12.pth 2 \
+data/cls_finetuner/cls_finetuner_clip_base60_all_train/epoch_12.pth 3 \
 --eval=gt_acc \
 --eval-options jsonfile_prefix=data/coco/clip_proposal_feat/base_finetuned/extract_feat \
 --cfg-options data.test.ann_file=data/coco/annotations/instances_train2017_56000_64000.json  data.test.img_prefix=data/coco/train2017/ \
@@ -222,13 +222,14 @@ data.test.eval_filter_empty_gt=True
 
 
 # remain
-bash tools/dist_test_23_double.sh \
+bash tools/dist_test.sh \
 configs/cls_finetuner/cls_finetuner_clip_full_coco.py \
-data/cls_finetuner/cls_finetuner_clip_base60_all_train/epoch_12.pth 2 \
+data/cls_finetuner/cls_finetuner_clip_base60_all_train/epoch_12.pth 3 \
 --eval=gt_acc \
 --eval-options jsonfile_prefix=data/coco/clip_proposal_feat/base_finetuned/extract_feat \
 --cfg-options data.test.ann_file=data/coco/annotations/instances_train2017.json  data.test.img_prefix=data/coco/train2017/ \
 model.test_cfg.generate_bbox_feat=True model.test_cfg.feat_save_path=data/coco/clip_proposal_feat/fewshot_finetuned \
 model.test_cfg.use_pregenerated_proposal=data/coco/clip_proposal/32_32_512_fewshot \
 model.test_cfg.num_of_rand_bboxes=500 model.test_cfg.save_cates_and_conf=True model.test_cfg.rand_select_subset=True \
-data.test.eval_filter_empty_gt=False model.base_cate_name='coco_base_only' 
+data.test.eval_filter_empty_gt=True
+
