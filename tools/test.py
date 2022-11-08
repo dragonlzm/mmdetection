@@ -17,6 +17,8 @@ from mmdet.apis import multi_gpu_test, single_gpu_test
 from mmdet.datasets import (build_dataloader, build_dataset,
                             replace_ImageToTensor)
 from mmdet.models import build_detector
+import numpy as np
+import random
 
 
 def parse_args():
@@ -105,6 +107,10 @@ def parse_args():
 
 
 def main():
+    torch.manual_seed(42)
+    random.seed(42)
+    np.random.seed(42)
+    
     args = parse_args()
 
     assert args.out or args.eval or args.format_only or args.show \
@@ -180,7 +186,8 @@ def main():
         samples_per_gpu=samples_per_gpu,
         workers_per_gpu=cfg.data.workers_per_gpu,
         dist=distributed,
-        shuffle=False)
+        shuffle=True)
+    
 
     # build the model and load checkpoint
     cfg.model.train_cfg = None

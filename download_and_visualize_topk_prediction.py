@@ -15,7 +15,8 @@ from PIL import Image
 #file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_200clip_pro_repro/base_and_novel.bbox.json'
 #file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_2x_coco_base48_200clip_pro_repro/base_and_novel_e18.bbox.json'
 #file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_base48_gn_10_200clipproposal/base_results.bbox.json'
-file_path = '/data/zhuoming/detection/mask_rcnn_clip_classifier/results_base48.bbox.json'
+#file_path = '/data/zhuoming/detection/mask_rcnn_clip_classifier/results_base48.bbox.json'
+file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_per_base_filtered_clip_proposal_weight/base_and_novel.bbox.json'
 
 pred_content = json.load(open(file_path))
 # aggregate the predition base on the image
@@ -40,6 +41,7 @@ for image_id in from_image_id_to_prediction:
 
 # load the gt bboxes
 gt_anno_file = '/data/zhuoming/detection/coco/annotations/instances_val2017_65cates.json'
+
 from_image_id_to_image_file_name = {}
 
 # aggregate the gt bboxes base on the image
@@ -82,7 +84,7 @@ for info in gt_content['images']:
 #save_root = '/home/zhuoming/mcnn_2x_e18_top50_prediction'
 #save_root = '/home/zhuoming/mcnn_1x_e12_top50_prediction_base48'
 #save_root = '/home/zhuoming/mcnn_1x_e12_top20_prediction_base48'
-save_root = '/home/zhuoming/clip_classifer_top20_prediction_base48'
+save_root = '/home/zhuoming/download_and_visualize_topk_prediction'
 
 for i, image_id in enumerate(from_image_id_to_annotation):
     if i > 50:

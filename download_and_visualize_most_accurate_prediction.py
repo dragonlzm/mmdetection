@@ -72,10 +72,12 @@ count = 0
 save_root = '/home/zhuoming/mask_rcnn_distillation_per_base_filtered_clip_proposal_weight_visualization'
 for i, image_id in enumerate(from_image_id_to_annotation):
     # print the prediction
-    all_prediction = from_image_id_to_prediction[image_id]['bboxes']
-    base_gt_bboxes = from_image_id_to_annotation[image_id]['base']
-    novel_gt_bboxes = from_image_id_to_annotation[image_id]['novel']
-    
+    all_prediction = torch.tensor(from_image_id_to_prediction[image_id]['bboxes'])
+    all_prediction[:, 2] = all_prediction[:, 0] + all_prediction[:, 2]
+    all_prediction[:, 3] = all_prediction[:, 1] + all_prediction[:, 3]
+    base_gt_bboxes = torch.tensor(from_image_id_to_annotation[image_id]['base'])
+    novel_gt_bboxes = torch.tensor(from_image_id_to_annotation[image_id]['novel'])
+
     # we only visualize the image with novel instance
     if novel_gt_bboxes.shape[0] == 0:
         continue
@@ -83,7 +85,14 @@ for i, image_id in enumerate(from_image_id_to_annotation):
         count += 1
     if count > 50:
         break
-
+    
+    if base_gt_bboxes.shape[0] != 0:
+        base_gt_bboxes[:, 2] = base_gt_bboxes[:, 0] + base_gt_bboxes[:, 2]
+        base_gt_bboxes[:, 3] = base_gt_bboxes[:, 1] + base_gt_bboxes[:, 3]    
+    if novel_gt_bboxes.shape[0] != 0:
+        novel_gt_bboxes[:, 2] = novel_gt_bboxes[:, 0] + novel_gt_bboxes[:, 2]
+        novel_gt_bboxes[:, 3] = novel_gt_bboxes[:, 1] + novel_gt_bboxes[:, 3]
+        
     # download the image
     url = from_image_id_to_image_info[image_id]['coco_url']
     file_name = from_image_id_to_image_info[image_id]['file_name']
@@ -105,57 +114,50 @@ for i, image_id in enumerate(from_image_id_to_annotation):
     #     rect = patches.Rectangle((box[0], box[1]),box[2],box[3],linewidth=1,edgecolor='g',facecolor='none')
     #     ax.add_patch(rect)
     # print the novel
-    # for box in from_image_id_to_annotation[image_id]['novel']:
-    #     rect = patches.Rectangle((box[0], box[1]),box[2],box[3],linewidth=1,edgecolor='b',facecolor='none')
-    #     ax.add_patch(rect)
+    for box in from_image_id_to_annotation[image_id]['novel']:
+        rect = patches.Rectangle((box[0], box[1]),box[2],box[3],linewidth=1,edgecolor='b',facecolor='none')
+        ax.add_patch(rect)
     
     # for novel
     # find the matched bbox for gt bbox "novel"
     if novel_gt_bboxes.shape[0] != 0:
-        match = False
         #all_predicted_cate = all_proposals[:, -1]
         for novel_bbox in novel_gt_bboxes:
-            xyxy_gt = torch.tensor([[novel_bbox[0], novel_bbox[1], novel_bbox[0] + novel_bbox[2], 
-                                novel_bbox[1] + novel_bbox[3]]])
-            real_iou = iou_calculator(xyxy_gt, all_prediction[:, :4])
+            real_iou = iou_calculator(novel_bbox.unsqueeze(dim=0), all_prediction[:, :4])
             # leave the iou value only when the iou larger than 0
             iou_idx_over_zero = (real_iou > 0)
-            #real_iou = real_iou[real_iou > 0]
             # select the top 10 for each gt bboxes
             if torch.sum(iou_idx_over_zero) == 0:
                 continue
-            elif torch.sum(iou_idx_over_zero) < 10:
-                remain_proposal = all_prediction[iou_idx_over_zero.squeeze(dim=0)]
             else:
-                value, idx = torch.topk(real_iou, 10)
-                remain_proposal = all_prediction[idx.squeeze(dim=0)]
+                value, idx = torch.max(real_iou, dim=-1)
+                remain_proposal = all_prediction[idx].squeeze(dim=0)
             
-            for box in remain_proposal:
-                rect = patches.Rectangle((box[0], box[1]),box[2]-box[0],box[3]-box[1],linewidth=1,edgecolor='r',facecolor='none')
-                ax.add_patch(rect)        
+            #for box in remain_proposal:
+            rect = patches.Rectangle((remain_proposal[0], remain_proposal[1]),remain_proposal[2]-remain_proposal[0],remain_proposal[3]-remain_proposal[1],linewidth=1,edgecolor='r',facecolor='none')
+            ax.add_patch(rect)        
     
-    if base_gt_bboxes.shape[0] != 0:
-        match = False
-        #all_predicted_cate = all_proposals[:, -1]
-        for base_bbox in base_gt_bboxes:
-            xyxy_gt = torch.tensor([[base_bbox[0], base_bbox[1], base_bbox[0] + base_bbox[2], 
-                                base_bbox[1] + base_bbox[3]]])
-            real_iou = iou_calculator(xyxy_gt, all_prediction[:, :4])
-            # leave the iou value only when the iou larger than 0
-            iou_idx_over_zero = (real_iou > 0)
-            #real_iou = real_iou[real_iou > 0]
-            # select the top 10 for each gt bboxes
-            if torch.sum(iou_idx_over_zero) == 0:
-                continue
-            elif torch.sum(iou_idx_over_zero) < 10:
-                remain_proposal = all_prediction[iou_idx_over_zero.squeeze(dim=0)]
-            else:
-                value, idx = torch.topk(real_iou, 10)
-                remain_proposal = all_prediction[idx.squeeze(dim=0)]
+    # if base_gt_bboxes.shape[0] != 0:
+    #     #all_predicted_cate = all_proposals[:, -1]
+    #     for base_bbox in base_gt_bboxes:
+    #         xyxy_gt = torch.tensor([[base_bbox[0], base_bbox[1], base_bbox[0] + base_bbox[2], 
+    #                             base_bbox[1] + base_bbox[3]]])
+    #         real_iou = iou_calculator(xyxy_gt, all_prediction[:, :4])
+    #         # leave the iou value only when the iou larger than 0
+    #         iou_idx_over_zero = (real_iou > 0)
+    #         #real_iou = real_iou[real_iou > 0]
+    #         # select the top 10 for each gt bboxes
+    #         if torch.sum(iou_idx_over_zero) == 0:
+    #             continue
+    #         elif torch.sum(iou_idx_over_zero) < 10:
+    #             remain_proposal = all_prediction[iou_idx_over_zero.squeeze(dim=0)]
+    #         else:
+    #             value, idx = torch.topk(real_iou, 10)
+    #             remain_proposal = all_prediction[idx.squeeze(dim=0)]
             
-            for box in remain_proposal:
-                rect = patches.Rectangle((box[0], box[1]),box[2]-box[0],box[3]-box[1],linewidth=1,edgecolor='r',facecolor='none')
-                ax.add_patch(rect)      
+    #         for box in remain_proposal:
+    #             rect = patches.Rectangle((box[0], box[1]),box[2]-box[0],box[3]-box[1],linewidth=1,edgecolor='r',facecolor='none')
+    #             ax.add_patch(rect)      
 
     print_path = os.path.join(save_root, 'printed')
     if not os.path.exists(print_path):
