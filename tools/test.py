@@ -107,9 +107,9 @@ def parse_args():
 
 
 def main():
-    torch.manual_seed(42)
-    random.seed(42)
-    np.random.seed(42)
+    # torch.manual_seed(42)
+    # random.seed(42)
+    # np.random.seed(42)
     
     args = parse_args()
 
@@ -186,7 +186,7 @@ def main():
         samples_per_gpu=samples_per_gpu,
         workers_per_gpu=cfg.data.workers_per_gpu,
         dist=distributed,
-        shuffle=True)
+        shuffle=False)
     
 
     # build the model and load checkpoint
