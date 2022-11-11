@@ -10,7 +10,8 @@ import matplotlib.patches as patches
 from PIL import Image
 from mmdet.core.bbox.iou_calculators.iou2d_calculator import BboxOverlaps2D
 iou_calculator = BboxOverlaps2D()
-
+from draw_bbox_with_cate import *
+import cv2
 
 # load the prediction file
 file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_per_base_filtered_clip_proposal_weight/base_and_novel.bbox.json'
@@ -47,6 +48,7 @@ base_cates_name = ('person', 'bicycle', 'car', 'motorcycle', 'train',
             'refrigerator', 'book', 'clock', 'vase', 'toothbrush')
 
 from_cate_name_to_cate_id = {anno['name']: anno['id'] for anno in gt_content['categories']}
+from_cate_id_to_cate_name = {anno['id']: anno['name'] for anno in gt_content['categories']}
 base_cates_ids = [from_cate_name_to_cate_id[name] for name in base_cates_name]
 
 # aggreate the anotation base on the image id
@@ -77,6 +79,7 @@ for i, image_id in enumerate(from_image_id_to_annotation):
     all_prediction[:, 3] = all_prediction[:, 1] + all_prediction[:, 3]
     base_gt_bboxes = torch.tensor(from_image_id_to_annotation[image_id]['base'])
     novel_gt_bboxes = torch.tensor(from_image_id_to_annotation[image_id]['novel'])
+    all_predicted_cate = from_image_id_to_prediction[image_id]['category_id']
 
     # we only visualize the image with novel instance
     if novel_gt_bboxes.shape[0] == 0:
@@ -104,22 +107,26 @@ for i, image_id in enumerate(from_image_id_to_annotation):
     with open(save_path, 'wb') as f:
         f.write(r.content)
 
-    im = np.array(Image.open(save_path), dtype=np.uint8)
-    fig,ax = plt.subplots(1)
-
+    #im = np.array(Image.open(save_path), dtype=np.uint8)
+    #fig,ax = plt.subplots(1)
+    img = cv2.imread(save_path)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    
     # Display the image
-    ax.imshow(im)
+    #ax.imshow(im)
     # print the base
     # for box in from_image_id_to_annotation[image_id]['base']:
     #     rect = patches.Rectangle((box[0], box[1]),box[2],box[3],linewidth=1,edgecolor='g',facecolor='none')
     #     ax.add_patch(rect)
     # print the novel
-    for box in from_image_id_to_annotation[image_id]['novel']:
-        rect = patches.Rectangle((box[0], box[1]),box[2],box[3],linewidth=1,edgecolor='b',facecolor='none')
-        ax.add_patch(rect)
+    #for box in from_image_id_to_annotation[image_id]['novel']:
+        #rect = patches.Rectangle((box[0], box[1]),box[2],box[3],linewidth=1,edgecolor='b',facecolor='none')
+        #ax.add_patch(rect)
     
     # for novel
     # find the matched bbox for gt bbox "novel"
+    all_most_matched_bbox = []
+    all_most_matched_bbox_cate = []
     if novel_gt_bboxes.shape[0] != 0:
         #all_predicted_cate = all_proposals[:, -1]
         for novel_bbox in novel_gt_bboxes:
@@ -132,10 +139,18 @@ for i, image_id in enumerate(from_image_id_to_annotation):
             else:
                 value, idx = torch.max(real_iou, dim=-1)
                 remain_proposal = all_prediction[idx].squeeze(dim=0)
+                pred_cate_for_bbox = from_cate_id_to_cate_name[all_predicted_cate[idx]]
+                all_most_matched_bbox.append[remain_proposal.tolist()]
+                all_most_matched_bbox_cate.append(pred_cate_for_bbox)
             
+        img_with_boxes = draw_multiple_rectangles(img, all_most_matched_bbox)
+        img_with_boxes = add_multiple_labels(img_with_boxes, all_most_matched_bbox_cate, all_most_matched_bbox)
+        
+        print('type', type(img_with_boxes))
+        break
             #for box in remain_proposal:
-            rect = patches.Rectangle((remain_proposal[0], remain_proposal[1]),remain_proposal[2]-remain_proposal[0],remain_proposal[3]-remain_proposal[1],linewidth=1,edgecolor='r',facecolor='none')
-            ax.add_patch(rect)        
+            #rect = patches.Rectangle((remain_proposal[0], remain_proposal[1]),remain_proposal[2]-remain_proposal[0],remain_proposal[3]-remain_proposal[1],linewidth=1,edgecolor='r',facecolor='none')
+            #ax.add_patch(rect)        
     
     # if base_gt_bboxes.shape[0] != 0:
     #     #all_predicted_cate = all_proposals[:, -1]
@@ -159,9 +174,9 @@ for i, image_id in enumerate(from_image_id_to_annotation):
     #             rect = patches.Rectangle((box[0], box[1]),box[2]-box[0],box[3]-box[1],linewidth=1,edgecolor='r',facecolor='none')
     #             ax.add_patch(rect)      
 
-    print_path = os.path.join(save_root, 'printed')
-    if not os.path.exists(print_path):
-        os.makedirs(print_path)
+    # print_path = os.path.join(save_root, 'printed')
+    # if not os.path.exists(print_path):
+    #     os.makedirs(print_path)
 
-    plt.savefig(os.path.join(print_path,file_name))
-    plt.close()
+    # plt.savefig(os.path.join(print_path,file_name))
+    # plt.close()
