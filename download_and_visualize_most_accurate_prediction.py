@@ -14,7 +14,8 @@ from draw_bbox_with_cate import *
 import cv2
 
 # load the prediction file
-file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_per_base_filtered_clip_proposal_weight/base_and_novel.bbox.json'
+#file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_per_base_filtered_clip_proposal_weight/base_and_novel.bbox.json'
+file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_per_raw_rpn_proposal_weight/base_and_novel.bbox.json'
 
 pred_content = json.load(open(file_path))
 # aggregate the predition base on the image
@@ -71,7 +72,8 @@ for info in gt_content['images']:
     from_image_id_to_image_info[image_id] = info
 
 count = 0
-save_root = '/home/zhuoming/test'
+#save_root = '/home/zhuoming/test'
+save_root = '/home/zhuoming/raw_rpn'
 for i, image_id in enumerate(from_image_id_to_annotation):
     # print the prediction
     all_prediction = torch.tensor(from_image_id_to_prediction[image_id]['bboxes'])
@@ -154,40 +156,4 @@ for i, image_id in enumerate(from_image_id_to_annotation):
         print_path = os.path.join(save_root, 'printed')
         if not os.path.exists(print_path):
             os.makedirs(print_path)
-
-        
         data.save(os.path.join(print_path,file_name))
-        
-        break
-            #for box in remain_proposal:
-            #rect = patches.Rectangle((remain_proposal[0], remain_proposal[1]),remain_proposal[2]-remain_proposal[0],remain_proposal[3]-remain_proposal[1],linewidth=1,edgecolor='r',facecolor='none')
-            #ax.add_patch(rect)        
-    
-    # if base_gt_bboxes.shape[0] != 0:
-    #     #all_predicted_cate = all_proposals[:, -1]
-    #     for base_bbox in base_gt_bboxes:
-    #         xyxy_gt = torch.tensor([[base_bbox[0], base_bbox[1], base_bbox[0] + base_bbox[2], 
-    #                             base_bbox[1] + base_bbox[3]]])
-    #         real_iou = iou_calculator(xyxy_gt, all_prediction[:, :4])
-    #         # leave the iou value only when the iou larger than 0
-    #         iou_idx_over_zero = (real_iou > 0)
-    #         #real_iou = real_iou[real_iou > 0]
-    #         # select the top 10 for each gt bboxes
-    #         if torch.sum(iou_idx_over_zero) == 0:
-    #             continue
-    #         elif torch.sum(iou_idx_over_zero) < 10:
-    #             remain_proposal = all_prediction[iou_idx_over_zero.squeeze(dim=0)]
-    #         else:
-    #             value, idx = torch.topk(real_iou, 10)
-    #             remain_proposal = all_prediction[idx.squeeze(dim=0)]
-            
-    #         for box in remain_proposal:
-    #             rect = patches.Rectangle((box[0], box[1]),box[2]-box[0],box[3]-box[1],linewidth=1,edgecolor='r',facecolor='none')
-    #             ax.add_patch(rect)      
-
-    # print_path = os.path.join(save_root, 'printed')
-    # if not os.path.exists(print_path):
-    #     os.makedirs(print_path)
-
-    # plt.savefig(os.path.join(print_path,file_name))
-    # plt.close()
