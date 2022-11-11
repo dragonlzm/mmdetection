@@ -71,7 +71,7 @@ for info in gt_content['images']:
     from_image_id_to_image_info[image_id] = info
 
 count = 0
-save_root = '/home/zhuoming/mask_rcnn_distillation_per_base_filtered_clip_proposal_weight_visualization'
+save_root = '/home/zhuoming/test'
 for i, image_id in enumerate(from_image_id_to_annotation):
     # print the prediction
     all_prediction = torch.tensor(from_image_id_to_prediction[image_id]['bboxes'])
@@ -140,13 +140,24 @@ for i, image_id in enumerate(from_image_id_to_annotation):
                 value, idx = torch.max(real_iou, dim=-1)
                 remain_proposal = all_prediction[idx].squeeze(dim=0)
                 pred_cate_for_bbox = from_cate_id_to_cate_name[all_predicted_cate[idx]]
-                all_most_matched_bbox.append[remain_proposal.tolist()]
+                all_most_matched_bbox.append(remain_proposal.int().tolist())
                 all_most_matched_bbox_cate.append(pred_cate_for_bbox)
-            
+        #print(all_most_matched_bbox)
         img_with_boxes = draw_multiple_rectangles(img, all_most_matched_bbox)
         img_with_boxes = add_multiple_labels(img_with_boxes, all_most_matched_bbox_cate, all_most_matched_bbox)
         
-        print('type', type(img_with_boxes))
+        #print('type', type(img_with_boxes))
+        data = Image.fromarray(img_with_boxes)
+        
+        # saving the final output 
+        # as a PNG file
+        print_path = os.path.join(save_root, 'printed')
+        if not os.path.exists(print_path):
+            os.makedirs(print_path)
+
+        
+        data.save(os.path.join(print_path,file_name))
+        
         break
             #for box in remain_proposal:
             #rect = patches.Rectangle((remain_proposal[0], remain_proposal[1]),remain_proposal[2]-remain_proposal[0],remain_proposal[3]-remain_proposal[1],linewidth=1,edgecolor='r',facecolor='none')
