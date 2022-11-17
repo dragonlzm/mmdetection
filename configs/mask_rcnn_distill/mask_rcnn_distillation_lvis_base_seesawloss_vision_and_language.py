@@ -1,7 +1,8 @@
 _base_ = './mask_rcnn_distillation_lvis_base_seesawloss.py'
 
+# in this setting we use the vision and language finetuned feature and text embedding to train the model
+
 # change the data pipeline
-# try different feature.
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 train_pipeline = [

@@ -1,5 +1,7 @@
 _base_ = './mask_rcnn_distillation_per_base_filtered_clip_proposal_weight.py'
 
+## in this setting we are using the vision only finetuned feature to traine the model
+
 # default bs = 2x2
 # dataset settings
 classes = ('air_conditioner', 'airplane', 'alarm_clock', 'antenna', 'apple', 
