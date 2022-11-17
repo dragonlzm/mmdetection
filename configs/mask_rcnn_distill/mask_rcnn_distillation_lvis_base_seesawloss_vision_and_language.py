@@ -1,4 +1,4 @@
-_base_ = './mask_rcnn_distillation_lvis_base_12e.py'
+_base_ = './mask_rcnn_distillation_lvis_base_seesawloss.py'
 
 # change the data pipeline
 # try different feature.
@@ -12,7 +12,7 @@ train_pipeline = [
         img_scale=[(1333, 640), (1333, 800)],
         multiscale_mode='range',
         keep_ratio=True),    
-    dict(type='LoadCLIPFeat', file_path_prefix='data/lvis_v1/clip_proposal_feat/lvis_base_finetuned',
+    dict(type='LoadCLIPFeat', file_path_prefix='data/lvis_v1/clip_proposal_feat/lvis_base_finetuned_vision_and_text',
          num_of_rand_bbox=200, select_fixed_subset=200, load_rand_bbox_weight=True),    
     dict(type='RandomFlip', flip_ratio=0.5),
     dict(type='Normalize', **img_norm_cfg),
@@ -25,3 +25,9 @@ train_pipeline = [
 data = dict(
     train=dict(
         dataset=dict(pipeline=train_pipeline)))
+
+
+# model config
+model = dict(
+    roi_head=dict(
+        bbox_head=dict(fg_vec_cfg=dict(load_path='data/embeddings/base_vision_and_text_finetuned_866cates.pt'))))
