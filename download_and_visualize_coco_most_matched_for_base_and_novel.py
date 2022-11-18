@@ -75,7 +75,7 @@ for i, image_id in enumerate(from_image_id_to_annotation):
         continue
     else:
         count += 1
-    if count > 10:
+    if count > 100:
         break
 
     #download the image
