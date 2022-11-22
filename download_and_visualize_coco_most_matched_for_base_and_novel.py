@@ -61,11 +61,13 @@ for info in gt_content['images']:
     from_image_id_to_image_info[image_id] = info
 
 # load the proposal and print the image
-save_root = '/home/zhuoming/coco_visualization_most_matched_base_and_novel'
-proposal_path_root = '/data/zhuoming/detection/coco/clip_proposal/32_32_512'
+#save_root = '/home/zhuoming/coco_visualization_most_matched_base_and_novel'
+# save_root = '/home/zhuoming/coco_visualization_most_matched_base_and_novel_top1'
+# proposal_path_root = '/data/zhuoming/detection/coco/clip_proposal/32_32_512'
 
 # save_root = '/home/zhuoming/coco_visualization_most_matched_base_and_novel_rpn_proposal'
-# proposal_path_root = '/data/zhuoming/detection/coco/rpn_proposal/mask_rcnn_r50_fpn_2x_coco_2gpu_base48_reg_class_agno'
+save_root = '/home/zhuoming/coco_visualization_most_matched_base_and_novel_rpn_proposal_top1_over_threshold'
+proposal_path_root = '/data/zhuoming/detection/coco/rpn_proposal/mask_rcnn_r50_fpn_2x_coco_2gpu_base48_reg_class_agno'
 
 count = 0
 for i, image_id in enumerate(from_image_id_to_annotation):
@@ -130,15 +132,23 @@ for i, image_id in enumerate(from_image_id_to_annotation):
             # select the top 10 for each gt bboxes
             if torch.sum(iou_idx_over_zero) == 0:
                 continue
-            elif torch.sum(iou_idx_over_zero) < 10:
-                remain_proposal = all_proposals[iou_idx_over_zero.squeeze(dim=0)]
             else:
-                value, idx = torch.topk(real_iou, 10)
-                remain_proposal = all_proposals[idx.squeeze(dim=0)]
+                value, idx = torch.max(real_iou, dim=-1)
+                if value < 0.5:
+                    continue
+                remain_proposal = all_proposals[idx].squeeze(dim=0)
+                rect = patches.Rectangle((remain_proposal[0], remain_proposal[1]),remain_proposal[2]-remain_proposal[0],remain_proposal[3]-remain_proposal[1],linewidth=1,edgecolor='r',facecolor='none')
+                ax.add_patch(rect)   
             
-            for box in remain_proposal:
-                rect = patches.Rectangle((box[0], box[1]),box[2]-box[0],box[3]-box[1],linewidth=1,edgecolor='r',facecolor='none')
-                ax.add_patch(rect)    
+            # elif torch.sum(iou_idx_over_zero) < 10:
+            #     remain_proposal = all_proposals[iou_idx_over_zero.squeeze(dim=0)]
+            # else:
+            #     value, idx = torch.topk(real_iou, 10)
+            #     remain_proposal = all_proposals[idx.squeeze(dim=0)]
+            
+            # for box in remain_proposal:
+            #     rect = patches.Rectangle((box[0], box[1]),box[2]-box[0],box[3]-box[1],linewidth=1,edgecolor='r',facecolor='none')
+            #     ax.add_patch(rect)    
 
     # if base_gt_bboxes.shape[0] != 0:
     #     match = False
