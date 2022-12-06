@@ -17,16 +17,23 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #rm -rf ./data
 #ln -sf /project/nevatia_174/zhuoming/detection ./data
 
-CONFIG_FILE="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection/configs/cls_proposal_generator/cls_proposal_generator_coco_base48.py"
-JSONFILE_PREFIX="data/test/cls_proposal_generator_coco/results_32_32_512_base48"
-BBOX_SAVE_PATH_ROOT="data/coco/clip_proposal/32_32_512_base48"
+# CONFIG_FILE="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection/configs/cls_proposal_generator/cls_proposal_generator_coco_base48.py"
+# JSONFILE_PREFIX="data/test/cls_proposal_generator_coco/results_32_32_512_base48"
+# BBOX_SAVE_PATH_ROOT="data/coco/clip_proposal/32_32_512_base48"
+
+# for fixing the channel problem
+CONFIG_FILE="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection/configs/cls_proposal_generator/cls_proposal_generator_coco.py"
+JSONFILE_PREFIX="data/test/cls_proposal_generator_coco/results_32_32_512_channel_corr"
+BBOX_SAVE_PATH_ROOT="data/coco/clip_proposal/32_32_512_channel_corr"
+CHECKPOINT="data/exp_res/cls_finetuner_clip_base48_all_train/latest.pth"
+
 
 # 1
 # PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
 # python -m torch.distributed.launch --nproc_per_node=2 \
 #     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/test.py \
 #     ${CONFIG_FILE} \
-#     /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/epoch_12.pth \
+#     ${CHECKPOINT} \
 #     --launcher pytorch --eval=proposal_fast --options jsonfile_prefix=${JSONFILE_PREFIX}_1 \
 #     --cfg-options model.anchor_generator.strides=[32] model.anchor_generator.scales=[1,2,4,8,16] model.test_cfg.nms_on_all_anchors=True \
 #     model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=True model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
@@ -37,7 +44,7 @@ BBOX_SAVE_PATH_ROOT="data/coco/clip_proposal/32_32_512_base48"
 # python -m torch.distributed.launch --nproc_per_node=2 \
 #     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/test.py \
 #     ${CONFIG_FILE} \
-#     /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/epoch_12.pth \
+#     ${CHECKPOINT} \
 #     --launcher pytorch --eval=proposal_fast --options jsonfile_prefix=${JSONFILE_PREFIX}_2 \
 #     --cfg-options model.anchor_generator.strides=[32] model.anchor_generator.scales=[1,2,4,8,16] model.test_cfg.nms_on_all_anchors=True \
 #     model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=True model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
@@ -48,7 +55,7 @@ BBOX_SAVE_PATH_ROOT="data/coco/clip_proposal/32_32_512_base48"
 # python -m torch.distributed.launch --nproc_per_node=2 \
 #     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/test.py \
 #     ${CONFIG_FILE} \
-#     /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/epoch_12.pth \
+#     ${CHECKPOINT} \
 #     --launcher pytorch --eval=proposal_fast --options jsonfile_prefix=${JSONFILE_PREFIX}_3 \
 #     --cfg-options model.anchor_generator.strides=[32] model.anchor_generator.scales=[1,2,4,8,16] model.test_cfg.nms_on_all_anchors=True \
 #     model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=True model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
@@ -59,7 +66,7 @@ BBOX_SAVE_PATH_ROOT="data/coco/clip_proposal/32_32_512_base48"
 # python -m torch.distributed.launch --nproc_per_node=2 \
 #     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/test.py \
 #     ${CONFIG_FILE} \
-#     /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/epoch_12.pth \
+#     ${CHECKPOINT} \
 #     --launcher pytorch --eval=proposal_fast --options jsonfile_prefix=${JSONFILE_PREFIX}_4 \
 #     --cfg-options model.anchor_generator.strides=[32] model.anchor_generator.scales=[1,2,4,8,16] model.test_cfg.nms_on_all_anchors=True \
 #     model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=True model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
@@ -70,7 +77,7 @@ BBOX_SAVE_PATH_ROOT="data/coco/clip_proposal/32_32_512_base48"
 # python -m torch.distributed.launch --nproc_per_node=2 \
 #     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/test.py \
 #     ${CONFIG_FILE} \
-#     /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/epoch_12.pth \
+#     ${CHECKPOINT} \
 #     --launcher pytorch --eval=proposal_fast --options jsonfile_prefix=${JSONFILE_PREFIX}_5 \
 #     --cfg-options model.anchor_generator.strides=[32] model.anchor_generator.scales=[1,2,4,8,16] model.test_cfg.nms_on_all_anchors=True \
 #     model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=True model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
@@ -81,7 +88,7 @@ BBOX_SAVE_PATH_ROOT="data/coco/clip_proposal/32_32_512_base48"
 # python -m torch.distributed.launch --nproc_per_node=2 \
 #     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/test.py \
 #     ${CONFIG_FILE} \
-#     /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/epoch_12.pth \
+#     ${CHECKPOINT} \
 #     --launcher pytorch --eval=proposal_fast --options jsonfile_prefix=${JSONFILE_PREFIX}_6 \
 #     --cfg-options model.anchor_generator.strides=[32] model.anchor_generator.scales=[1,2,4,8,16] model.test_cfg.nms_on_all_anchors=True \
 #     model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=True model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
@@ -92,7 +99,7 @@ BBOX_SAVE_PATH_ROOT="data/coco/clip_proposal/32_32_512_base48"
 # python -m torch.distributed.launch --nproc_per_node=2 \
 #     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/test.py \
 #     ${CONFIG_FILE} \
-#     /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/epoch_12.pth \
+#     ${CHECKPOINT} \
 #     --launcher pytorch --eval=proposal_fast --options jsonfile_prefix=${JSONFILE_PREFIX}_7 \
 #     --cfg-options model.anchor_generator.strides=[32] model.anchor_generator.scales=[1,2,4,8,16] model.test_cfg.nms_on_all_anchors=True \
 #     model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=True model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
@@ -103,7 +110,7 @@ BBOX_SAVE_PATH_ROOT="data/coco/clip_proposal/32_32_512_base48"
 # python -m torch.distributed.launch --nproc_per_node=2 \
 #     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/test.py \
 #     ${CONFIG_FILE} \
-#     /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/epoch_12.pth \
+#     ${CHECKPOINT} \
 #     --launcher pytorch --eval=proposal_fast --options jsonfile_prefix=${JSONFILE_PREFIX}_8 \
 #     --cfg-options model.anchor_generator.strides=[32] model.anchor_generator.scales=[1,2,4,8,16] model.test_cfg.nms_on_all_anchors=True \
 #     model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=True model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
@@ -114,7 +121,7 @@ BBOX_SAVE_PATH_ROOT="data/coco/clip_proposal/32_32_512_base48"
 # python -m torch.distributed.launch --nproc_per_node=2 \
 #     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/test.py \
 #     ${CONFIG_FILE} \
-#     /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/epoch_12.pth \
+#     ${CHECKPOINT} \
 #     --launcher pytorch --eval=proposal_fast --options jsonfile_prefix=${JSONFILE_PREFIX}_9 \
 #     --cfg-options model.anchor_generator.strides=[32] model.anchor_generator.scales=[1,2,4,8,16] model.test_cfg.nms_on_all_anchors=True \
 #     model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=True model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
@@ -125,7 +132,7 @@ BBOX_SAVE_PATH_ROOT="data/coco/clip_proposal/32_32_512_base48"
 # python -m torch.distributed.launch --nproc_per_node=2 \
 #     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/test.py \
 #     ${CONFIG_FILE} \
-#     /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/epoch_12.pth \
+#     ${CHECKPOINT} \
 #     --launcher pytorch --eval=proposal_fast --options jsonfile_prefix=${JSONFILE_PREFIX}_10 \
 #     --cfg-options model.anchor_generator.strides=[32] model.anchor_generator.scales=[1,2,4,8,16] model.test_cfg.nms_on_all_anchors=True \
 #     model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=True model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
@@ -137,7 +144,7 @@ PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH 
 python -m torch.distributed.launch --nproc_per_node=2 \
     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/test.py \
     ${CONFIG_FILE} \
-    /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/epoch_12.pth \
+    ${CHECKPOINT} \
     --launcher pytorch --eval=proposal_fast --options jsonfile_prefix=${JSONFILE_PREFIX}_11 \
     --cfg-options model.anchor_generator.strides=[32] model.anchor_generator.scales=[1,2,4,8,16] model.test_cfg.nms_on_all_anchors=True \
     model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=True model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
@@ -148,7 +155,7 @@ python -m torch.distributed.launch --nproc_per_node=2 \
 # python -m torch.distributed.launch --nproc_per_node=2 \
 #     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/test.py \
 #     ${CONFIG_FILE} \
-#     /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/epoch_12.pth \
+#     ${CHECKPOINT} \
 #     --launcher pytorch --eval=proposal_fast --options jsonfile_prefix=${JSONFILE_PREFIX}_12 \
 #     --cfg-options model.anchor_generator.strides=[32] model.anchor_generator.scales=[1,2,4,8,16] model.test_cfg.nms_on_all_anchors=True \
 #     model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=True model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
@@ -159,7 +166,7 @@ python -m torch.distributed.launch --nproc_per_node=2 \
 # python -m torch.distributed.launch --nproc_per_node=2 \
 #     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/test.py \
 #     ${CONFIG_FILE} \
-#     /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/epoch_12.pth \
+#     ${CHECKPOINT} \
 #     --launcher pytorch --eval=proposal_fast --options jsonfile_prefix=${JSONFILE_PREFIX}_12 \
 #     --cfg-options model.anchor_generator.strides=[32] model.anchor_generator.scales=[1,2,4,8,16] model.test_cfg.nms_on_all_anchors=True \
 #     model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=True model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
@@ -170,7 +177,7 @@ python -m torch.distributed.launch --nproc_per_node=2 \
 # python -m torch.distributed.launch --nproc_per_node=2 \
 #     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/test.py \
 #     ${CONFIG_FILE} \
-#     /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/epoch_12.pth \
+#     ${CHECKPOINT} \
 #     --launcher pytorch --eval=proposal_fast --options jsonfile_prefix=${JSONFILE_PREFIX}_12 \
 #     --cfg-options model.anchor_generator.strides=[32] model.anchor_generator.scales=[1,2,4,8,16] model.test_cfg.nms_on_all_anchors=True \
 #     model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=True model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
@@ -181,7 +188,7 @@ python -m torch.distributed.launch --nproc_per_node=2 \
 # python -m torch.distributed.launch --nproc_per_node=2 \
 #     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/test.py \
 #     ${CONFIG_FILE} \
-#     /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/epoch_12.pth \
+#     ${CHECKPOINT} \
 #     --launcher pytorch --eval=proposal_fast --options jsonfile_prefix=${JSONFILE_PREFIX}_12 \
 #     --cfg-options model.anchor_generator.strides=[32] model.anchor_generator.scales=[1,2,4,8,16] model.test_cfg.nms_on_all_anchors=True \
 #     model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=True model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
@@ -193,7 +200,7 @@ python -m torch.distributed.launch --nproc_per_node=2 \
 # python -m torch.distributed.launch --nproc_per_node=2 \
 #     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/test.py \
 #     ${CONFIG_FILE} \
-#     /project/nevatia_174/zhuoming/detection/test/cls_finetuner_clip_base_all_train/epoch_12.pth \
+#     ${CHECKPOINT} \
 #     --launcher pytorch --eval=proposal_fast --options jsonfile_prefix=${JSONFILE_PREFIX}_remain \
 #     --cfg-options model.anchor_generator.strides=[32] model.anchor_generator.scales=[1,2,4,8,16] model.test_cfg.nms_on_all_anchors=True \
 #     model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=True model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
