@@ -451,12 +451,16 @@ class ClsProposalGenerator(BaseDetector):
                     
                     #if img_info['ori_filename'] == '000000002985.jpg':
                     #    print(dets[:100], max_idx_per_anchor[keep][:100])
-                        
+                    
+                    #print('dets', dets.shape)
                     proposal_for_all_imgs.append(dets)
-                    print('max_idx_per_anchor', max_idx_per_anchor.shape)
-                    predicted_cates_for_all_imgs.append(max_idx_per_anchor[keep])
-                    print('max_score_per_anchor', max_score_per_anchor)
-                    predicted_confs_for_all_imgs.append(max_score_per_anchor[keep])
+                    #print('max_idx_per_anchor', max_idx_per_anchor.shape)
+                    #print('max_idx_per_anchor[keep][:self.paded_proposal_num]', max_idx_per_anchor[keep][:self.paded_proposal_num].shape, max_idx_per_anchor[keep][:self.paded_proposal_num])
+                    predicted_cates_for_all_imgs.append(max_idx_per_anchor[keep][:self.paded_proposal_num])
+                    
+                    #print('max_score_per_anchor', max_score_per_anchor.shape)
+                    #print('max_score_per_anchor[keep][:self.paded_proposal_num]', max_score_per_anchor[keep][:self.paded_proposal_num].shape, max_score_per_anchor[keep][:self.paded_proposal_num])
+                    predicted_confs_for_all_imgs.append(max_score_per_anchor[keep][:self.paded_proposal_num])
         
             else:
                 proposal_for_all_imgs = []
