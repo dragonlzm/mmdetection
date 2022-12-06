@@ -97,6 +97,7 @@ class ClsProposalGenerator(BaseDetector):
         self.nms_on_diff_scale = self.test_cfg.get('nms_on_diff_scale', False) if self.test_cfg is not None else False
 
         self.bbox_save_path_root = self.test_cfg.get('bbox_save_path_root', None) if self.test_cfg is not None else None
+        self.save_pred_category = self.test_cfg.get('save_pred_category', None) if self.test_cfg is not None else None
         
         self.least_conf_bbox = self.test_cfg.get('least_conf_bbox', False) if self.test_cfg is not None else False
         self.use_sigmoid_for_cos = self.test_cfg.get('use_sigmoid_for_cos', False) if self.test_cfg is not None else False
@@ -105,7 +106,7 @@ class ClsProposalGenerator(BaseDetector):
             "anchor_generator['strides']", anchor_generator['strides'], "self.paded_proposal_num", self.paded_proposal_num, "self.min_entropy", self.min_entropy,
             "self.nms_on_all_anchors", self.nms_on_all_anchors, "self.nms_threshold", self.nms_threshold,
             'self.bbox_save_path_root', self.bbox_save_path_root, 'self.least_conf_bbox', self.least_conf_bbox, 'self.use_sigmoid_for_cos',
-            self.use_sigmoid_for_cos)
+            self.use_sigmoid_for_cos, 'self.save_pred_category', self.save_pred_category)
 
     def crop_img_to_patches(self, imgs, gt_bboxes, img_metas):
         # handle the test config
@@ -366,6 +367,8 @@ class ClsProposalGenerator(BaseDetector):
 
             if self.nms_on_all_anchors:
                 proposal_for_all_imgs = []
+                predicted_cates_for_all_imgs = []
+                predicted_confs_for_all_imgs = []
                 for logits_per_img, anchor_per_img, img_info in zip(pred_logits, anchors_for_each_img, img_metas):
                     h, w, _ = img_info['img_shape']
                     if self.use_sigmoid_for_cos:
@@ -377,7 +380,7 @@ class ClsProposalGenerator(BaseDetector):
                     if not self.min_entropy:
                         max_pred_prob = torch.max(pred_prob, dim=1)
                         max_score_per_anchor = max_pred_prob[0]
-                        #max_idx_per_anchor = max_pred_prob[1]
+                        max_idx_per_anchor = max_pred_prob[1]
                     else:
                         cate_num = pred_prob.shape[-1]
                         #print(cate_num)
@@ -450,6 +453,10 @@ class ClsProposalGenerator(BaseDetector):
                     #    print(dets[:100], max_idx_per_anchor[keep][:100])
                         
                     proposal_for_all_imgs.append(dets)
+                    print('max_idx_per_anchor', max_idx_per_anchor.shape)
+                    predicted_cates_for_all_imgs.append(max_idx_per_anchor[keep])
+                    print('max_score_per_anchor', max_score_per_anchor)
+                    predicted_confs_for_all_imgs.append(max_score_per_anchor[keep])
         
             else:
                 proposal_for_all_imgs = []
@@ -501,11 +508,18 @@ class ClsProposalGenerator(BaseDetector):
                     proposal_for_all_imgs.append(dets)
                     
         result = [proposal.cpu().numpy() for proposal in proposal_for_all_imgs]
+        predicted_cates_for_all_imgs = [ele.cpu().numpy() for ele in predicted_cates_for_all_imgs]
+        predicted_confs_for_all_imgs = [ele.cpu().numpy() for ele in predicted_confs_for_all_imgs]
         #print('result[0].shape', result[0].shape)
         
-        if self.bbox_save_path_root != None:        
+        if self.bbox_save_path_root != None:    
             file = open(file_name, 'w')
-            result_json = {'image_id':int(clear_file_name.split('.')[0].strip('0')), 'score':result[0].tolist()}
+            if self.save_pred_category:
+                result_json = {'image_id':int(clear_file_name.split('.')[0].strip('0')), 'score':result[0].tolist(), 
+                               'predicted_cates_for_all_imgs': predicted_cates_for_all_imgs[0].tolist(),
+                               'predicted_confs_for_all_imgs': predicted_confs_for_all_imgs[0].tolist()}
+            else:
+                result_json = {'image_id':int(clear_file_name.split('.')[0].strip('0')), 'score':result[0].tolist()}
             file.write(json.dumps(result_json))
             file.close()
             
