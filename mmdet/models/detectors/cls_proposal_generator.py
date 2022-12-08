@@ -456,11 +456,9 @@ class ClsProposalGenerator(BaseDetector):
                     proposal_for_all_imgs.append(dets)
                     #print('max_idx_per_anchor', max_idx_per_anchor.shape)
                     #print('max_idx_per_anchor[keep][:self.paded_proposal_num]', max_idx_per_anchor[keep][:self.paded_proposal_num].shape, max_idx_per_anchor[keep][:self.paded_proposal_num])
-                    predicted_cates_for_all_imgs.append(max_idx_per_anchor[keep][:self.paded_proposal_num])
-                    
-                    #print('max_score_per_anchor', max_score_per_anchor.shape)
-                    #print('max_score_per_anchor[keep][:self.paded_proposal_num]', max_score_per_anchor[keep][:self.paded_proposal_num].shape, max_score_per_anchor[keep][:self.paded_proposal_num])
-                    predicted_confs_for_all_imgs.append(max_score_per_anchor[keep][:self.paded_proposal_num])
+                    if self.save_pred_category:
+                        predicted_cates_for_all_imgs.append(max_idx_per_anchor[keep][:self.paded_proposal_num])
+                        predicted_confs_for_all_imgs.append(max_score_per_anchor[keep][:self.paded_proposal_num])
         
             else:
                 proposal_for_all_imgs = []
@@ -512,8 +510,9 @@ class ClsProposalGenerator(BaseDetector):
                     proposal_for_all_imgs.append(dets)
                     
         result = [proposal.cpu().numpy() for proposal in proposal_for_all_imgs]
-        predicted_cates_for_all_imgs = [ele.cpu().numpy() for ele in predicted_cates_for_all_imgs]
-        predicted_confs_for_all_imgs = [ele.cpu().numpy() for ele in predicted_confs_for_all_imgs]
+        if self.save_pred_category:
+            predicted_cates_for_all_imgs = [ele.cpu().numpy() for ele in predicted_cates_for_all_imgs]
+            predicted_confs_for_all_imgs = [ele.cpu().numpy() for ele in predicted_confs_for_all_imgs]
         #print('result[0].shape', result[0].shape)
         
         if self.bbox_save_path_root != None:    
