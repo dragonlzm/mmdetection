@@ -20,10 +20,10 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 
 # 80 cates
 # bash tools/new_dist_train.sh configs/deformable_detr/deformable_detr_r50_2x2_50e_coco_grad8xcumulated.py 2 \
-# /data/zhuoming/detection/one_stage/deformable_detr_r50_2x2_50e_coco_grad8xcumulated /data/zhuoming/detection \
+# data/one_stage/deformable_detr_r50_2x2_50e_coco_grad8xcumulated /data/zhuoming/detection \
 # #--resume-from=data/one_stage/retinanet_r50_fpn_1x_coco_base48/latest.pth
 
 # 48 cates
 bash tools/new_dist_train.sh configs/deformable_detr/deformable_detr_r50_2x2_50e_coco_grad8xcumulated_base48.py 2 \
-/data/zhuoming/detection/one_stage/deformable_detr_r50_2x2_50e_coco_grad8xcumulated_base48 /data/zhuoming/detection \
+data/one_stage/deformable_detr_r50_2x2_50e_coco_grad8xcumulated_base48 /data/zhuoming/detection \
 #--resume-from=data/one_stage/deformable_detr_r50_2x2_50e_coco_grad8xcumulated_base48/latest.pth
