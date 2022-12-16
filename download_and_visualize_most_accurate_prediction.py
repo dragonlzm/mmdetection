@@ -15,7 +15,12 @@ import cv2
 
 # load the prediction file
 #file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_per_base_filtered_clip_proposal_weight/base_and_novel.bbox.json'
-file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_per_raw_rpn_proposal_weight/base_and_novel.bbox.json'
+#file_path = '/data/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_per_raw_rpn_proposal_weight/base_and_novel.bbox.json'
+#file_path = '/data/zhuoming/detection/one_stage/retinanet_r50_fpn_1x_coco_base48/base48_300.bbox.json'
+#file_path = '/data/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_2gpu_base48_reg_class_agno/base48_300.bbox.json'
+
+file_path = '/data/zhuoming/detection/one_stage/fcos_r50_caffe_fpn_gn-head_1x_coco_base48/base48_300.bbox.json'
+
 
 pred_content = json.load(open(file_path))
 # aggregate the predition base on the image
@@ -32,7 +37,9 @@ for res in pred_content:
     from_image_id_to_prediction[image_id]['category_id'].append(category_id)
 
 # load the gt bboxes
-gt_anno_file = '/data/zhuoming/detection/coco/annotations/instances_val2017_65cates.json'
+#gt_anno_file = '/data/zhuoming/detection/coco/annotations/instances_val2017_65cates.json'
+gt_anno_file = '/data/zhuoming/detection/coco/annotations/instances_val2017.json'
+
 from_image_id_to_image_file_name = {}
 
 # aggregate the gt bboxes base on the image
@@ -73,7 +80,12 @@ for info in gt_content['images']:
 
 count = 0
 #save_root = '/home/zhuoming/test'
-save_root = '/home/zhuoming/raw_rpn'
+#save_root = '/home/zhuoming/raw_rpn'
+
+#save_root = '/home/zhuoming/retina'
+#save_root = '/home/zhuoming/mrcnn'
+save_root = '/home/zhuoming/fcos'
+
 for i, image_id in enumerate(from_image_id_to_annotation):
     # print the prediction
     all_prediction = torch.tensor(from_image_id_to_prediction[image_id]['bboxes'])
