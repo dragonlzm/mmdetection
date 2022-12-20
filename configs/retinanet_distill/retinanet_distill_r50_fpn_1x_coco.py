@@ -11,7 +11,7 @@ train_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='LoadAnnotations', with_bbox=True, with_mask=True),
     dict(type='Resize', img_scale=(1333, 800), keep_ratio=True),
-    dict(type='LoadCLIPFeat', file_path_prefix='data/coco/clip_proposal_feat/base48_finetuned_500',
+    dict(type='LoadCLIPFeat', file_path_prefix='data/coco/clip_proposal_feat/base48_finetuned_base_filtered',
          num_of_rand_bbox=200, select_fixed_subset=200, load_rand_bbox_weight=True),    
     dict(type='RandomFlip', flip_ratio=0.5),
     dict(type='Normalize', **img_norm_cfg),
@@ -32,7 +32,8 @@ optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
 model = dict(
     type='RetinaDistillNet',
     bbox_head=dict(
-        type='RetinaDistillHead'),
+        type='RetinaDistillHead',
+        fg_vec_cfg=dict(load_path='data/embeddings/base_finetuned_80cates.pt')),
     test_cfg=dict(
         score_thr=0.05,
         max_per_img=300))

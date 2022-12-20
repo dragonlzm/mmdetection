@@ -54,12 +54,14 @@ class RetinaDistillHead(AnchorHead):
                          std=0.01,
                          bias_prob=0.01)),
                  cls_predictor_cfg=dict(type='Linear'),
+                 fg_vec_cfg=dict(load_path='data/embeddings/base_finetuned_48cates.pt'),
                  **kwargs):
         self.stacked_convs = stacked_convs
         self.conv_cfg = conv_cfg
         self.norm_cfg = norm_cfg
         self.clip_dim = clip_dim
         self.cls_predictor_cfg = cls_predictor_cfg
+        self.fg_vec_cfg = fg_vec_cfg
         super(RetinaDistillHead, self).__init__(
             num_classes,
             in_channels,
@@ -123,11 +125,6 @@ class RetinaDistillHead(AnchorHead):
         
         load_value = torch.load(self.fg_vec_cfg.load_path)
         load_value = load_value.cuda()
-        if self.use_svd_conversion:
-            # convert the text feature
-            load_value = torch.mm(load_value, self.conversion_mat)
-            #print('load_value:', load_value)
-        
         load_value = load_value / load_value.norm(dim=-1, keepdim=True)
         #load_value = load_value.t()
         self.load_value = load_value
@@ -302,7 +299,6 @@ class RetinaDistillHead(AnchorHead):
             anchor_list,
             valid_flag_list,
             rand_bboxes,
-            ?
             img_metas,
             gt_bboxes_ignore_list=gt_bboxes_ignore,
             gt_labels_list=gt_labels,
