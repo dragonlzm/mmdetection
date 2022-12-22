@@ -102,8 +102,8 @@ class DepthWiseCorrelationAggregator(BaseModule):
             Tensor: When `with_fc` is True, the aggregate feature is with
                 shape (N, C), otherwise, its shape is (N, C, H, W).
         """
-        assert query_feat.size(1) == support_feat.size(1), \
-            'mismatch channel number between query and support features.'
+        # assert query_feat.size(1) == support_feat.size(1), \
+        #     'mismatch channel number between query and support features.'
 
         feat = F.conv2d(
             query_feat,

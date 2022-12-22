@@ -1,6 +1,6 @@
 _base_ = [
     '../_base_/models/retinanet_r50_fpn.py',
-    '../_base_/datasets/coco_instance_with_clip_feat.py',
+    '../_base_/datasets/coco_detection_with_clip_feat.py',
     '../_base_/schedules/schedule_1x.py', '../_base_/default_runtime.py'
 ]
 
@@ -17,7 +17,7 @@ train_pipeline = [
     dict(type='Normalize', **img_norm_cfg),
     dict(type='Pad', size_divisor=32),
     dict(type='DefaultFormatBundle'),
-    dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels', 'gt_masks', 'gt_feats',
+    dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels', 'gt_feats',
                                'rand_bboxes', 'rand_feats', 'rand_bbox_weights']),
 ]
 

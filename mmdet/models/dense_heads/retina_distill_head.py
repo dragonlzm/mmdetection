@@ -3,11 +3,13 @@ import torch.nn as nn
 from mmcv.cnn import ConvModule
 from mmcv.runner import force_fp32
 from ..builder import HEADS, build_loss
+from ..utils import build_aggregator
 from .anchor_head import AnchorHead
 from mmdet.core import (anchor_inside_flags, build_anchor_generator,
                         build_assigner, build_bbox_coder, build_sampler,
                         images_to_levels, multi_apply, multiclass_nms, unmap)
 import torch
+import copy
 from mmdet.models.utils import build_linear_layer
 
 @HEADS.register_module()
@@ -48,14 +50,24 @@ class RetinaDistillHead(AnchorHead):
                      type='Normal',
                      layer='Conv2d',
                      std=0.01,
-                     override=dict(
+                    # override=dict(
+                    #      type='Xavier',
+                    #      name='map_to_clip')
+                    #  override=dict(
+                    #      type='Normal',
+                    #      name='map_to_clip',
+                    #      std=0.01,
+                    #      bias_prob=0.01)
+                    override=dict(
                          type='Normal',
-                         name='map_to_clip',
+                         name='retina_cls',
                          std=0.01,
-                         bias_prob=0.01)),
+                         bias_prob=0.01)
+                     ),
                  cls_predictor_cfg=dict(type='Linear'),
                  fg_vec_cfg=dict(load_path='data/embeddings/base_finetuned_48cates.pt'),
                  distill_loss_factor=1.0,
+                 temperature=100,
                  **kwargs):
         self.stacked_convs = stacked_convs
         self.conv_cfg = conv_cfg
@@ -64,6 +76,7 @@ class RetinaDistillHead(AnchorHead):
         self.cls_predictor_cfg = cls_predictor_cfg
         self.fg_vec_cfg = fg_vec_cfg
         self.distill_loss_factor = distill_loss_factor
+        self._temperature = temperature
         super(RetinaDistillHead, self).__init__(
             num_classes,
             in_channels,
@@ -72,18 +85,17 @@ class RetinaDistillHead(AnchorHead):
             **kwargs)
         self.distillation_loss_config = dict(type='L1Loss', loss_weight=1.0)
         self.distillation_loss = build_loss(self.distillation_loss_config)
-
-    def init_weights(self):
-        """Init module weights."""
-        # Training Centripetal Model needs to reset parameters for Conv2d
-        super(RetinaDistillHead, self).init_weights()
         
-        # load the module and set the require_grad
-        with torch.no_grad():
-            self.retina_cls.weight.copy_(self.load_value)
-        for param in self.retina_cls.parameters():
-            param.requires_grad = False
-        self.load_value.require_grad = False
+        ####################### for cross correlation ##################
+        # aggregation_layer = dict(
+        #              type='AggregationLayer',
+        #              aggregator_cfgs=[
+        #                  dict(
+        #                      type='DepthWiseCorrelationAggregator',
+        #                      in_channels=self.clip_dim,
+        #                      with_fc=False)
+        #              ])
+        # self.aggregation_layer = build_aggregator(copy.deepcopy(aggregation_layer))
 
     def _init_layers(self):
         """Initialize layers of the head."""
@@ -115,12 +127,20 @@ class RetinaDistillHead(AnchorHead):
             self.feat_channels,
             self.num_anchors * self.clip_dim,
             3,
-            padding=1)   
+            padding=1)  
+        
+        ############### for the original one ############### 
         # self.retina_cls = nn.Conv2d(
         #     self.feat_channels,
         #     self.num_anchors * self.cls_out_channels,
         #     3,
         #     padding=1)
+        self.retina_reg = nn.Conv2d(
+            self.feat_channels, self.num_anchors * 4, 3, padding=1)
+
+        ################ for linear classifier #######################
+        ### for loading the value into the linear layers
+        
         # using linear layer for converting anchor * clip_dim to anchor * num_of_classes
         self.retina_cls = build_linear_layer(self.cls_predictor_cfg,
                                 in_features=self.clip_dim,
@@ -132,9 +152,18 @@ class RetinaDistillHead(AnchorHead):
         load_value = load_value / load_value.norm(dim=-1, keepdim=True)
         #load_value = load_value.t()
         self.load_value = load_value
-        # use the matrix multiplication to finish the classification
-        self.retina_reg = nn.Conv2d(
-            self.feat_channels, self.num_anchors * 4, 3, padding=1)
+        with torch.no_grad():
+            self.retina_cls.weight.copy_(self.load_value)
+        for param in self.retina_cls.parameters():
+            param.requires_grad = False
+        self.load_value.require_grad = False
+        
+        ################### for correlation ##############
+        # map the support feature
+        # reshape the text embedding
+        # self.support_feat = self.load_value.unsqueeze(dim=-1).unsqueeze(dim=-1)
+        # self.support_feat.require_grad = False
+
 
     def forward_single(self, x):
         """Forward feature of a single scale level.
@@ -149,12 +178,25 @@ class RetinaDistillHead(AnchorHead):
                 bbox_pred (Tensor): Box energies / deltas for a single scale
                     level, the channels number is num_anchors * 4.
         """
+        ############# for distillation ####################
+        if False in (self.retina_cls.weight.data == self.load_value):
+            print('loading value again')
+            with torch.no_grad():
+                self.retina_cls.weight.copy_(self.load_value)
+            for param in self.retina_cls.parameters():
+                param.requires_grad = False
+        
         cls_feat = x
         reg_feat = x
         for cls_conv in self.cls_convs:
             cls_feat = cls_conv(cls_feat)
         for reg_conv in self.reg_convs:
             reg_feat = reg_conv(reg_feat)
+            
+        ################# for original module ####################
+        #cls_score = self.retina_cls(cls_feat)
+        
+        ################# for distillation #####################
         cls_feat = self.map_to_clip(cls_feat)
         # convert the dimension that fit the linear layer
         # the feature dim is torch.Size([2, 4608, 100, 152]), [bs, self.num_anchors * self.clip_dim, h, w]
@@ -172,7 +214,31 @@ class RetinaDistillHead(AnchorHead):
         #cls_score after the conversion: torch.Size([2, 160, 100, 432])
         # permute the dimension back to the suitable dimension
         cls_score = cls_score.permute([0,3,1,2])
+        
+        cls_score *= self._temperature
         # cls_score after the permute: torch.Size([2, 432, 160, 100])
+        
+        ############ for correlation ##################
+        # bs = cls_feat.shape[0]
+        # h, w = cls_feat.shape[-2], cls_feat.shape[-1]
+        # cls_feat = cls_feat.reshape([-1, self.clip_dim, h, w])
+        # cls_feat = cls_feat / cls_feat.norm(dim=1, keepdim=True)
+        
+        # generate the positve feat
+        # select the needed text embedding
+        # for the image i the cate_idx should be query_gt_labels[i][0]
+        # query_feat torch.Size([1, 1024, 43, 48]) support_feat torch.Size([1, 1024, 1, 1])
+        #query_feat_input[0] torch.Size([1, 512, 40, 54]) query_gt_labels[0][0] tensor(2, device='cuda:1') support_feat_input[query_gt_labels[i][0]].unsqueeze(dim=0) torch.Size([1, 512, 1, 1]) result: torch.Size([1, 512, 40, 54])
+        # print('before aggregation:', cls_feat.shape, self.support_feat.shape)
+        
+        # cls_score = [self.aggregation_layer(
+        #         query_feat=cls_feat,
+        #         support_feat=self.support_feat[i].unsqueeze(dim=0)
+        #         ) for i in range(self.support_feat.shape[0])]
+        # print('after aggregation:', cls_score.shape)
+        # # reshape back to the need dim
+        # #cls_score = cls_score.reshape(bs, -1, h, w)
+        # print('after reshape:', cls_score[0].shape)
         
         bbox_pred = self.retina_reg(reg_feat)
         if self.training:
@@ -357,6 +423,7 @@ class RetinaDistillHead(AnchorHead):
         #cat_all_predicted_feat = cat_all_predicted_feat / cat_all_predicted_feat.norm(dim=-1, keepdim=True)
         distill_loss_value = self.distillation_loss(cat_target_gt_feat, cat_all_predicted_feat)
         distill_loss_value *= (self.clip_dim * self.distill_loss_factor)
+        #distill_loss_value *= 0
         
         losses_cls, losses_bbox = multi_apply(
             self.loss_single,
