@@ -89,6 +89,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
                          bias_prob=0.01)),
                  clip_dim=512,
                  fg_vec_cfg=None,
+                 temperature=100,
                  **kwargs):
         self.regress_ranges = regress_ranges
         self.center_sampling = center_sampling
@@ -116,6 +117,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         self.distill_loss_factor = self.train_cfg.get('distill_loss_factor', (1.0/20.0)) if self.train_cfg is not None else (1.0/20.0)        
         self.distillation_loss_config = dict(type='L1Loss', loss_weight=1.0)
         self.distillation_loss = build_loss(self.distillation_loss_config)
+        self._temperature = temperature
 
     def _init_predictor(self):
         """Initialize predictor layers of the head."""
@@ -249,7 +251,6 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         cls_feat = cls_feat.permute([0, 3, 1, 2])
         cls_score = cls_score.permute([0, 3, 1, 2])
         
-
         for reg_layer in self.reg_convs:
             reg_feat = reg_layer(reg_feat)
         bbox_pred = self.conv_reg(reg_feat)
@@ -285,6 +286,13 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         else:
             bbox_pred = bbox_pred.exp()
         #return cls_score, bbox_pred, centerness
+        
+        ### normalize the cls_feat
+        cls_feat = cls_feat / cls_feat.norm(dim=-1, keepdim=True)
+        
+        ### multiple the temperature score to the classification score
+        cls_score *= self._temperature
+        
         return cls_score, bbox_pred, cls_feat
 
     @force_fp32(apply_to=('cls_scores', 'bbox_preds', 'cls_feat'))
@@ -429,8 +437,9 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
                 selected_feat = now_feat[valid_idx]
                 all_target_feat.append(selected_feat)
         all_target_feat = torch.cat(all_target_feat, dim=0)
+        all_target_feat = all_target_feat / all_target_feat.norm(dim=-1, keepdim=True)
         # all_target_feat torch.Size([4232, 512])
-        #print('all_target_feat', all_target_feat.shape)   
+        # print('all_target_feat', all_target_feat.shape)   
         
         
         # TODO: following the centerness method, use the centerness target as the weight 

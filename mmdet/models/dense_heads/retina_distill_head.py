@@ -365,18 +365,40 @@ class RetinaDistillHead(AnchorHead):
         all_anchor_list = images_to_levels(concat_anchor_list,
                                            num_level_anchors)
 
+        losses_cls, losses_bbox = multi_apply(
+            self.loss_single,
+            cls_scores,
+            bbox_preds,
+            all_anchor_list,
+            labels_list,
+            label_weights_list,
+            bbox_targets_list,
+            bbox_weights_list,
+            num_total_samples=num_total_samples)
+
         ###############################distillation######################################
         #all distillation bbox and all distillation feature
+        # gt_bboxes [tensor([[ 375.6625,  539.6905,  419.4938,  585.8272],
+        # ...,
+        # [ 520.6353, 1004.8081,  568.4764, 1030.2081]], device='cuda:1'), 
+        #     tensor([[212.8480, 189.3771, 536.6454, 930.1129],
+        # [282.2964, 322.7458, 652.6079, 847.1966]], device='cuda:1')] 
+        
+        # rand_bboxes tensor([[[ 404.6863,  681.3726,  476.1503,  752.8101],
+        #  ...,
+        #  [ 373.9613,  682.9807,  800.0000, 1045.0193]],
+        # [[ 210.7452,  421.4904,  301.2549,  602.5096],
+        #  ...,
+        #  [ 613.4904,  530.7452,  794.5096,  621.2548]]], device='cuda:1')
         all_dist_bboxes = [torch.cat([gt_bboxes_per_img, rand_bboxes_per_img], dim=0) for gt_bboxes_per_img, rand_bboxes_per_img in zip(gt_bboxes, rand_bboxes)] 
         all_target_feat = [torch.cat([gt_feats_per_img, rand_feats_per_img], dim=0) for gt_feats_per_img, rand_feats_per_img in zip(gt_feats, rand_feats)]
-        #print('all_dist_bboxes', [ele.shape for ele in all_dist_bboxes])
-        #print('all_target_feat', [ele.shape for ele in all_target_feat])
         
         #assign the distillation bbox with the anchor
         # we need the idx in the distillation feature that assigned to each anchor
-        # pos_inds_list represent the idx of the anchor which is regared as the positive sample
-        # the all_assigned_idx represent all the gt feature idx for each anchor, if the anchor label assigned is the -1 mean this anchor is a nagative anchor. 
+        # pos_inds_list: represent the idx of the anchor which is regared as the positive sample
+        # all_assigned_idx: represent the gt feature idx for each anchor, if the anchor label assigned is the -1 mean this anchor is a nagative anchor. 
         # which do no have high overlap with any distillation bbox
+        # pos_inds_list 2 [torch.Size([1751]), torch.Size([2924])] all_assigned_idx 2 [torch.Size([182403]), torch.Size([182403])]
         pos_inds_list, all_assigned_idx = self.get_targets_idx(
             anchor_list,
             valid_flag_list,
@@ -388,8 +410,6 @@ class RetinaDistillHead(AnchorHead):
 
         # select the anchor assigned idx
         pos_anchor_assigned_idx = [all_gt_idx[pos_idx] for pos_idx, all_gt_idx in zip(pos_inds_list, all_assigned_idx)]
-        #print('pos_anchor_assigned_idx', pos_anchor_assigned_idx, [(-1 in ele) for ele in pos_anchor_assigned_idx])
-        #print('pos_inds_list', [ele.shape for ele in pos_inds_list])
         
         # prepare the predicted feature
         #print('cls_feat', [ele.shape for ele in cls_feat])
@@ -408,13 +428,10 @@ class RetinaDistillHead(AnchorHead):
         #print('converted class feature', [ele.shape for ele in concat_feat_list])
         #print('all_assigned_idx', [ele.shape for ele in all_assigned_idx])
         
-        
         # prepare the target gt feature
         target_gt_feat = [gt_feat_set_per_img[gt_feat_idx_per_img] for gt_feat_set_per_img, gt_feat_idx_per_img in zip(all_target_feat, pos_anchor_assigned_idx)]
         cat_target_gt_feat =torch.cat(target_gt_feat, dim=0)
-        
         cat_target_gt_feat = cat_target_gt_feat / cat_target_gt_feat.norm(dim=-1, keepdim=True)
-        #print('target_gt_feat', [ele.shape for ele in target_gt_feat])
         
         # prepare the distillation weight
         # if rand_bbox_weights:
@@ -425,18 +442,7 @@ class RetinaDistillHead(AnchorHead):
         #cat_all_predicted_feat = cat_all_predicted_feat / cat_all_predicted_feat.norm(dim=-1, keepdim=True)
         distill_loss_value = self.distillation_loss(cat_target_gt_feat, cat_all_predicted_feat)
         distill_loss_value *= (self.clip_dim * self.distill_loss_factor)
-        #distill_loss_value *= 0
         
-        losses_cls, losses_bbox = multi_apply(
-            self.loss_single,
-            cls_scores,
-            bbox_preds,
-            all_anchor_list,
-            labels_list,
-            label_weights_list,
-            bbox_targets_list,
-            bbox_weights_list,
-            num_total_samples=num_total_samples)
         return dict(loss_cls=losses_cls, loss_bbox=losses_bbox, distill_loss=distill_loss_value)
 
     ### update the input and the input for each function
@@ -543,6 +549,9 @@ class RetinaDistillHead(AnchorHead):
         # anchor number of multi levels
         num_level_anchors = [anchors.size(0) for anchors in anchor_list[0]]
         # concat all level anchors to a single tensor
+        # anchor_list 2 5 [torch.Size([136800, 4]), torch.Size([34200, 4]), torch.Size([8550, 4]), torch.Size([2223, 4]), torch.Size([630, 4])]
+        # anchor_list 2 torch.Size([136800+34200+8550+2223+630, 4])
+        
         concat_anchor_list = []
         concat_valid_flag_list = []
         for i in range(num_imgs):
@@ -555,8 +564,10 @@ class RetinaDistillHead(AnchorHead):
             gt_bboxes_ignore_list = [None for _ in range(num_imgs)]
         #if gt_labels_list is None:
         # use the gt_label to represent which distillation bbox be assigned
+        #gt_labels_list [tensor([  0,   1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,  12,  13, ···
+        #196, 197, 198, 199, 200, 201], device='cuda:0'), tensor([  0,   1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,  12,  13, ···
+        #196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209], device='cuda:0')]
         gt_labels_list = [torch.tensor([k for k in range(len(gt_bboxes_list_per_image))]).cuda() for gt_bboxes_list_per_image in gt_bboxes_list] 
-        #print('gt_labels_list', gt_labels_list)
         label_channels = max([len(ele) for ele in gt_bboxes_list])
         results = multi_apply(
             self._get_targets_single_idx,
@@ -575,9 +586,7 @@ class RetinaDistillHead(AnchorHead):
         #print('pos_inds_list', len(pos_inds_list), [ele.shape for ele in pos_inds_list], pos_inds_list[0])
         #print('all_labels', len(all_labels), [ele.shape for ele in all_labels], all_labels[0], [(ele!=-1).sum() for ele in all_labels])
         # if the anchor idx is -1 means the anchor is not assigned
-        # pos_inds_list 2 [torch.Size([2713]), torch.Size([3080])] tensor([ 33701,  33710,  33719,  ..., 191950, 191952, 191958], device='cuda:1')
-        # all_labels 2 [torch.Size([191970]), torch.Size([148851])] tensor([-1, -1, -1,  ..., -1, -1, -1], device='cuda:1') [tensor(2713, device='cuda:1'), 
-        # tensor(3080, device='cuda:1')]
+        # pos_inds_list 2 pos_inds_list 2 [torch.Size([1751]), torch.Size([2924])] all_assigned_idx 2 [torch.Size([182403]), torch.Size([182403])]
         
         # pos_inds_list represent the idx of the anchor which is regared as the positive sample
         # the all_labels represetn all the gt feature idx for each anchor, if the anchor label assigned is the -1 mean this anchor is a nagative anchor. 
@@ -623,6 +632,7 @@ class RetinaDistillHead(AnchorHead):
                 num_total_pos (int): Number of positive samples in all images
                 num_total_neg (int): Number of negative samples in all images
         """
+        # inside_flags torch.Size([191970]) (should be the number of the anchor) tensor([True, True, True,  ..., True, True, True], device='cuda:1')
         inside_flags = anchor_inside_flags(flat_anchors, valid_flags,
                                            img_meta['img_shape'][:2],
                                            self.train_cfg.allowed_border)
@@ -674,7 +684,7 @@ class RetinaDistillHead(AnchorHead):
             num_total_anchors = flat_anchors.size(0)
             labels = unmap(
                 labels, num_total_anchors, inside_flags,
-                fill=-1)  # fill bg label
+                fill=-1)  # fill -1
             label_weights = unmap(label_weights, num_total_anchors,
                                   inside_flags)
             bbox_targets = unmap(bbox_targets, num_total_anchors, inside_flags)
