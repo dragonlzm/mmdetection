@@ -24,7 +24,7 @@ data = dict(
 optimizer_config = dict(
     _delete_=True, grad_clip=dict(max_norm=10, norm_type=2))
 
-model = dict(
-    backbone=dict(
-        init_cfg=dict(type='Pretrained', 
-            checkpoint='open-mmlab://detectron/resnet50_caffe')))
+# model = dict(
+#     backbone=dict(
+#         init_cfg=dict(type='Pretrained', 
+#             checkpoint='open-mmlab://detectron/resnet50_caffe')))

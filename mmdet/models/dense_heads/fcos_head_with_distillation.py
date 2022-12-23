@@ -114,7 +114,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
             **kwargs)
         #self.loss_centerness = build_loss(loss_centerness)
         self.conv_cls = None
-        self.distill_loss_factor = self.train_cfg.get('distill_loss_factor', (1.0/20.0)) if self.train_cfg is not None else (1.0/20.0)        
+        self.distill_loss_factor = self.train_cfg.get('distill_loss_factor', 1.0) if self.train_cfg is not None else 1.0   
         self.distillation_loss_config = dict(type='L1Loss', loss_weight=1.0)
         self.distillation_loss = build_loss(self.distillation_loss_config)
         self._temperature = temperature
