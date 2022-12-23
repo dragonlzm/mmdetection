@@ -412,6 +412,8 @@ class RetinaDistillHead(AnchorHead):
         # prepare the target gt feature
         target_gt_feat = [gt_feat_set_per_img[gt_feat_idx_per_img] for gt_feat_set_per_img, gt_feat_idx_per_img in zip(all_target_feat, pos_anchor_assigned_idx)]
         cat_target_gt_feat =torch.cat(target_gt_feat, dim=0)
+        
+        cat_target_gt_feat = cat_target_gt_feat / cat_target_gt_feat.norm(dim=-1, keepdim=True)
         #print('target_gt_feat', [ele.shape for ele in target_gt_feat])
         
         # prepare the distillation weight
@@ -582,28 +584,6 @@ class RetinaDistillHead(AnchorHead):
         # which do no have high overlap with any distillation bbox
         return pos_inds_list, all_labels
         
-        # # no valid anchors
-        # if any([labels is None for labels in all_labels]):
-        #     return None
-        # # sampled anchors of all images
-        # num_total_pos = sum([max(inds.numel(), 1) for inds in pos_inds_list])
-        # num_total_neg = sum([max(inds.numel(), 1) for inds in neg_inds_list])
-        # # split targets to a list w.r.t. multiple levels
-        # labels_list = images_to_levels(all_labels, num_level_anchors)
-        # label_weights_list = images_to_levels(all_label_weights,
-        #                                       num_level_anchors)
-        # bbox_targets_list = images_to_levels(all_bbox_targets,
-        #                                      num_level_anchors)
-        # bbox_weights_list = images_to_levels(all_bbox_weights,
-        #                                      num_level_anchors)
-        # res = (labels_list, label_weights_list, bbox_targets_list,
-        #        bbox_weights_list, num_total_pos, num_total_neg)
-        # if return_sampling_results:
-        #     res = res + (sampling_results_list, )
-        # for i, r in enumerate(rest_results):  # user-added return values
-        #     rest_results[i] = images_to_levels(r, num_level_anchors)
-
-        # return res + tuple(rest_results)
 
     def _get_targets_single_idx(self,
                             flat_anchors,
