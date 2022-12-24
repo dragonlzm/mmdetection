@@ -82,9 +82,10 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
                      type='Normal',
                      layer='Conv2d',
                      std=0.01,
+                     ### for mapping ###
                      override=dict(
                          type='Normal',
-                         name='conv_cls',
+                         name='map_to_clip',
                          std=0.01,
                          bias_prob=0.01)),
                  clip_dim=512,
@@ -101,7 +102,6 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         self.fg_vec_cfg=fg_vec_cfg
         load_value = torch.load(self.fg_vec_cfg.load_path)
         load_value = load_value / load_value.norm(dim=-1, keepdim=True)
-        #load_value = load_value.t()
         self.load_value = load_value.cuda()
 
         super().__init__(
@@ -121,9 +121,12 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
 
     def _init_predictor(self):
         """Initialize predictor layers of the head."""
-        self.map_to_clip = build_linear_layer(self.cls_predictor_cfg,
-                                in_features=self.feat_channels,
-                                out_features=self.clip_dim)
+        ### for mapping ###
+        self.map_to_clip = nn.Conv2d(
+            self.feat_channels, self.clip_dim, 3, padding=1)
+        # self.map_to_clip = build_linear_layer(self.cls_predictor_cfg,
+        #                         in_features=self.feat_channels,
+        #                         out_features=self.clip_dim)
         self.fc_cls = build_linear_layer(self.cls_predictor_cfg,
                                 in_features=self.clip_dim,
                                 out_features=self.num_classes,
@@ -237,17 +240,26 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
 
         for cls_layer in self.cls_convs:
             cls_feat = cls_layer(cls_feat)
+            
+        ###### for the version of the self.map_to_clip is an linear layer ######
+        # change the feat dim from ([bs, dim, h, w]) to ([bs, h, w, dim])
+        # cls_feat = cls_feat.permute([0, 2, 3, 1])
+        # cls_feat = self.map_to_clip(cls_feat)
+        
+        ###### for the version of the self.map_to_clip is an conv layer ######
+        cls_feat = self.map_to_clip(cls_feat)
         # change the feat dim from ([bs, dim, h, w]) to ([bs, h, w, dim])
         cls_feat = cls_feat.permute([0, 2, 3, 1])
-        cls_feat = self.map_to_clip(cls_feat)
+        
         cls_score = self.fc_cls(cls_feat)
-
         # for test only, calculate the base score
         if self.filter_base_cate != None:
             base_score = self.fc_cls_base(cls_feat)
             cls_score = torch.cat([cls_score, base_score], dim=-1)        
             
         # change the cls_score and the cls_feat back to original
+        # cls_feat would be ([bs, h, w, dim]) => ([bs, dim, h, w])
+        # cls_score would be ([bs, h, w, cls_num]) => ([bs, cls_num, h, w])
         cls_feat = cls_feat.permute([0, 3, 1, 2])
         cls_score = cls_score.permute([0, 3, 1, 2])
         
@@ -285,7 +297,6 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
                 bbox_pred *= stride
         else:
             bbox_pred = bbox_pred.exp()
-        #return cls_score, bbox_pred, centerness
         
         ### normalize the cls_feat
         cls_feat = cls_feat / cls_feat.norm(dim=-1, keepdim=True)
@@ -331,6 +342,12 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         """
         assert len(cls_scores) == len(bbox_preds) == len(cls_feat)
         featmap_sizes = [featmap.size()[-2:] for featmap in cls_scores]
+        
+        # all_level_points dimension 2 means the (y,x) location of the point only for one image
+        # since the feature map of two images are the same
+        # [torch.Size([16000, 2]), torch.Size([4000, 2]), torch.Size([1000, 2]), torch.Size([260, 2]), torch.Size([70, 2])] 
+        # tensor([[   4.,    4.], [  12.,    4.], ...,
+        # [ 788., 1276.], [ 796., 1276.]], device='cuda:1')
         all_level_points = self.get_points(featmap_sizes, bbox_preds[0].dtype,
                                            bbox_preds[0].device)
         labels, bbox_targets, _ = self.get_targets(all_level_points, gt_bboxes,
@@ -338,6 +355,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
 
         num_imgs = cls_scores[0].size(0)
         # flatten cls_scores, bbox_preds and centerness
+        # change the feat dim from ([bs, dim, h, w]) => ([bs, h, w, dim]) => ([bs*h*w, dim])
         flatten_cls_scores = [
             cls_score.permute(0, 2, 3, 1).reshape(-1, self.cls_out_channels)
             for cls_score in cls_scores
@@ -386,6 +404,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         else:
             loss_bbox = pos_bbox_preds.sum()
 
+        ########################### for distillation part ##################################
         # only distill the region which is only belong to any forground
         # select the region which is belongs to the foregourd region for distillation
         # also need to consider the weight of the distillation grids
@@ -395,16 +414,20 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
                               for gt_bbox, rand_bbox in zip(gt_bboxes, rand_bboxes)]
         temp_label = [torch.ones(ele.shape[0]).cuda() for ele in all_distill_bboxes]
         _, matched_distill_bbox, assigned_idx = self.get_targets(all_level_points, all_distill_bboxes,
-                                              temp_label)        
-        # prepare the idx target_idx = -1 means it's the bg
-        #target_idx = target_idx[target_idx != -1] 
-        
+                                              temp_label)  
         # cls_feat 5 list[tensor] tensor [bs,dim,h,w] [2, 512, 152, 100]
-        # assigned_idx list[tuple(tensor)] 2 5 torch.Size([15200]) 
+        # assigned_idx list[tuple(tensor)] 2 5  [torch.Size([16000]), torch.Size([4000]), torch.Size([1000]), torch.Size([260]), torch.Size([70])]
+        # (tensor([-1, -1, -1,  ..., -1, -1, -1], device='cuda:0'), 
+        # tensor([-1, -1, -1,  ..., -1, -1, -1], device='cuda:0'), 
+        # tensor([ -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,
+        #  ..., 
+        #  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  91,  91,  91,  91,  91,
+        #  91,  91,  91,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,
+        #  ...,
+        #  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1], device='cuda:0')
         
         # convert the feat shape, converted cls_feat 5 torch.Size([2, 15200, 512])
-        cls_feat = [ele.view(list(ele.shape[:-2]) + [-1]).permute([0,2,1]) 
-                    for ele in cls_feat]
+        cls_feat = [ele.reshape(list(ele.shape[:-2]) + [-1]).permute([0,2,1]) for ele in cls_feat]
         # aggregate the fg grid prediction base on the idx
         all_predict_feat = []
         for img_id in range(len(assigned_idx)):
@@ -413,7 +436,6 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
                 # select the grid which is not the BG grid
                 valid_idx = (now_idx != -1)
                 now_feat = cls_feat[feat_lvl][img_id]
-                
                 selected_feat = now_feat[valid_idx]
                 all_predict_feat.append(selected_feat)
         all_predict_feat = torch.cat(all_predict_feat, dim=0)
@@ -444,7 +466,6 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         
         # TODO: following the centerness method, use the centerness target as the weight 
         # use the matched_distill_bbox to calculate the weight following the way we calculate pos_centerness_targets
-        
         distill_loss_value = self.distillation_loss(all_predict_feat, all_target_feat, weight=None)
         distill_loss_value *= (self.clip_dim * self.distill_loss_factor)
 
@@ -736,6 +757,13 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
     def _get_target_single(self, gt_bboxes, gt_labels, points, regress_ranges,
                            num_points_per_lvl):
         """Compute regression and classification targets for a single image."""
+        
+        #### the main logic is to see whether a point is in any once of the gt bbox
+        #### by looking at whether the left side of the point (xs - gt_bboxes[..., 0])
+        #### the right side of the point gt_bboxes[..., 2] - xs
+        #### the top side of the point ys - gt_bboxes[..., 1]
+        #### the bottom side of the point gt_bboxes[..., 3] - ys
+        #### if all the above value are larger than 0 means the point is in one of the gt bboxes
         num_points = points.size(0)
         num_gts = gt_labels.size(0)
         
@@ -743,11 +771,12 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         if num_gts == 0:
             return gt_labels.new_full((num_points,), self.num_classes), \
                    gt_bboxes.new_zeros((num_points, 4))
-
+        # keep the area of each gt bbox the shape is torch.Size([204])
         areas = (gt_bboxes[:, 2] - gt_bboxes[:, 0]) * (
             gt_bboxes[:, 3] - gt_bboxes[:, 1])
         # TODO: figure out why these two are different
         # areas = areas[None].expand(num_points, num_gts)
+        # repeat areas with the number of the point torch.Size([20267, 204])
         areas = areas[None].repeat(num_points, 1)
         regress_ranges = regress_ranges[:, None, :].expand(
             num_points, num_gts, 2)
@@ -760,6 +789,9 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         right = gt_bboxes[..., 2] - xs
         top = ys - gt_bboxes[..., 1]
         bottom = gt_bboxes[..., 3] - ys
+        
+        # bbox_targets torch.Size([20267, 3, 4]) [point_num, gt_num, 4]
+        # this is the relationship between the points and gt bboxes, to see whether a point is in the gt bboxes
         bbox_targets = torch.stack((left, top, right, bottom), -1)
 
         if self.center_sampling:
