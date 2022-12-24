@@ -19,7 +19,7 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #ln -sf /project/nevatia_174/zhuoming/detection ./data
 
 ####### update the hyper parameters
-bash tools/new_dist_train_23.sh configs/retinanet_distill/retinanet_distill_r50_fpn_1x_coco_base48.py 2 \
+bash tools/new_dist_train.sh configs/retinanet_distill/retinanet_distill_r50_fpn_1x_coco_base48.py 2 \
 data/one_stage/retina_distill_ori_1 /data/zhuoming/detection \
 --cfg-options optimizer.lr=0.0025 \
 --resume-from=data/one_stage/retina_distill_ori_1/epoch_3.pth
