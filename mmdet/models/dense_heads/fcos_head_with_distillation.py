@@ -93,6 +93,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
                  temperature=1,
                  use_centerness=False,
                  induced_centerness=True,
+                 conv_based_mapping=True,
                  **kwargs):
         self.regress_ranges = regress_ranges
         self.center_sampling = center_sampling
@@ -107,6 +108,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         self.load_value = load_value.cuda()
         self.use_centerness = use_centerness
         self.induced_centerness = induced_centerness
+        self.conv_based_mapping = conv_based_mapping
 
         super().__init__(
             num_classes,
@@ -128,11 +130,13 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
     def _init_predictor(self):
         """Initialize predictor layers of the head."""
         ### for mapping ###
-        self.map_to_clip = nn.Conv2d(
-            self.feat_channels, self.clip_dim, 3, padding=1)
-        # self.map_to_clip = build_linear_layer(self.cls_predictor_cfg,
-        #                         in_features=self.feat_channels,
-        #                         out_features=self.clip_dim)
+        if self.conv_based_mapping:
+            self.map_to_clip = nn.Conv2d(
+                self.feat_channels, self.clip_dim, 3, padding=1)
+        else:
+            self.map_to_clip = build_linear_layer(self.cls_predictor_cfg,
+                                    in_features=self.feat_channels,
+                                    out_features=self.clip_dim)
         self.fc_cls = build_linear_layer(self.cls_predictor_cfg,
                                 in_features=self.clip_dim,
                                 out_features=self.num_classes,
