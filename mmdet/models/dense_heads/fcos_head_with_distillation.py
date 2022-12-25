@@ -92,6 +92,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
                  fg_vec_cfg=None,
                  temperature=1,
                  use_centerness=False,
+                 induced_centerness=True,
                  **kwargs):
         self.regress_ranges = regress_ranges
         self.center_sampling = center_sampling
@@ -105,6 +106,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         load_value = load_value / load_value.norm(dim=-1, keepdim=True)
         self.load_value = load_value.cuda()
         self.use_centerness = use_centerness
+        self.induced_centerness = induced_centerness
 
         super().__init__(
             num_classes,
@@ -120,7 +122,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         self.distillation_loss_config = dict(type='L1Loss', loss_weight=1.0)
         self.distillation_loss = build_loss(self.distillation_loss_config)
         self._temperature = temperature
-        if self.use_centerness:
+        if self.use_centerness and self.induced_centerness:
             self.loss_centerness = build_loss(loss_centerness)
 
     def _init_predictor(self):
@@ -311,6 +313,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
             return cls_score, bbox_pred, None, cls_feat
         else:
             centerness = self.conv_centerness(cls_feat)
+            cls_score = cls_score * centerness
             return cls_score, bbox_pred, centerness, cls_feat
 
     @force_fp32(apply_to=('cls_scores', 'bbox_preds', 'cls_feat'))
@@ -381,7 +384,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         flatten_points = torch.cat(
                             [points.repeat(num_imgs, 1) for points in all_level_points])
 
-        if self.use_centerness:
+        if self.use_centerness and self.induced_centerness:
             flatten_centerness = [
                 centerness.permute(0, 2, 3, 1).reshape(-1)
                 for centerness in centernesses
@@ -417,7 +420,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
                 pos_decoded_target_preds,
                 weight=pos_centerness_targets,
                 avg_factor=centerness_denorm)
-            if self.use_centerness:
+            if self.use_centerness and self.induced_centerness:
                 pos_centerness = flatten_centerness[pos_inds]
                 loss_centerness = self.loss_centerness(
                     pos_centerness, pos_centerness_targets, avg_factor=num_pos)
@@ -482,25 +485,26 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         all_target_feat = torch.cat(all_target_feat, dim=0)
         all_target_feat = all_target_feat / all_target_feat.norm(dim=-1, keepdim=True)
         # all_target_feat torch.Size([4232, 512])
-        # print('all_target_feat', all_target_feat.shape)   
-        
+        # print('all_target_feat', all_target_feat.shape)
         
         # TODO: following the centerness method, use the centerness target as the weight 
         # use the matched_distill_bbox to calculate the weight following the way we calculate pos_centerness_targets
         distill_loss_value = self.distillation_loss(all_predict_feat, all_target_feat, weight=None)
         distill_loss_value *= (self.clip_dim * self.distill_loss_factor)
 
-        if not self.use_centerness:
-            return dict(
-                loss_cls=loss_cls,
-                loss_bbox=loss_bbox,
-                loss_distillation=distill_loss_value)
-        else:
+        if self.use_centerness and self.induced_centerness:
             return dict(
                 loss_cls=loss_cls,
                 loss_bbox=loss_bbox,
                 loss_distillation=distill_loss_value,
                 loss_centerness=loss_centerness)
+
+        else:
+            return dict(
+                loss_cls=loss_cls,
+                loss_bbox=loss_bbox,
+                loss_distillation=distill_loss_value)
+
 
     @force_fp32(apply_to=('cls_scores', 'bbox_preds', 'cls_feat'))
     def get_bboxes(self,
