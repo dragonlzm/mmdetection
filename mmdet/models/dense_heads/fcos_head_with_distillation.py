@@ -319,7 +319,8 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
             return cls_score, bbox_pred, None, cls_feat
         else:
             centerness = self.conv_centerness(cls_feat)
-            cls_score = cls_score * centerness
+            if not self.induced_centerness:
+                cls_score = cls_score * centerness
             return cls_score, bbox_pred, centerness, cls_feat
 
     @force_fp32(apply_to=('cls_scores', 'bbox_preds', 'cls_feat'))
