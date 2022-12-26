@@ -255,14 +255,16 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
             cls_feat = cls_layer(cls_feat)
             
         ###### for the version of the self.map_to_clip is an linear layer ######
-        # change the feat dim from ([bs, dim, h, w]) to ([bs, h, w, dim])
-        # cls_feat = cls_feat.permute([0, 2, 3, 1])
-        # cls_feat = self.map_to_clip(cls_feat)
+        if not self.conv_based_mapping:
+            # change the feat dim from ([bs, dim, h, w]) to ([bs, h, w, dim])
+            cls_feat = cls_feat.permute([0, 2, 3, 1])
+            cls_feat = self.map_to_clip(cls_feat)
         
         ###### for the version of the self.map_to_clip is an conv layer ######
-        cls_feat = self.map_to_clip(cls_feat)
-        # change the feat dim from ([bs, dim, h, w]) to ([bs, h, w, dim])
-        cls_feat = cls_feat.permute([0, 2, 3, 1])
+        else:
+            cls_feat = self.map_to_clip(cls_feat)
+            # change the feat dim from ([bs, dim, h, w]) to ([bs, h, w, dim])
+            cls_feat = cls_feat.permute([0, 2, 3, 1])
         
         cls_score = self.fc_cls(cls_feat)
         # for test only, calculate the base score
