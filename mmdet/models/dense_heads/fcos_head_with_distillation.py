@@ -94,6 +94,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
                  use_centerness=False,
                  induced_centerness=True,
                  conv_based_mapping=True,
+                 distill_negative=False,
                  **kwargs):
         self.regress_ranges = regress_ranges
         self.center_sampling = center_sampling
@@ -109,6 +110,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         self.use_centerness = use_centerness
         self.induced_centerness = induced_centerness
         self.conv_based_mapping = conv_based_mapping
+        self.distill_negative = distill_negative
 
         super().__init__(
             num_classes,
@@ -497,6 +499,26 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         # TODO: following the centerness method, use the centerness target as the weight 
         # use the matched_distill_bbox to calculate the weight following the way we calculate pos_centerness_targets
         distill_loss_value = self.distillation_loss(all_predict_feat, all_target_feat, weight=None)
+        
+        #### add distillation loss for negative sample ###
+        if self.distill_negative:
+            # select all negative sample
+            all_predict_neg_feat = []
+            for img_id in range(len(assigned_idx)):
+                for feat_lvl in range(len(cls_feat)):
+                    now_idx = assigned_idx[img_id][feat_lvl]
+                    # select the grid which is not the BG grid
+                    valid_idx = (now_idx == -1)
+                    now_feat = cls_feat[feat_lvl][img_id]
+                    selected_feat = now_feat[valid_idx]
+                    all_predict_neg_feat.append(selected_feat)
+            all_predict_neg_feat = torch.cat(all_predict_neg_feat, dim=0)
+            
+            all_predict_neg_feat_target = torch.zero(all_predict_neg_feat.shape).cuda()
+            distill_loss_neg_value = self.distillation_loss(all_predict_neg_feat, all_predict_neg_feat_target, weight=None)
+            distill_loss_value += (distill_loss_neg_value*0.5)
+        
+        
         distill_loss_value *= (self.clip_dim * self.distill_loss_factor)
 
         if self.use_centerness and self.induced_centerness:
