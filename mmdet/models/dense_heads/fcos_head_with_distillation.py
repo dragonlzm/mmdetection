@@ -516,8 +516,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
             
             all_predict_neg_feat_target = torch.zero(all_predict_neg_feat.shape).cuda()
             distill_loss_neg_value = self.distillation_loss(all_predict_neg_feat, all_predict_neg_feat_target, weight=None)
-            distill_loss_value += (distill_loss_neg_value*0.5)
-        
+            distill_loss_value += (distill_loss_neg_value*0.25)
         
         distill_loss_value *= (self.clip_dim * self.distill_loss_factor)
 
