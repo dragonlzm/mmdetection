@@ -514,7 +514,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
                     all_predict_neg_feat.append(selected_feat)
             all_predict_neg_feat = torch.cat(all_predict_neg_feat, dim=0)
             
-            all_predict_neg_feat_target = torch.zero(all_predict_neg_feat.shape).cuda()
+            all_predict_neg_feat_target = torch.zeros(all_predict_neg_feat.shape).cuda()
             distill_loss_neg_value = self.distillation_loss(all_predict_neg_feat, all_predict_neg_feat_target, weight=None)
             distill_loss_value += (distill_loss_neg_value*0.25)
         
@@ -675,7 +675,10 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
             from mmdet.core.export import get_k_for_topk
             nms_pre = get_k_for_topk(nms_pre_tensor, bbox_pred.shape[1])
             if nms_pre > 0:
-                max_scores, _ = (scores * centerness[..., None]).max(-1)
+                if self.induced_centerness:
+                    max_scores, _ = (scores * centerness[..., None]).max(-1)
+                else:
+                    max_scores, _ = scores.max(-1)
                 _, topk_inds = max_scores.topk(nms_pre)
                 batch_inds = torch.arange(batch_size).view(
                     -1, 1).expand_as(topk_inds).long()
