@@ -597,7 +597,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         scale_factors = [
             img_metas[i]['scale_factor'] for i in range(cls_scores[0].shape[0])
         ]
-        if not self.use_centerness:
+        if not self.use_centerness or (self.use_centerness and not self.induced_centerness):
             result_list = self._get_bboxes_wocenterness(cls_score_list, bbox_pred_list, mlvl_points,
                                         img_shapes, scale_factors, cfg, rescale,
                                         with_nms)
@@ -675,10 +675,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
             from mmdet.core.export import get_k_for_topk
             nms_pre = get_k_for_topk(nms_pre_tensor, bbox_pred.shape[1])
             if nms_pre > 0:
-                if self.induced_centerness:
-                    max_scores, _ = (scores * centerness[..., None]).max(-1)
-                else:
-                    max_scores, _ = scores.max(-1)
+                max_scores, _ = (scores * centerness[..., None]).max(-1)
                 _, topk_inds = max_scores.topk(nms_pre)
                 batch_inds = torch.arange(batch_size).view(
                     -1, 1).expand_as(topk_inds).long()
