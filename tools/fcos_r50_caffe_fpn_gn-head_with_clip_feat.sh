@@ -72,20 +72,33 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #    --resume-from=${WORK_DIR}/latest.pth
 
 
-####### update the hyper parameters
-WORK_DIR="/project/nevatia_174/zhuoming/detection/one_stage/fcos_distill_new"
+# ####### update the hyper parameters
+# WORK_DIR="/project/nevatia_174/zhuoming/detection/one_stage/fcos_distill_new"
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#    configs/fcos_distill/fcos_r50_caffe_fpn_gn-head_with_base48_tuned_clip_feat_1x_coco_base48_200_clip_pro.py --launcher pytorch \
+#    --work-dir=${WORK_DIR} \
+#    --cfg-options optimizer.lr=0.0025  \
+# #   --resume-from=${WORK_DIR}/latest.pth
+
+
+############ cross correlation ###############
+WORK_DIR="/project/nevatia_174/zhuoming/detection/one_stage/fcos_distill_wcenterness_correlation"
 PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
    configs/fcos_distill/fcos_r50_caffe_fpn_gn-head_with_base48_tuned_clip_feat_1x_coco_base48_200_clip_pro.py --launcher pytorch \
    --work-dir=${WORK_DIR} \
-   --cfg-options optimizer.lr=0.0025  \
+   --cfg-options optimizer.lr=0.0025 model.bbox_head.use_centerness=True \
+   model.bbox_head.temperature=100 model.bbox_head.use_cross_correlation=True \
 #   --resume-from=${WORK_DIR}/latest.pth
-
 
 # test the model 
 bash tools/dist_test.sh configs/fcos_distill/fcos_r50_caffe_fpn_gn-head_with_base48_tuned_clip_feat_1x_coco_bn65.py \
 ${WORK_DIR}/latest.pth 2 --eval bbox \
 --eval-options jsonfile_prefix=${WORK_DIR}/base_and_novel \
---cfg-options data.test.eval_filter_empty_gt=False data.test.ann_file=data/coco/annotations/instances_val2017_65cates.json \
-model.roi_head.bbox_head.reg_with_cls_embedding=True data.test.eval_on_splits='zeroshot'
+--cfg-options model.test_cfg.max_per_img=300 model.test_cfg.score_thr=0.0001 \
+data.test.eval_filter_empty_gt=False data.test.ann_file=data/coco/annotations/instances_val2017_65cates.json \
+data.test.eval_on_splits='zeroshot' model.bbox_head.use_centerness=True \
+model.bbox_head.temperature=100 model.bbox_head.use_cross_correlation=True \

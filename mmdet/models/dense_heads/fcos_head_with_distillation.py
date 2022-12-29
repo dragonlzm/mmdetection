@@ -98,6 +98,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
                  conv_based_mapping=True,
                  distill_negative=False,
                  use_cross_correlation=False,
+                 correlation_linear_layer=False,
                  **kwargs):
         self.regress_ranges = regress_ranges
         self.center_sampling = center_sampling
@@ -115,13 +116,15 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         self.conv_based_mapping = conv_based_mapping
         self.distill_negative = distill_negative
         self.use_cross_correlation = use_cross_correlation
+        self.correlation_linear_layer = correlation_linear_layer
         self.aggregation_layer = dict(
                      type='AggregationLayer',
                      aggregator_cfgs=[
                          dict(
                              type='DepthWiseCorrelationAggregator',
                              in_channels=self.clip_dim,
-                             with_fc=False)
+                             with_fc=self.correlation_linear_layer,
+                             out_channels=1 if self.correlation_linear_layer else None)
                      ])
         super().__init__(
             num_classes,
@@ -240,7 +243,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
                     each is a 4D-tensor, the channel number is num_points * 1.
         """
         # load the pretrained text embedding again
-        if False in (self.fc_cls.weight.data == self.load_value):
+        if not self.use_cross_correlation and (False in (self.fc_cls.weight.data == self.load_value)):
             print('loading value again')
             with torch.no_grad():
                 self.fc_cls.weight.copy_(self.load_value)
@@ -315,15 +318,16 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
             #query_feat_input[0] torch.Size([1, 512, 40, 54]) query_gt_labels[0][0] tensor(2, device='cuda:1') support_feat_input[query_gt_labels[i][0]].unsqueeze(dim=0) torch.Size([1, 512, 1, 1]) result: torch.Size([1, 512, 40, 54])
             #print('before aggregation:', cls_feat.shape, self.support_feat.shape)
             
-            cls_score = [self.aggregation_layer(
+            cls_score = [self.fc_cls(
                     query_feat=cls_feat,
                     support_feat=self.support_feat[i].unsqueeze(dim=0)
                     ) for i in range(self.support_feat.shape[0])]
-            print('after aggregation:', cls_score.shape)
-            # reshape back to the need dim
-            #cls_score = cls_score.reshape(bs, -1, h, w)
-            print('after reshape:', cls_score[0].shape)            
-        
+            #after reshape: 48 1 torch.Size([2, 512, 160, 100])
+            if self.correlation_linear_layer:
+                cls_score = torch.cat([res_per_cate[0] for res_per_cate in cls_score], dim=1)
+            else:
+                cls_score = torch.cat([res_per_cate[0].sum(dim=1, keepdim=True) for res_per_cate in cls_score], dim=1)
+            #print(cls_score.shape)
         
         ###### for regression ######
         for reg_layer in self.reg_convs:
@@ -359,6 +363,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         
         ### multiple the temperature score to the classification score
         cls_score *= self._temperature
+        #print('cls_score', cls_score)
         
         if not self.use_centerness:
             return cls_score, bbox_pred, None, cls_feat
