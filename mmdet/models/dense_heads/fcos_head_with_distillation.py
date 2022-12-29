@@ -273,19 +273,20 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         for cls_layer in self.cls_convs:
             cls_feat = cls_layer(cls_feat)
         
-
-        ###### for the version of the self.map_to_clip is an linear layer ######
+        ###### for mapping the feature to clip feature space ######
+        # for the version of the self.map_to_clip is an linear layer #
         if not self.conv_based_mapping:
             # change the feat dim from ([bs, dim, h, w]) to ([bs, h, w, dim])
             cls_feat = cls_feat.permute([0, 2, 3, 1])
             cls_feat = self.map_to_clip(cls_feat)
-        ###### for the version of the self.map_to_clip is an conv layer ######
+        # for the version of the self.map_to_clip is an conv layer #
         else:
             cls_feat = self.map_to_clip(cls_feat)
             # change the feat dim from ([bs, dim, h, w]) to ([bs, h, w, dim])
             cls_feat = cls_feat.permute([0, 2, 3, 1])
         
-        ###### for linear based classifier structure
+        ###### for classifier ######
+        # for linear based classifier structure
         if not self.use_cross_correlation:  
             ### normalize the cls_feat
             cls_feat = cls_feat / cls_feat.norm(dim=-1, keepdim=True)          
@@ -300,7 +301,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
             # cls_score would be ([bs, h, w, cls_num]) => ([bs, cls_num, h, w])
             cls_feat = cls_feat.permute([0, 3, 1, 2])
             cls_score = cls_score.permute([0, 3, 1, 2])
-        ###### for the cross-correlation layer ######
+        # for the cross-correlation layer
         else:
             #([bs, h, w, dim]) => ([bs, dim, h, w])
             cls_feat = cls_feat.permute([0, 3, 1, 2])
