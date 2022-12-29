@@ -9,6 +9,8 @@ from mmdet.core import distance2bbox, multi_apply, multiclass_nms, reduce_mean
 from ..builder import HEADS, build_loss
 from .anchor_free_head import AnchorFreeHead
 from mmdet.models.utils import build_linear_layer
+from ..utils import build_aggregator
+import copy
 
 INF = 1e8
 
@@ -95,6 +97,7 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
                  induced_centerness=True,
                  conv_based_mapping=True,
                  distill_negative=False,
+                 use_cross_correlation=False,
                  **kwargs):
         self.regress_ranges = regress_ranges
         self.center_sampling = center_sampling
@@ -111,7 +114,15 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         self.induced_centerness = induced_centerness
         self.conv_based_mapping = conv_based_mapping
         self.distill_negative = distill_negative
-
+        self.use_cross_correlation = use_cross_correlation
+        self.aggregation_layer = dict(
+                     type='AggregationLayer',
+                     aggregator_cfgs=[
+                         dict(
+                             type='DepthWiseCorrelationAggregator',
+                             in_channels=self.clip_dim,
+                             with_fc=False)
+                     ])
         super().__init__(
             num_classes,
             in_channels,
@@ -139,10 +150,13 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
             self.map_to_clip = build_linear_layer(self.cls_predictor_cfg,
                                     in_features=self.feat_channels,
                                     out_features=self.clip_dim)
-        self.fc_cls = build_linear_layer(self.cls_predictor_cfg,
-                                in_features=self.clip_dim,
-                                out_features=self.num_classes,
-                                bias=False)
+        if self.use_cross_correlation:
+            self.fc_cls = build_aggregator(copy.deepcopy(self.aggregation_layer))
+        else:
+            self.fc_cls = build_linear_layer(self.cls_predictor_cfg,
+                                    in_features=self.clip_dim,
+                                    out_features=self.num_classes,
+                                    bias=False)
         self.conv_reg = nn.Conv2d(self.feat_channels, 4, 3, padding=1)
         if self.filter_base_cate:
             base_load_value = torch.load(self.filter_base_cate)
@@ -160,10 +174,14 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         super()._init_layers()
         #self.conv_centerness = nn.Conv2d(self.feat_channels, 1, 3, padding=1)
         self.scales = nn.ModuleList([Scale(1.0) for _ in self.strides])
-        with torch.no_grad():
-            self.fc_cls.weight.copy_(self.load_value)
-        for param in self.fc_cls.parameters():
-            param.requires_grad = False
+        if self.use_cross_correlation:
+            self.support_feat = self.load_value.unsqueeze(dim=-1).unsqueeze(dim=-1)
+            self.support_feat.require_grad = False
+        else:
+            with torch.no_grad():
+                self.fc_cls.weight.copy_(self.load_value)
+            for param in self.fc_cls.parameters():
+                param.requires_grad = False
         if self.use_centerness:
             # by default we calculate the centerness on the classifcation banch
             self.conv_centerness = nn.Conv2d(self.clip_dim, 1, 3, padding=1)
@@ -252,34 +270,61 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
         """
         cls_feat = x
         reg_feat = x
-
         for cls_layer in self.cls_convs:
             cls_feat = cls_layer(cls_feat)
-            
+        
+
         ###### for the version of the self.map_to_clip is an linear layer ######
         if not self.conv_based_mapping:
             # change the feat dim from ([bs, dim, h, w]) to ([bs, h, w, dim])
             cls_feat = cls_feat.permute([0, 2, 3, 1])
             cls_feat = self.map_to_clip(cls_feat)
-        
         ###### for the version of the self.map_to_clip is an conv layer ######
         else:
             cls_feat = self.map_to_clip(cls_feat)
             # change the feat dim from ([bs, dim, h, w]) to ([bs, h, w, dim])
             cls_feat = cls_feat.permute([0, 2, 3, 1])
         
-        cls_score = self.fc_cls(cls_feat)
-        # for test only, calculate the base score
-        if self.filter_base_cate != None:
-            base_score = self.fc_cls_base(cls_feat)
-            cls_score = torch.cat([cls_score, base_score], dim=-1)        
+        ###### for linear based classifier structure
+        if not self.use_cross_correlation:  
+            ### normalize the cls_feat
+            cls_feat = cls_feat / cls_feat.norm(dim=-1, keepdim=True)          
+            cls_score = self.fc_cls(cls_feat)
+            # for test only, calculate the base score
+            if self.filter_base_cate != None:
+                base_score = self.fc_cls_base(cls_feat)
+                cls_score = torch.cat([cls_score, base_score], dim=-1)        
+                
+            # change the cls_score and the cls_feat back to original
+            # cls_feat would be ([bs, h, w, dim]) => ([bs, dim, h, w])
+            # cls_score would be ([bs, h, w, cls_num]) => ([bs, cls_num, h, w])
+            cls_feat = cls_feat.permute([0, 3, 1, 2])
+            cls_score = cls_score.permute([0, 3, 1, 2])
+        ###### for the cross-correlation layer ######
+        else:
+            #([bs, h, w, dim]) => ([bs, dim, h, w])
+            cls_feat = cls_feat.permute([0, 3, 1, 2])
+            #cls_feat = cls_feat.reshape([-1, self.clip_dim, h, w])
+            cls_feat = cls_feat / cls_feat.norm(dim=1, keepdim=True)
             
-        # change the cls_score and the cls_feat back to original
-        # cls_feat would be ([bs, h, w, dim]) => ([bs, dim, h, w])
-        # cls_score would be ([bs, h, w, cls_num]) => ([bs, cls_num, h, w])
-        cls_feat = cls_feat.permute([0, 3, 1, 2])
-        cls_score = cls_score.permute([0, 3, 1, 2])
+            #generate the positve feat
+            #select the needed text embedding
+            #for the image i the cate_idx should be query_gt_labels[i][0]
+            #query_feat torch.Size([1, 1024, 43, 48]) support_feat torch.Size([1, 1024, 1, 1])
+            #query_feat_input[0] torch.Size([1, 512, 40, 54]) query_gt_labels[0][0] tensor(2, device='cuda:1') support_feat_input[query_gt_labels[i][0]].unsqueeze(dim=0) torch.Size([1, 512, 1, 1]) result: torch.Size([1, 512, 40, 54])
+            #print('before aggregation:', cls_feat.shape, self.support_feat.shape)
+            
+            cls_score = [self.aggregation_layer(
+                    query_feat=cls_feat,
+                    support_feat=self.support_feat[i].unsqueeze(dim=0)
+                    ) for i in range(self.support_feat.shape[0])]
+            print('after aggregation:', cls_score.shape)
+            # reshape back to the need dim
+            #cls_score = cls_score.reshape(bs, -1, h, w)
+            print('after reshape:', cls_score[0].shape)            
         
+        
+        ###### for regression ######
         for reg_layer in self.reg_convs:
             reg_feat = reg_layer(reg_feat)
         bbox_pred = self.conv_reg(reg_feat)
@@ -310,9 +355,6 @@ class FCOSHeadWithDistillation(AnchorFreeHead):
                 bbox_pred *= stride
         else:
             bbox_pred = bbox_pred.exp()
-        
-        ### normalize the cls_feat
-        cls_feat = cls_feat / cls_feat.norm(dim=-1, keepdim=True)
         
         ### multiple the temperature score to the classification score
         cls_score *= self._temperature
