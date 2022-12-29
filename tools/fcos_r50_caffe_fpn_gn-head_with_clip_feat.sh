@@ -94,6 +94,7 @@ python -m torch.distributed.launch --nproc_per_node=2 \
    model.bbox_head.temperature=100 model.bbox_head.use_cross_correlation=True \
 #   --resume-from=${WORK_DIR}/latest.pth
 
+
 # test the model 
 bash tools/dist_test.sh configs/fcos_distill/fcos_r50_caffe_fpn_gn-head_with_base48_tuned_clip_feat_1x_coco_bn65.py \
 ${WORK_DIR}/latest.pth 2 --eval bbox \
