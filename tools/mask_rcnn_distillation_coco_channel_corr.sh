@@ -21,7 +21,6 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 mask_rcnn_distillation_coco_channel_corr
 
 # for random reproduce
-
 WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_coco_channel_corr"
 PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
