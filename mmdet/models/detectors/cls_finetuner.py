@@ -7,9 +7,9 @@ import mmcv
 import torch
 from mmcv.image import tensor2imgs
 
-from mmdet.core import bbox_mapping
+from mmdet.core import bbox_mapping, bbox2roi
 from mmdet.core.bbox.iou_calculators.iou2d_calculator import BboxOverlaps2D
-from ..builder import DETECTORS, build_backbone, build_head, build_neck
+from ..builder import DETECTORS, build_backbone, build_head, build_neck, build_roi_extractor
 from .base import BaseDetector
 from PIL import Image
 import numpy as np
@@ -19,6 +19,7 @@ import random
 import os
 import json
 from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normalize
+from torchvision.transforms import functional as F
 try:
     from torchvision.transforms import InterpolationMode
     BICUBIC = InterpolationMode.BICUBIC
@@ -28,13 +29,16 @@ except ImportError:
 def _convert_image_to_rgb(image):
     return image.convert("RGB")
 
+MEANS = (0.48145466, 0.4578275, 0.40821073)
+STDS = (0.26862954, 0.26130258, 0.27577711)
+
 def _transform(n_px):
     return Compose([
         Resize(n_px, interpolation=BICUBIC),
         CenterCrop(n_px),
         _convert_image_to_rgb,
         ToTensor(),
-        Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
+        Normalize(MEANS, STDS),
     ])
 
 
@@ -51,7 +55,8 @@ class ClsFinetuner(BaseDetector):
                  pretrained=None,
                  init_cfg=None,
                  base_cate_name=None,
-                 all_cate_name=None):
+                 all_cate_name=None,
+                 use_roialign=False):
         super(ClsFinetuner, self).__init__(init_cfg)
         if pretrained:
             warnings.warn('DeprecationWarning: pretrained is deprecated, '
@@ -171,6 +176,16 @@ class ClsFinetuner(BaseDetector):
             torch.manual_seed(42)
             random.seed(42)
             np.random.seed(42)
+
+        self.use_roialign = use_roialign
+        if self.use_roialign:
+            bbox_roi_extractor=dict(
+                type='SingleRoIExtractor',
+                roi_layer=dict(type='RoIAlign', output_size=224, sampling_ratio=0),
+                out_channels=3,
+                featmap_strides=[1])
+            self.bbox_roi_extractor = build_roi_extractor(bbox_roi_extractor)
+
 
     def read_use_base_novel_clip(self, img_metas):
         file_name = img_metas[0]['ori_filename']
@@ -394,8 +409,6 @@ class ClsFinetuner(BaseDetector):
             w = 10.0
         if h < 10.0:
             h = 10.0        
-        
-        
         # change the bbox location by changing the top left position
         # bbox change direction
         x_direction_sign = random.randint(-1,1)
@@ -436,57 +449,71 @@ class ClsFinetuner(BaseDetector):
             crop_size_modi_ratio = self.test_crop_size_modi_ratio if remain_same_bbox_size == False else 1.0
             crop_loca_modi_ratio = self.test_crop_loca_modi_ratio            
         
-        bs, c, _, _ = imgs.shape
-        #'img_shape':  torch.Size([2, 3, 800, 1184])
-        # what we need is [800, 1184, 3]
-        imgs = imgs.permute(0, 2, 3, 1).numpy()
+        ########### for the original implementation ########### 
+        if not self.use_roialign:
+            bs, c, _, _ = imgs.shape
+            #'img_shape':  torch.Size([2, 3, 800, 1184])
+            # what we need is [800, 1184, 3]
+            imgs = imgs.permute(0, 2, 3, 1).numpy()
 
-        all_results = []
-        for img_idx in range(bs):
-            H, W, channel = img_metas[img_idx]['img_shape']
-            all_gt_bboxes = gt_bboxes[img_idx]
-            if len(all_gt_bboxes) == 0:
-                continue
-            img = imgs[img_idx]
-            result = []
-            for box_i, bbox in enumerate(all_gt_bboxes):      
-                # crop the image
-                if self.crop_with_extra_patches:
-                    now_patch = self.cropping_with_extra_patches(img, bbox, H, W)
-                else:
-                    now_patch = self.cropping_with_purturb(img, bbox, crop_size_modi_ratio, crop_loca_modi_ratio, H, W)
-                
-                # pad the patches
-                if self.target_patch_loca == 'br':
-                    now_patch = self.pad_on_specific_side(now_patch)
-                else:
-                    now_patch = self.default_zero_padding(now_patch)
-                       
-                # if not os.path.exists('/home/zhuoming/square_image_patches/'):
-                #     os.makedirs('/home/zhuoming/square_image_patches/')
-                # data = Image.fromarray(np.uint8(now_patch))
-                # data.save('/home/zhuoming/square_image_patches/' + img_metas[img_idx]['ori_filename'] + '_' + str(box_i) + '.png')
-                
-                # center_start_idx = np.array(now_patch.shape) // 7 * 6
-                # center_end_idx = np.array(now_patch.shape)
-                # center_patches = now_patch[center_start_idx[0]:center_end_idx[0], center_start_idx[1]:center_end_idx[1], :]
-                # data = Image.fromarray(np.uint8(center_patches))
-                # data.save('/home/zhuoming/br_5patch_visualize/' + img_metas[img_idx]['ori_filename'] + '_' + str(box_i) + '_br' + '.png')
-                
-                #new_patch, w_scale, h_scale = mmcv.imresize(now_patch, (224, 224), return_scale=True)
-                # convert the numpy to PIL image
-                PIL_image = Image.fromarray(np.uint8(now_patch))
-                # do the preprocessing
-                new_patch = self.preprocess(PIL_image)
-                #image_result.append(np.expand_dims(new_patch, axis=0))
-                #if bbox[0] == 126.62 and bbox[1] == 438.82:
-                #    x = self.backbone(new_patch.unsqueeze(dim=0).cuda())
-                #    print(x)
-                
-                result.append(new_patch.unsqueeze(dim=0))
-            result = torch.cat(result, dim=0)
-            all_results.append(result)
+            all_results = []
+            for img_idx in range(bs):
+                H, W, channel = img_metas[img_idx]['img_shape']
+                all_gt_bboxes = gt_bboxes[img_idx]
+                if len(all_gt_bboxes) == 0:
+                    continue
+                img = imgs[img_idx]
+                result = []
+                for box_i, bbox in enumerate(all_gt_bboxes):      
+                    # crop the image
+                    if self.crop_with_extra_patches:
+                        now_patch = self.cropping_with_extra_patches(img, bbox, H, W)
+                    else:
+                        now_patch = self.cropping_with_purturb(img, bbox, crop_size_modi_ratio, crop_loca_modi_ratio, H, W)
+                    
+                    # pad the patches
+                    if self.target_patch_loca == 'br':
+                        now_patch = self.pad_on_specific_side(now_patch)
+                    else:
+                        now_patch = self.default_zero_padding(now_patch)
 
+                    #new_patch, w_scale, h_scale = mmcv.imresize(now_patch, (224, 224), return_scale=True)
+                    # convert the numpy to PIL image
+                    PIL_image = Image.fromarray(np.uint8(now_patch))
+                    # do the preprocessing
+                    new_patch = self.preprocess(PIL_image)
+                    #print('new patch', new_patch, new_patch.shape, 'img_meta["filename"]', img_metas[img_idx]['filename'])
+                    #temp_file_name = img_metas[img_idx]['ori_filename'].split('.')[0] + '_reshape_and_norm_' + '.pt'
+                    #torch.save(new_patch, os.path.join('/data/zhuoming/detection/test/test2', temp_file_name))
+                    
+                    #image_result.append(np.expand_dims(new_patch, axis=0))
+                    #if bbox[0] == 126.62 and bbox[1] == 438.82:
+                    #    x = self.backbone(new_patch.unsqueeze(dim=0).cuda())
+                    #    print(x)
+                    
+                    result.append(new_patch.unsqueeze(dim=0))
+                result = torch.cat(result, dim=0)
+                all_results.append(result)
+        else:
+            #### testing the 
+            gt_num_per_img = [len(ele) for ele in gt_bboxes]
+            rois = bbox2roi([ele.cpu() for ele in gt_bboxes])
+            #print(type(imgs[0,0,0,0]))
+            with torch.no_grad():
+                bbox_feats = self.bbox_roi_extractor((imgs.float(),), rois, roi_scale_factor=crop_size_modi_ratio)
+            #print('bbox_feats', bbox_feats.shape, bbox_feats)
+            # normalize
+            bbox_feats = F.normalize(bbox_feats, MEANS, STDS)
+            
+            # split the bbox result
+            all_results = bbox_feats.split(gt_num_per_img, 0)
+            #print(len(all_results), [ele.shape for ele in all_results])
+            ### print the image
+            # for all_res_per_img, img_meta in zip(all_results, img_metas):
+            #     all_res_per_img = all_res_per_img.permute(0, 2, 3, 1).numpy()
+            #     for i, result in enumerate(all_res_per_img):
+            #         data = Image.fromarray(np.uint8(result))
+            #         data.save('/home/zhuoming/roialigned/' + img_meta['ori_filename'] + "_" + str(i) + '.png')
         #cropped_patches = np.concatenate(result, axis=0)
         # the shape of the cropped_patches: torch.Size([gt_num_in_batch, 3, 224, 224])
         #cropped_patches = torch.cat(result, dim=0).cuda()
@@ -513,6 +540,8 @@ class ClsFinetuner(BaseDetector):
         # (a function to convert the img)
         #cropped_patches_list:len = batch_size, list[tensor] each tensor shape [gt_num_of_image, 3, 224, 224]
         if cropped_patches == None:
+            ########### for the original implementation ########### 
+            #cropped_patches_list = self.crop_img_to_patches(img.cpu(), gt_bboxes, img_metas, remain_same_bbox_size=remain_same_bbox_size)
             cropped_patches_list = self.crop_img_to_patches(img.cpu(), gt_bboxes, img_metas, remain_same_bbox_size=remain_same_bbox_size)
         else:
             print('testing cropped_patches')
