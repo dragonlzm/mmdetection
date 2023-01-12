@@ -59,7 +59,7 @@ WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_dist
 
 bash tools/new_dist_train.sh configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_base_seesawloss_48e.py 2 \
 ${WORK_DIR} /data/zhuoming/detection \
---cfg-options ${ADDITIONAL_CONFIG}
+--cfg-options ${ADDITIONAL_CONFIG} \
 --resume-from=${WORK_DIR}/epoch_1.pth
 #--resume-from=${WORK_DIR}/latest.pth
 
