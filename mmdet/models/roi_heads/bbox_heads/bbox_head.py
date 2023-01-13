@@ -429,6 +429,40 @@ class BBoxHead(BaseModule):
                 dimension 5 represent (tl_x, tl_y, br_x, br_y, score).
                 Second tensor is the labels with shape (num_boxes, ).
         """
+        # rois.shape torch.Size([1000, 5]) cls_score.shape torch.Size([1000, 66]) bbox_pred.shape torch.Size([1000, 4])
+        if self.use_pregenerate_proposal_and_score is not None:
+            all_proposals = []
+            all_scores = []
+            for i, img_meta in enumerate(img_metas): 
+                image_name = img_meta['filename'].split('/')[-1]
+                proposal_file_name = os.path.join(self.use_pregenerate_proposal_and_score, (image_name + '.json'))
+                proposal_res_file_name = os.path.join(self.use_pregenerate_proposal_and_score, (image_name + 'pred_score' + '.json'))
+                # load the bbox and the score
+                bbox_content = json.load(open(proposal_file_name))
+                score_content = json.load(open(proposal_res_file_name))
+                # reshape the bbox to torch.Size([1, 4, 100, 152])
+                # (1000, 4)
+                proposal_per_img = torch.tensor(bbox_content['box']).cuda()
+                proposal_per_img *= proposal_per_img.new_tensor(img_meta['scale_factor'])
+                roi_idx = torch.full([proposal_per_img.shape[0], 1], i).cuda()
+                proposal_per_img = torch.cat([roi_idx, proposal_per_img], dim=-1)
+
+                all_proposals.append(proposal_per_img)
+                # reshape the score to ([1, 4, 100, 152])
+                # (1000, 65) =>(1000, 66)
+                score_per_img = torch.tensor(score_content['score']).cuda()
+                bg_score = torch.full([score_per_img.shape[0], 1], -1e5).cuda()
+                score_per_img = torch.cat([score_per_img, bg_score], dim=-1)
+                all_scores.append(score_per_img)
+                
+            all_proposals = torch.cat(all_proposals, dim=0)
+            all_scores = torch.cat(all_scores, dim=0)
+            all_bbox_pred = torch.zeros(all_proposals.shape[0], 4).cuda()
+            #print('all_proposals', all_proposals.shape, all_proposals, 'all_scores', all_scores.shape, all_scores, 'all_bbox_pred', all_bbox_pred.shape)
+            rois=all_proposals
+            cls_score=all_scores
+            bbox_pred=all_bbox_pred
+        
         # for testing
         if hasattr(self, 'filter_base_cate') and self.filter_base_cate != None:
             if self.custom_cls_channels:

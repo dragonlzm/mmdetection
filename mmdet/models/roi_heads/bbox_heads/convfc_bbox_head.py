@@ -289,6 +289,8 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
                  use_svd_conversion=None,
                  mapping_after_dist=None,
                  normalize_bg_vec=False,
+                 use_pregenerate_proposal_and_score=None,
+                 learnable_temperature=False,
                  conv_cfg=None,
                  norm_cfg=None,
                  init_cfg=None,
@@ -316,7 +318,6 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         self.norm_cfg = norm_cfg
         self.fg_vec_cfg = fg_vec_cfg
         self.clip_dim = clip_dim
-        self._temperature = temperature
         self.filter_base_cate = filter_base_cate
         self.use_bg_vector = use_bg_vector
         self.use_zero_bg_vector = use_zero_bg_vector
@@ -324,6 +325,13 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
         self.use_svd_conversion = use_svd_conversion
         self.mapping_after_dist = mapping_after_dist
         self.normalize_bg_vec = normalize_bg_vec
+        self.use_pregenerate_proposal_and_score = use_pregenerate_proposal_and_score
+        self.learnable_temperature = learnable_temperature
+        
+        if self.learnable_temperature:
+            self._temperature = nn.Parameter(torch.ones([]) * 4.6052)
+        else:
+            self._temperature = temperature
 
         # add shared convs and fcs
         self.shared_convs, self.shared_fcs, last_layer_dim = \
@@ -640,13 +648,19 @@ class ConvFCEmbeddingBBoxHead(BBoxHead):
             base_score = self.fc_cls_base(final_x_cls)
             cls_score = torch.cat([cls_score, base_score], dim=-1)
         
+        # handle the temperature
+        if self.learnable_temperature:
+            now_temperature = self._temperature.exp()
+        else:
+            now_temperature = self._temperature
+        
         # for see-saw loss
         if self.custom_cls_channels:
             #scores = self.loss_cls.get_activation(cls_score)
-            cls_score[..., :self.num_classes] *= self._temperature
-            cls_score[..., self.num_classes+2:] *= self._temperature
+            cls_score[..., :self.num_classes] *= now_temperature
+            cls_score[..., self.num_classes+2:] *= now_temperature
         else:
-            cls_score *= self._temperature
+            cls_score *= now_temperature
         
         if self.reg_with_cls_embedding:
             #print('original shape', x_reg.shape)
