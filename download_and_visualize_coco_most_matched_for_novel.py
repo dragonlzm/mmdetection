@@ -63,9 +63,10 @@ for info in gt_content['images']:
 
 # load the proposal and print the image
 #save_root = '/home/zhuoming/coco_visualization_most_matched'
-save_root = '/home/zhuoming/coco_visualization_vit_most_matched'
+save_root = '/home/zhuoming/coco_visualization_vit_most_matched_1'
 #proposal_path_root = '/data/zhuoming/detection/coco/clip_proposal_feat/base48_finetuned_base_filtered/random'
-proposal_path_root = '/home/zhuoming/detectron_proposal1'
+#proposal_path_root = '/home/zhuoming/detectron_proposal1'
+proposal_path_root = '/home/zhuoming/detectron_proposal2'
 
 count = 0
 for i, image_id in enumerate(from_image_id_to_annotation):

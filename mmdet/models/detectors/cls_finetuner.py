@@ -87,6 +87,7 @@ class ClsFinetuner(BaseDetector):
         self.generate_bbox_feat = self.test_cfg.get('generate_bbox_feat', False) if self.test_cfg is not None else False
         self.generate_mix_gt_feat = self.test_cfg.get('generate_mix_gt_feat', False) if self.test_cfg is not None else False
         self.feat_save_path = self.test_cfg.get('feat_save_path', None) if self.test_cfg is not None else None
+        # for loading the clip proposal
         self.use_pregenerated_proposal = self.test_cfg.get('use_pregenerated_proposal', None) if self.test_cfg is not None else None
         self.iou_calculator = BboxOverlaps2D()
         self.filter_low_iou_bboxes = self.test_cfg.get('filter_low_iou_bboxes', True) if self.test_cfg is not None else True
@@ -186,6 +187,8 @@ class ClsFinetuner(BaseDetector):
                 featmap_strides=[1])
             self.bbox_roi_extractor = build_roi_extractor(bbox_roi_extractor)
 
+        # for using clip to filter the pregenerated prediction(the predition may come from the vitdet final prediction)
+        self.use_pregenerated_prediction = self.test_cfg.get('use_pregenerated_prediction', None) if self.test_cfg is not None else None
 
     def read_use_base_novel_clip(self, img_metas):
         file_name = img_metas[0]['ori_filename']
@@ -244,6 +247,27 @@ class ClsFinetuner(BaseDetector):
         
         return all_bboxes
 
+    def read_pregenerated_pred(self, img_metas):
+        file_name = img_metas[0]['ori_filename']
+        # for lvis dataset
+        if file_name.startswith('train2017'):
+            file_name = file_name.split('/')[-1]
+        # for VOC dataset
+        if file_name.startswith('JPEGImages'):
+            file_name = file_name.split('/')[-1]
+            if 'VOC2007' in img_metas[0]['filename']:
+                file_name = os.path.join('VOC2007', file_name)
+            elif 'VOC2012' in img_metas[0]['filename']:
+                file_name = os.path.join('VOC2012', file_name)
+        file_name = os.path.join(self.use_pregenerated_prediction, (file_name + '_final_pred' + '.json'))
+        #proposal_file_name = os.path.join("/home/zhuoming/detectron_proposal1", (image_name + '_final_pred' + '.json'))
+        
+        # read the random bbox, the loaded bbox is xyxy format
+        pregenerated_bbox = json.load(open(file_name))['box']
+        pregenerated_bbox = torch.tensor(pregenerated_bbox).cuda()
+        #print('in the loading', pregenerated_bbox.shape)
+        return pregenerated_bbox
+            
     def read_pregenerated_bbox(self, img_metas, gt_bboxes, num_of_rand_bboxes):
         file_name = img_metas[0]['ori_filename']
         # for lvis dataset
@@ -907,6 +931,24 @@ class ClsFinetuner(BaseDetector):
             now_rand_bbox = self.generate_rand_bboxes(img_metas, self.num_of_rand_bboxes)
             x = self.extract_feat(img, [now_rand_bbox], cropped_patches, img_metas=img_metas)
         else:
+            if self.use_pregenerated_prediction != None:
+                #print('proposal_list', [ele.shape for ele in proposal_list])
+                file_name = img_metas[0]['ori_filename']
+                # for lvis dataset
+                if file_name.startswith('train2017'):
+                    file_name = file_name.split('/')[-1]
+                # for VOC dataset
+                if file_name.startswith('JPEGImages'):
+                    file_name = file_name.split('/')[-1]
+                    if 'VOC2007' in img_metas[0]['filename']:
+                        file_name = os.path.join('VOC2007', file_name)
+                    elif 'VOC2012' in img_metas[0]['filename']:
+                        file_name = os.path.join('VOC2012', file_name)
+                file_name = os.path.join(self.use_pregenerated_prediction, (file_name + '_clip_pred' + '.json'))
+                if os.path.exists(file_name):
+                    return [np.zeros((1,5))]    
+                
+                gt_bboxes = [self.read_pregenerated_pred(img_metas)]
             x = self.extract_feat(img, gt_bboxes, cropped_patches, img_metas=img_metas)
         # get origin input shape to onnx dynamic input shape
         if torch.onnx.is_in_onnx_export():
@@ -915,6 +957,13 @@ class ClsFinetuner(BaseDetector):
         if len(x) == 0:
             return [torch.zeros(10, 4)]
         proposal_list = self.rpn_head.simple_test_bboxes(x, gt_labels, img_metas, gt_bboxes)
+        if self.use_pregenerated_prediction != None:
+            #proposal_file_name = os.path.join("/home/zhuoming/detectron_proposal1", (image_name + '_final_pred' + '.json'))
+            result = {'score': proposal_list[0].cpu().tolist()}
+            file = open(file_name, 'w')
+            file.write(json.dumps(result))
+            file.close()                
+            
         #if rescale:
         #    for proposals, meta in zip(proposal_list, img_metas):
         #        proposals[:, :4] /= proposals.new_tensor(meta['scale_factor'])
