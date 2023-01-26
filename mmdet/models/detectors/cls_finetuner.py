@@ -667,8 +667,7 @@ class ClsFinetuner(BaseDetector):
                 
             # if the file has been created, skip this image
             if os.path.exists(gt_file_path):
-                return [np.zeros((1,5))]                
-            
+                return [np.zeros((1,5))]
             
             # handle the image metas
             my_img_meta = img_metas[0]
