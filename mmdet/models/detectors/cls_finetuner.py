@@ -266,6 +266,9 @@ class ClsFinetuner(BaseDetector):
         pregenerated_bbox = json.load(open(file_name))['box']
         pregenerated_bbox = torch.tensor(pregenerated_bbox).cuda()
         #print('in the loading', pregenerated_bbox.shape)
+        # reshape the bboxes to the size of the image
+        pregenerated_bbox[:, :4] *= pregenerated_bbox.new_tensor(img_metas[0]['scale_factor'])
+        
         return pregenerated_bbox
             
     def read_pregenerated_bbox(self, img_metas, gt_bboxes, num_of_rand_bboxes):
@@ -945,7 +948,7 @@ class ClsFinetuner(BaseDetector):
                         file_name = os.path.join('VOC2012', file_name)
                 file_name = os.path.join(self.use_pregenerated_prediction, (file_name + '_clip_pred' + '.json'))
                 if os.path.exists(file_name):
-                    return [np.zeros((1,5))]    
+                    return [np.zeros((1,5))]
                 
                 gt_bboxes = [self.read_pregenerated_pred(img_metas)]
             x = self.extract_feat(img, gt_bboxes, cropped_patches, img_metas=img_metas)

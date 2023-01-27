@@ -148,11 +148,14 @@ for i, image_id in enumerate(from_image_id_to_annotation):
                 ax.add_patch(rect)
                 
                 # find the predicted categories
+                #print('all_clip_score', all_clip_score.shape, idx)
                 clip_score_for_proposal = all_clip_score[idx]
+                clip_score_for_proposal = clip_score_for_proposal.squeeze(dim=0)
+                #print('clip_score_for_proposal', clip_score_for_proposal.shape)
                 max_clip_score_val, max_clip_score_idx = torch.max(clip_score_for_proposal, dim=-1)
                 pred_cate_name = from_idx_to_name[max_clip_score_idx.item()]
-                print('clip_score_for_proposal', clip_score_for_proposal, 'max_clip_score_val', max_clip_score_val , 'max_clip_score_idx', max_clip_score_idx)
                 novel_cate_name = from_gt_id_to_name[novel_bbox_cate_id]
+                #print('clip_score_for_proposal', clip_score_for_proposal, 'max_clip_score_val', max_clip_score_val , 'max_clip_score_idx', max_clip_score_idx, 'pred_cate_name', pred_cate_name, 'novel_cate_name', novel_cate_name)
 
                 print_path = os.path.join(save_root, 'printed')
                 if not os.path.exists(print_path):
