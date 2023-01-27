@@ -75,7 +75,7 @@ for info in gt_content['images']:
 
 # load the proposal and print the image
 #save_root = '/home/zhuoming/coco_visualization_most_matched'
-save_root = '/home/zhuoming/coco_visualization_vit_most_matched_1'
+save_root = '/home/zhuoming/coco_visualization_vit_clip_selected'
 #proposal_path_root = '/data/zhuoming/detection/coco/clip_proposal_feat/base48_finetuned_base_filtered/random'
 #proposal_path_root = '/home/zhuoming/detectron_proposal1'
 proposal_path_root = '/home/zhuoming/detectron_proposal2'
@@ -129,7 +129,7 @@ for i, image_id in enumerate(from_image_id_to_annotation):
     if len(novel_idx) != 0:
         all_candicate_bboxes = all_proposals[novel_idx]
         for candicate_bbox in all_candicate_bboxes:
-            rect = patches.Rectangle((candicate_bbox[0], candicate_bbox[1]),candicate_bbox[2]-candicate_bbox[0],candicate_bbox[3]-candicate_bbox[1],linewidth=1,edgecolor='r',facecolor='none')
+            rect = patches.Rectangle((candicate_bbox[0], candicate_bbox[1]), candicate_bbox[2] - candicate_bbox[0], candicate_bbox[3] - candicate_bbox[1],linewidth=1,edgecolor='r',facecolor='none')
             ax.add_patch(rect)   
 
     print_path = os.path.join(save_root, 'printed')

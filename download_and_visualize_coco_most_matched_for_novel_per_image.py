@@ -1,3 +1,4 @@
+# this version draw a img for each novel categories bboxes
 # this script aims to visualize the coco dataset, include the filtering with base
 
 import json
@@ -44,12 +45,13 @@ novel_names = ('airplane', 'bus', 'cat', 'dog', 'cow',
 from_name_to_idx = {name:i for i, name in enumerate(all_names)}
 from_idx_to_name = {i:name for i, name in enumerate(all_names)}
 
-
+from_gt_id_to_name = {}
 novel_id = []
 base_id = []
 for ele in gt_content['categories']:
     category_id = ele['id']
     name = ele['name']
+    from_gt_id_to_name[category_id] = name
     if name in base_names:
         base_id.append(category_id)
     elif name in novel_names:
@@ -77,7 +79,7 @@ for info in gt_content['images']:
 
 # load the proposal and print the image
 #save_root = '/home/zhuoming/coco_visualization_most_matched'
-save_root = '/home/zhuoming/coco_visualization_vit_most_matched_1'
+save_root = '/home/zhuoming/coco_visualization_vit_most_matched_per_novel'
 #proposal_path_root = '/data/zhuoming/detection/coco/clip_proposal_feat/base48_finetuned_base_filtered/random'
 #proposal_path_root = '/home/zhuoming/detectron_proposal1'
 proposal_path_root = '/home/zhuoming/detectron_proposal2'
@@ -104,34 +106,34 @@ for i, image_id in enumerate(from_image_id_to_annotation):
         f.write(r.content)
 
     im = np.array(Image.open(save_path), dtype=np.uint8)
-    fig,ax = plt.subplots(1)
-
-    # Display the image
-    ax.imshow(im)
-    # print the base
-    for box in from_image_id_to_annotation[image_id]['base']:
-        rect = patches.Rectangle((box[0], box[1]),box[2],box[3],linewidth=1,edgecolor='g',facecolor='none')
-        ax.add_patch(rect)
-    # print the novel
-    for box in from_image_id_to_annotation[image_id]['novel']:
-        rect = patches.Rectangle((box[0], box[1]),box[2],box[3],linewidth=1,edgecolor='b',facecolor='none')
-        ax.add_patch(rect)
-    # load the proposal 
-    #pregenerate_prop_path = os.path.join(proposal_path_root, '.'.join(file_name.split('.')[:-1]) + '.json')
-    pregenerate_prop_path = os.path.join(proposal_path_root, (file_name + '_final_pred.json'))
-    pregenerated_bbox = json.load(open(pregenerate_prop_path))
-    #all_proposals = torch.tensor(pregenerated_bbox['bbox'])
-    all_proposals = torch.tensor(pregenerated_bbox['box'])
-    
-    # find the matched bbox for gt bbox "novel"
     if novel_gt_bboxes.shape[0] != 0:
-        match = False
-        all_predicted_cate = all_proposals[:, -1]
-        for novel_bbox in novel_gt_bboxes:
-            novel_bbox_cate_id = novel_bbox[-1]
+        for novel_box in from_image_id_to_annotation[image_id]['novel']:
+            # show the image
+            fig,ax = plt.subplots(1)
+            ax.imshow(im)
+            
+            rect = patches.Rectangle((novel_box[0], novel_box[1]),novel_box[2],novel_box[3],linewidth=1,edgecolor='b',facecolor='none')
+            ax.add_patch(rect)
+        
+            # load the proposal 
+            #pregenerate_prop_path = os.path.join(proposal_path_root, '.'.join(file_name.split('.')[:-1]) + '.json')
+            pregenerate_prop_path = os.path.join(proposal_path_root, (file_name + '_final_pred.json'))
+            pregenerated_bbox = json.load(open(pregenerate_prop_path))
+            #all_proposals = torch.tensor(pregenerated_bbox['bbox'])
+            all_proposals = torch.tensor(pregenerated_bbox['box'])
+            
+            # load the clip score
+            clip_path = os.path.join(proposal_path_root, (file_name + '_clip_pred.json'))
+            clip_content = json.load(open(clip_path))        
+            all_clip_score = torch.tensor(clip_content['score'])
+            
+            # match the novel bboxes with the 
+            match = False
+            all_predicted_cate = all_proposals[:, -1]
+            novel_bbox_cate_id = novel_box[-1]
             #print('novel_bbox', novel_bbox)
-            xyxy_gt = torch.tensor([[novel_bbox[0], novel_bbox[1], novel_bbox[0] + novel_bbox[2], 
-                                novel_bbox[1] + novel_bbox[3]]])
+            xyxy_gt = torch.tensor([[novel_box[0], novel_box[1], novel_box[0] + novel_box[2], 
+                                novel_box[1] + novel_box[3]]])
             #print('xyxy_gt', xyxy_gt)
             real_iou = iou_calculator(xyxy_gt, all_proposals[:, :4])
             iou_idx_over_zero = (real_iou > 0)
@@ -144,11 +146,20 @@ for i, image_id in enumerate(from_image_id_to_annotation):
                 remain_proposal = all_proposals[idx].squeeze(dim=0)
                 rect = patches.Rectangle((remain_proposal[0], remain_proposal[1]),remain_proposal[2]-remain_proposal[0],remain_proposal[3]-remain_proposal[1],linewidth=1,edgecolor='r',facecolor='none')
                 ax.add_patch(rect)
+                
+                # find the predicted categories
+                clip_score_for_proposal = all_clip_score[idx]
+                max_clip_score_val, max_clip_score_idx = torch.max(clip_score_for_proposal, dim=-1)
+                pred_cate_name = from_idx_to_name[max_clip_score_idx.item()]
+                print('clip_score_for_proposal', clip_score_for_proposal, 'max_clip_score_val', max_clip_score_val , 'max_clip_score_idx', max_clip_score_idx)
+                novel_cate_name = from_gt_id_to_name[novel_bbox_cate_id]
 
-    print_path = os.path.join(save_root, 'printed')
-    if not os.path.exists(print_path):
-        os.makedirs(print_path)
-
-    plt.savefig(os.path.join(print_path,file_name))
-    plt.close()
+                print_path = os.path.join(save_root, 'printed')
+                if not os.path.exists(print_path):
+                    os.makedirs(print_path)
+                save_file_name = file_name + '_'+ novel_cate_name + '_' + pred_cate_name + '_' + '.jpg'
+                plt.savefig(os.path.join(print_path, save_file_name))
+                plt.close()
+    else:
+        continue
 
