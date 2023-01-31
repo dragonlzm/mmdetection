@@ -3,6 +3,7 @@
 
 import json
 import torch
+from torch import nn
 import requests
 import os
 import numpy as np
@@ -12,6 +13,8 @@ from PIL import Image
 from mmdet.core.bbox.iou_calculators.iou2d_calculator import BboxOverlaps2D
 iou_calculator = BboxOverlaps2D()
 
+softmax_fun = nn.Softmax(dim=1)
+sigmoid_fun = nn.Sigmoid()
 # load the gt bboxes
 #gt_content = json.load(open('/data/zhuoming/detection/coco/annotations/instances_train2017_except_48base_only.json'))
 #gt_content = json.load(open('/data/zhuoming/detection/coco/annotations/instances_train2017.json'))
@@ -115,7 +118,7 @@ for i, image_id in enumerate(from_image_id_to_annotation):
             rect = patches.Rectangle((novel_box[0], novel_box[1]),novel_box[2],novel_box[3],linewidth=1,edgecolor='b',facecolor='none')
             ax.add_patch(rect)
         
-            # load the proposal 
+            # load the final predict 
             #pregenerate_prop_path = os.path.join(proposal_path_root, '.'.join(file_name.split('.')[:-1]) + '.json')
             pregenerate_prop_path = os.path.join(proposal_path_root, (file_name + '_final_pred.json'))
             pregenerated_bbox = json.load(open(pregenerate_prop_path))
@@ -126,6 +129,11 @@ for i, image_id in enumerate(from_image_id_to_annotation):
             clip_path = os.path.join(proposal_path_root, (file_name + '_clip_pred.json'))
             clip_content = json.load(open(clip_path))        
             all_clip_score = torch.tensor(clip_content['score'])
+            
+            # load the proposal
+            proposal_path = os.path.join(proposal_path_root, (file_name + '.json'))
+            proposal_content = json.load(open(proposal_path))        
+            all_objectness_score = torch.tensor(proposal_content['score'])
             
             # match the novel bboxes with the 
             match = False
@@ -150,8 +158,17 @@ for i, image_id in enumerate(from_image_id_to_annotation):
                 # find the predicted categories
                 #print('all_clip_score', all_clip_score.shape, idx)
                 clip_score_for_proposal = all_clip_score[idx]
-                clip_score_for_proposal = clip_score_for_proposal.squeeze(dim=0)
+                #clip_score_for_proposal = clip_score_for_proposal.squeeze(dim=0)
                 #print('clip_score_for_proposal', clip_score_for_proposal.shape)
+                # obtain the softmax score
+                softmax_score = softmax_fun(clip_score_for_proposal)
+                softmax_score = softmax_score.squeeze(dim=0)
+                max_softmax_score, _ = torch.max(softmax_score, dim=-1)
+                
+                # obtain the objectness score
+                objectness_score_for_proposal = all_objectness_score[idx]
+                objectness_score = sigmoid_fun(objectness_score_for_proposal)
+                
                 max_clip_score_val, max_clip_score_idx = torch.max(clip_score_for_proposal, dim=-1)
                 pred_cate_name = from_idx_to_name[max_clip_score_idx.item()]
                 novel_cate_name = from_gt_id_to_name[novel_bbox_cate_id]
@@ -160,7 +177,7 @@ for i, image_id in enumerate(from_image_id_to_annotation):
                 print_path = os.path.join(save_root, 'printed')
                 if not os.path.exists(print_path):
                     os.makedirs(print_path)
-                save_file_name = file_name + '_'+ novel_cate_name + '_' + pred_cate_name + '_' + '.jpg'
+                save_file_name = file_name + '_gt_name_'+ novel_cate_name + '_clip_pred_name_' + pred_cate_name + '_clip_score_' + str(max_softmax_score) + '_obj_score_' + str(objectness_score) + '.jpg'
                 plt.savefig(os.path.join(print_path, save_file_name))
                 plt.close()
     else:

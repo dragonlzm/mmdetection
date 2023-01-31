@@ -1,7 +1,10 @@
+# this script aims to generate the final score 
 import json
 import os
 import torch
+from torch import nn
 
+softmax_fun = nn.Softmax(dim=1)
 file_root = '/home/zhuoming/detectron_proposal2'
 
 all_final_name = os.listdir(file_root)
@@ -31,7 +34,8 @@ novel_name_idx = [from_name_to_idx[name] for name in novel_name]
 for proposal_file in all_proposal_files:
     final_pred_files = proposal_file[:-5] + '_final_pred.json'
     clip_pred_files = proposal_file[:-5] + '_clip_pred.json'
-    replaced_file_name = proposal_file[:-5] + '_final_replaced.json'
+    #replaced_file_name = proposal_file[:-5] + '_final_replaced.json'
+    replaced_file_name = proposal_file[:-5] + '_final_replaced_new.json'
     # if os.path.exists(os.path.join(file_root, replaced_file_name)):
     #     continue
     # load the rpn prediction(obtain the objectness score)
@@ -40,6 +44,9 @@ for proposal_file in all_proposal_files:
     # load the clip prediction score
     clip_predicted_content = json.load(open(os.path.join(file_root, clip_pred_files)))
     clip_predicted_score = torch.tensor(clip_predicted_content['score'])
+    # pass the clip score through the softmax
+    clip_predicted_score = softmax_fun(clip_predicted_score)
+    
     # select the bbox which maxscore of the clip score is novel categories
     value, max_cate_idx = torch.max(clip_predicted_score, dim=-1)
     novel_idx = torch.tensor([i for i, ele in enumerate(max_cate_idx) if ele in novel_name_idx])
@@ -48,13 +55,16 @@ for proposal_file in all_proposal_files:
         clip_confidence_score = None
     else:
         needed_objectness_score = objectness_score[novel_idx].tolist()
-        clip_confidence_score = value[novel_idx].tolist()
+        #clip_confidence_score = value[novel_idx].tolist()
+        # for saving the prob distribution version
+        clip_confidence_score = clip_predicted_score[novel_idx].tolist()
     
     # dump the result
-    final_pred_files = proposal_file[:-5] + '_final_pred.json'
+    #final_pred_files = proposal_file[:-5] + '_final_pred.json'
     final_pred_content = json.load(open(os.path.join(file_root, final_pred_files)))
     final_pred_content['novel_idx'] = novel_idx.tolist()
     final_pred_content['objectness_score'] = needed_objectness_score
+    final_pred_content['clip_score'] = clip_confidence_score
     
     file = open(os.path.join(file_root, replaced_file_name), 'w')
     file.write(json.dumps(final_pred_content))
