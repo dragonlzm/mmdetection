@@ -28,8 +28,7 @@ json_content = json.load(open(file))
 res = json_content['base']
 
 # matplotlib histogram
-plt.hist(res, color = 'blue', edgecolor = 'black',
-         bins = 50)
+plt.hist(res, color = 'blue', edgecolor = 'black', bins = 50)
 
 # seaborn histogram
 sns.distplot(res, hist=True, kde=False, 

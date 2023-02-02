@@ -126,6 +126,8 @@ for i, image_id in enumerate(from_image_id_to_annotation):
         for novel_box in from_image_id_to_annotation[image_id]['novel']:
             novel_bbox_cate_id = novel_box[-1]
             novel_cate_name = from_gt_id_to_name[novel_bbox_cate_id]
+            if novel_cate_name not in novel_names:
+                continue
             novel_cate_idx = from_name_to_idx[novel_cate_name]
             
             #print('novel_bbox', novel_bbox)
@@ -145,18 +147,18 @@ for i, image_id in enumerate(from_image_id_to_annotation):
                 # prepare the clip score
                 clip_score_for_proposal = all_clip_score[idx]
                 softmax_score = softmax_fun(clip_score_for_proposal)
-                #softmax_score = softmax_score.squeeze(dim=0)
-                #max_softmax_score, _ = torch.max(softmax_score, dim=-1)
-                
                 max_clip_score_val, max_clip_score_idx = torch.max(clip_score_for_proposal, dim=-1)
                 pred_cate_name = from_idx_to_name[max_clip_score_idx.item()]
-                
-
                 all_target_proposal_idx.append(idx.item())
                 # you need to save the gt label into the idx format
                 all_target_proposal_gt_idx.append(novel_cate_idx)
-                all_target_proposal_clip_distri.append(softmax_score.tolist())
-        print('all_target_proposal_idx', all_target_proposal_idx, 'all_target_proposal_gt_idx', all_target_proposal_gt_idx, 'all_target_proposal_clip_distri', all_target_proposal_clip_distri)
+                #print('softmax_score', softmax_score.shape)
+                all_target_proposal_clip_distri.append(softmax_score.squeeze(dim=0).tolist())
+        #print('all_target_proposal_idx', all_target_proposal_idx, 'all_target_proposal_gt_idx', all_target_proposal_gt_idx, 'all_target_proposal_clip_distri', all_target_proposal_clip_distri)
     
     # save the result
-            
+    all_result = {'all_target_proposal_idx':all_target_proposal_idx, 'all_target_proposal_gt_idx':all_target_proposal_gt_idx, 'all_target_proposal_clip_distri':all_target_proposal_clip_distri}
+    replaced_file_name = file_name + 'match_gt.json'
+    file = open(os.path.join(save_root, replaced_file_name), 'w')
+    file.write(json.dumps(all_result))
+    file.close()
