@@ -82,7 +82,9 @@ for info in gt_content['images']:
 
 # load the proposal and print the image
 #save_root = '/home/zhuoming/coco_visualization_most_matched'
-save_root = '/home/zhuoming/coco_visualization_vit_most_matched_per_novel'
+save_root = '/home/zhuoming/coco_visualization_highest_merge_score'
+#save_root = '/home/zhuoming/coco_visualization_highest_clip_score'
+#save_root = '/home/zhuoming/coco_visualization_highest_obj_score'
 #proposal_path_root = '/data/zhuoming/detection/coco/clip_proposal_feat/base48_finetuned_base_filtered/random'
 #proposal_path_root = '/home/zhuoming/detectron_proposal1'
 proposal_path_root = '/home/zhuoming/detectron_proposal2'
@@ -141,7 +143,10 @@ for i, image_id in enumerate(from_image_id_to_annotation):
             ax.add_patch(rect)
 
     # draw the bboxes with the highest confidence
-    _, selected_idx = torch.topk(merged_score, 3)
+    _, selected_idx = torch.topk(merged_score, 10)
+    #_, selected_idx = torch.topk(max_softmax_score, 10)
+    #_, selected_idx = torch.topk(all_objectness_score, 10)
+
     selected_proposals = all_proposals[selected_idx]
 
     for proposal in selected_proposals:
