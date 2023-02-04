@@ -13,7 +13,7 @@ iou_calculator = BboxOverlaps2D()
 path_for_maskrcnn = "/data/zhuoming/detection/grad_clip_check/mask_rcnn_distill_301212_3xschedule/base_and_novel.bbox.json"
 path_for_fcos = "/data/zhuoming/detection/one_stage/fcos_distill_wcenterness_fixnorm_2xreg_2xdist_3xschedule/base_and_novel.bbox.json"
 
-predict_path = path_for_fcos
+predict_path = path_for_maskrcnn
 
 
 # load and aggregate the predictions
@@ -83,7 +83,8 @@ count = 0
 
 #save_root = '/home/zhuoming/retina'
 #save_root = '/home/zhuoming/mrcnn'
-save_root = '/home/zhuoming/fcos_3x'
+#save_root = '/home/zhuoming/fcos_3x'
+save_root = '/home/zhuoming/mrcnn_3x'
 
 for i, image_id in enumerate(from_image_id_to_annotation):
     # print the prediction
@@ -148,13 +149,13 @@ for i, image_id in enumerate(from_image_id_to_annotation):
                 rect = patches.Rectangle((remain_proposal[0], remain_proposal[1]),remain_proposal[2]-remain_proposal[0],remain_proposal[3]-remain_proposal[1],linewidth=1,edgecolor='r',facecolor='none')
                 ax.add_patch(rect)
                 
-                gt_cate = from_cate_id_to_cate_name[cate_id[-1]]
-                pred_cate = from_cate_id_to_cate_name[remain_proposal[-1]]
+                gt_cate = from_cate_id_to_cate_name[novel_bbox[-1].item()]
+                pred_cate = from_cate_id_to_cate_name[remain_proposal[-1].item()]
 
             # save the result
             print_path = os.path.join(save_root, 'printed')
             if not os.path.exists(print_path):
                 os.makedirs(print_path)
-            temp_file_name = file_name + '_gt_cate_' + gt_cate + '_pred_cate_' + pred_cate
+            temp_file_name = file_name + '_gt_cate_' + gt_cate + '_pred_cate_' + pred_cate + '.jpg'
             plt.savefig(os.path.join(print_path,temp_file_name))
             plt.close()
