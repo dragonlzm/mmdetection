@@ -22,7 +22,7 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 WORK_DIR="data/exp_res/cls_finetuner_clip_lvis_freq405_train"
 bash tools/new_dist_train.sh configs/cls_finetuner/cls_finetuner_clip_lvis_freq405_train.py 2 \
 ${WORK_DIR} ./data \
---cfg-options runner.max_epochs=18 optimizer.lr=0.0002
+--cfg-options runner.max_epochs=18 \
 #--resume-from=${WORK_DIR}/latest.pth
 
 
