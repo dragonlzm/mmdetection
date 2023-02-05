@@ -25,12 +25,17 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 # --cfg-options runner.max_epochs=18 \
 # #--resume-from=${WORK_DIR}/latest.pth
 
-WORK_DIR="data/exp_res/cls_finetuner_clip_lvis_freq405_train_gt_only_100_rand"
-bash tools/new_dist_train.sh configs/cls_finetuner/cls_finetuner_clip_lvis_freq405_train_gt_only.py 2 \
+WORK_DIR="data/exp_res/cls_finetuner_clip_lvis_freq405_train_lr0002"
+bash tools/new_dist_train.sh configs/cls_finetuner/cls_finetuner_clip_lvis_freq405_train.py 2 \
 ${WORK_DIR} ./data \
---cfg-options runner.max_epochs=18 model.rpn_head.use_rand_name=100 \
-#--resume-from=${WORK_DIR}/epoch_12.pth
+--cfg-options runner.max_epochs=18 optimizer.lr=0.0002 \
+#--resume-from=${WORK_DIR}/latest.pth
 
+# WORK_DIR="data/exp_res/cls_finetuner_clip_lvis_freq405_train_gt_only_100_rand"
+# bash tools/new_dist_train.sh configs/cls_finetuner/cls_finetuner_clip_lvis_freq405_train_gt_only.py 2 \
+# ${WORK_DIR} ./data \
+# --cfg-options runner.max_epochs=18 model.rpn_head.use_rand_name=100 \
+# #--resume-from=${WORK_DIR}/epoch_12.pth
 
 
 # for testing base
