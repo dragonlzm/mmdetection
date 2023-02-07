@@ -26,15 +26,15 @@ BBOX_SAVE_PATH_ROOT="data/detection/lvis_v1/clip_proposal/lvis_fc866_32_32_512"
 CHECKPOINT="data/exp_res/cls_finetuner_clip_lvis_freq405_train_gt_only_100_rand/epoch_18.pth"
 
 # 1
-PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
-python -m torch.distributed.launch --nproc_per_node=2 \
-    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/test.py \
-    ${CONFIG_FILE} \
-    ${CHECKPOINT} \
-    --launcher pytorch --eval=proposal_fast --options jsonfile_prefix=${JSONFILE_PREFIX}_1 \
-    --cfg-options model.anchor_generator.strides=[32] model.anchor_generator.scales=[1,2,4,8,16] model.test_cfg.nms_on_all_anchors=True \
-    model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=True model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
-    data.test.ann_file=data/lvis_v1/annotations/lvis_v1_train_0_8000.json 
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/test.py \
+#     ${CONFIG_FILE} \
+#     ${CHECKPOINT} \
+#     --launcher pytorch --eval=proposal_fast --options jsonfile_prefix=${JSONFILE_PREFIX}_1 \
+#     --cfg-options model.anchor_generator.strides=[32] model.anchor_generator.scales=[1,2,4,8,16] model.test_cfg.nms_on_all_anchors=True \
+#     model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=True model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
+#     data.test.ann_file=data/lvis_v1/annotations/lvis_v1_train_0_8000.json 
 
 # 2
 # PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
@@ -92,15 +92,15 @@ python -m torch.distributed.launch --nproc_per_node=2 \
 #     data.test.ann_file=data/lvis_v1/annotations/lvis_v1_train_40000_48000.json 
 
 # 7
-# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
-# python -m torch.distributed.launch --nproc_per_node=2 \
-#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/test.py \
-#     ${CONFIG_FILE} \
-#     ${CHECKPOINT} \
-#     --launcher pytorch --eval=proposal_fast --options jsonfile_prefix=${JSONFILE_PREFIX}_1 \
-#     --cfg-options model.anchor_generator.strides=[32] model.anchor_generator.scales=[1,2,4,8,16] model.test_cfg.nms_on_all_anchors=True \
-#     model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=True model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
-#     data.test.ann_file=data/lvis_v1/annotations/lvis_v1_train_48000_56000.json 
+PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+python -m torch.distributed.launch --nproc_per_node=2 \
+    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/test.py \
+    ${CONFIG_FILE} \
+    ${CHECKPOINT} \
+    --launcher pytorch --eval=proposal_fast --options jsonfile_prefix=${JSONFILE_PREFIX}_1 \
+    --cfg-options model.anchor_generator.strides=[32] model.anchor_generator.scales=[1,2,4,8,16] model.test_cfg.nms_on_all_anchors=True \
+    model.test_cfg.nms_threshold=0.7 model.test_cfg.min_entropy=True model.test_cfg.bbox_save_path_root=${BBOX_SAVE_PATH_ROOT} \
+    data.test.ann_file=data/lvis_v1/annotations/lvis_v1_train_48000_56000.json 
 
 # 8
 # PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
