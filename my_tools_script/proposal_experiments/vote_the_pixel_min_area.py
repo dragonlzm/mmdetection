@@ -7,6 +7,9 @@ import os
 import numpy as np
 from PIL import Image
 INF = 1e8
+torch.manual_seed(0)
+color = torch.randint(0, 255, (66, 3))
+color[65] = torch.tensor([0,0,0]) 
 
 def get_points_single(featmap_size,
                         dtype,
@@ -44,18 +47,17 @@ def get_target_single(gt_bboxes, gt_labels, points, num_classes=65):
     bottom = gt_bboxes[..., 3] - ys
     bbox_targets = torch.stack((left, top, right, bottom), -1)
     inside_gt_bbox_mask = bbox_targets.min(-1)[0] > 0
-    # condition2: limit the regression range for each location
-    max_regress_distance = bbox_targets.max(-1)[0]
-    # if there are still more than one objects for a location,
-    # we choose the one with minimal area
+    
     areas[inside_gt_bbox_mask == 0] = INF
     min_area, min_area_inds = areas.min(dim=1)
     labels = gt_labels[min_area_inds]
-    labels[min_area == INF] = num_classes  # set as BG
-    bbox_targets = bbox_targets[range(num_points), min_area_inds]
-    return labels, bbox_targets
+    labels[min_area == INF] = 65  # set as BG
+
+    return labels
+
 
 proposal_path = "/home/zhuoming/detectron_proposal2"
+save_path = "/home/zhuoming/label_assignment/"
 
 # load the gt infomation for each image
 gt_content = json.load(open('/data/zhuoming/detection/coco/annotations/instances_val2017.json'))
@@ -77,17 +79,24 @@ for image_id in from_image_id_to_image_info:
     clip_conf_path = os.path.join(proposal_path, clip_conf_file_name)
     clip_conf_file_content = json.load(open(clip_conf_path))
     clip_score = torch.tensor(clip_conf_file_content['score']).cuda()
-    _, predicted_labels = torch.max(clip_score)
+    _, predicted_labels = torch.max(clip_score, dim=-1)
     # obtain the size of the image
     image_info = from_image_id_to_image_info[image_id]
     h, w = image_info['height'], image_info['width']
     # create the pixel map for each image
-    all_points = get_points_single((h,w), torch.float,  torch.device('cuda'))
+    all_points = get_points_single((h,w), torch.float16, torch.device('cuda'))
     # assign the result
-    result = get_target_single(predict_boxes, predicted_labels, all_points, regress_ranges)
-    print('result', result.shape)
+    assigned_label = get_target_single(predict_boxes, predicted_labels, all_points)
+    print(assigned_label.shape)
+    
+    # visualization_result = torch.cat(visualization_result, dim=0)
+    visualization_result = color[assigned_label]
+    visualization_result = visualization_result.reshape(h,w,3)
+    #print('visualization_result', visualization_result.shape)
+
+    # visualize the color and draw the picture
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+    data = Image.fromarray(np.uint8(visualization_result.cpu()))
+    data.save(os.path.join(save_path, file_name + "_label_assign.png"))
     break
-
-# load the clip predict score and the vitdet final prediction for each image
-
-# expect for each pixel we store the 
