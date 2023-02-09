@@ -46,7 +46,7 @@ def _get_target_single(gt_bboxes, gt_labels, points, num_classes=65):
 
 
 def get_target_single(gt_bboxes, gt_labels, points, num_classes=65):
-    # The function return the label per pixel selected by the min-area criteria
+    # this function return the per categories mask
     num_points = points.size(0)
     areas = (gt_bboxes[:, 2] - gt_bboxes[:, 0]) * (
     gt_bboxes[:, 3] - gt_bboxes[:, 1])
@@ -64,7 +64,9 @@ def get_target_single(gt_bboxes, gt_labels, points, num_classes=65):
         _inside_gt_bbox_mask = _get_target_single(gt_bboxes[start:end], gt_labels[start:end], all_points)
         #print(temp_assigned_label.shape)
         all_result.append(_inside_gt_bbox_mask)
+    # inside_gt_bbox_mask will be a tensor([num_of_pixel, num_of_proposal]), a true/ false mask
     inside_gt_bbox_mask = torch.cat(all_result, dim=-1)
+    print(inside_gt_bbox_mask)
     
     areas[inside_gt_bbox_mask == 0] = INF
     min_area, min_area_inds = areas.min(dim=1)
@@ -104,6 +106,7 @@ for i, image_id in enumerate(from_image_id_to_image_info):
     all_points = get_points_single((h,w), torch.float16, torch.device('cuda'))
     # assign the result
     assigned_label = get_target_single(predict_boxes, predicted_labels, all_points)
+    break
     
     # visualization_result = torch.cat(visualization_result, dim=0)
     visualization_result = color[assigned_label]
