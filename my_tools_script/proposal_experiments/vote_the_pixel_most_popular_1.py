@@ -11,6 +11,20 @@ torch.manual_seed(0)
 color = torch.randint(0, 255, (66, 3))
 color[65] = torch.tensor([0,0,0]) 
 
+all_bn_cate_name = ('person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 
+            'train', 'truck', 'boat', 'bench', 'bird', 'cat', 'dog', 
+            'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe', 
+            'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee', 
+            'skis', 'snowboard', 'kite', 'skateboard', 'surfboard', 'bottle', 
+            'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple', 
+            'sandwich', 'orange', 'broccoli', 'carrot', 'pizza', 'donut', 
+            'cake', 'chair', 'couch', 'bed', 'toilet', 'tv', 'laptop', 'mouse', 
+            'remote', 'keyboard', 'microwave', 'oven', 'toaster', 'sink', 
+            'refrigerator', 'book', 'clock', 'vase', 'scissors', 'toothbrush')
+
+from_id_to_cate_name = {i:ele for i, ele in enumerate(all_bn_cate_name)}
+
+
 def get_points_single(featmap_size,
                         dtype,
                         device):
@@ -46,7 +60,7 @@ def _get_target_single(gt_bboxes, gt_labels, points, num_classes=65):
 
 
 def get_target_single(gt_bboxes, gt_labels, points, num_classes=65):
-    # The function return the label per pixel selected by the min-area criteria
+    # this function return the per categories mask
     num_points = points.size(0)
     areas = (gt_bboxes[:, 2] - gt_bboxes[:, 0]) * (
     gt_bboxes[:, 3] - gt_bboxes[:, 1])
@@ -64,17 +78,26 @@ def get_target_single(gt_bboxes, gt_labels, points, num_classes=65):
         _inside_gt_bbox_mask = _get_target_single(gt_bboxes[start:end], gt_labels[start:end], all_points)
         #print(temp_assigned_label.shape)
         all_result.append(_inside_gt_bbox_mask)
+    # inside_gt_bbox_mask will be a tensor([num_of_pixel, num_of_proposal]), a true/ false mask
     inside_gt_bbox_mask = torch.cat(all_result, dim=-1)
+    inside_gt_bbox_mask = inside_gt_bbox_mask.permute([1,0])
+    #print(inside_gt_bbox_mask)
     
-    areas[inside_gt_bbox_mask == 0] = INF
-    min_area, min_area_inds = areas.min(dim=1)
-    labels = gt_labels[min_area_inds]
-    labels[min_area == INF] = num_classes  # set as BG
-    return labels    
+    mask_of_all_cates = []
+    for i in range(num_classes):
+        cate_matched_idx = (gt_labels == i)
+        # selected_masks tensor(num_of_mask, num_of_pixel)
+        selected_masks = inside_gt_bbox_mask[cate_matched_idx]
+        mask_per_cate = torch.sum(selected_masks, dim=0)
+        mask_of_all_cates.append(mask_per_cate.unsqueeze(dim=0))
+
+    # mask_of_all_cates should be the number per image per pixel
+    mask_of_all_cates = torch.cat(mask_of_all_cates, dim=0)
+    return mask_of_all_cates    
 
 
 proposal_path = "/home/zhuoming/detectron_proposal2"
-save_path = "/home/zhuoming/label_assignment_min_area/"
+save_path = "/home/zhuoming/label_assignment_per_cate_1/"
 
 # load the gt infomation for each image
 gt_content = json.load(open('/data/zhuoming/detection/coco/annotations/instances_val2017.json'))
@@ -103,14 +126,21 @@ for i, image_id in enumerate(from_image_id_to_image_info):
     # create the pixel map for each image
     all_points = get_points_single((h,w), torch.float16, torch.device('cuda'))
     # assign the result
-    assigned_label = get_target_single(predict_boxes, predicted_labels, all_points)
+    mask_of_all_cates = get_target_single(predict_boxes, predicted_labels, all_points)
+    #print('mask_of_all_cates', mask_of_all_cates.shape)
+    
+    # mask_of_all_cates should be the number per image per pixel
+    empty_pixel = (torch.sum(mask_of_all_cates, dim=0) == 0)
+    # find the max idx for all pixel
+    _, most_frequent = torch.max(mask_of_all_cates, dim=0)
+    # assign the empty pixel
+    most_frequent[empty_pixel] = 65
     
     # visualization_result = torch.cat(visualization_result, dim=0)
-    visualization_result = color[assigned_label]
+    visualization_result = color[most_frequent]
     visualization_result = visualization_result.reshape(h, w, 3)
     #print('visualization_result', visualization_result.shape)
-
-    # visualize the color and draw the picture
+    
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     data = Image.fromarray(np.uint8(visualization_result.cpu()))
