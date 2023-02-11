@@ -56,9 +56,9 @@ data = dict(
 # model config
 model = dict(
     roi_head=dict(
-        bbox_head=dict(num_classes=866,
+        bbox_head=dict(num_classes=405,
                        fg_vec_cfg=dict(load_path='data/embeddings/freq405_vnt_finetuned_freq405.pt')), 
-        mask_head=dict(num_classes=866)))
+        mask_head=dict(num_classes=405)))
 
 # optimizer
 optimizer = dict(lr=0.005)
