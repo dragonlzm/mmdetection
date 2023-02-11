@@ -27,33 +27,33 @@ TRAIN_CONFIG="configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_freq_tuned_c
 TEST_CONFIG="configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_freq_tuned_clipproposal_fc866.py"
 
 # 24 epoch with hyper parameters change
-ADDITIONAL_CONFIG="model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=0.5 optimizer_config.grad_clip.max_norm=10 \
-model.rpn_head.loss_bbox.loss_weight=2.0 model.roi_head.bbox_head.loss_bbox.loss_weight=2.0 \
-model.roi_head.bbox_head.num_shared_convs=3 model.roi_head.bbox_head.num_shared_fcs=0 \
-model.roi_head.bbox_head.num_cls_convs=1 model.roi_head.bbox_head.num_cls_fcs=2 \
-model.roi_head.bbox_head.num_reg_convs=1 model.roi_head.bbox_head.num_reg_fcs=2 \
-model.roi_head.bbox_head.learnable_temperature=True"
-WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_lvis_freq_tuned_clipproposal_freq405_301212_learnable_temp"
-TRAIN_CONFIG="configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_freq_tuned_clipproposal_freq405.py"
-TEST_CONFIG="configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_freq_tuned_clipproposal_fc866.py"
+# ADDITIONAL_CONFIG="model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=0.5 optimizer_config.grad_clip.max_norm=10 \
+# model.rpn_head.loss_bbox.loss_weight=2.0 model.roi_head.bbox_head.loss_bbox.loss_weight=2.0 \
+# model.roi_head.bbox_head.num_shared_convs=3 model.roi_head.bbox_head.num_shared_fcs=0 \
+# model.roi_head.bbox_head.num_cls_convs=1 model.roi_head.bbox_head.num_cls_fcs=2 \
+# model.roi_head.bbox_head.num_reg_convs=1 model.roi_head.bbox_head.num_reg_fcs=2 \
+# model.roi_head.bbox_head.learnable_temperature=True"
+# WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_lvis_freq_tuned_clipproposal_freq405_301212_learnable_temp"
+# TRAIN_CONFIG="configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_freq_tuned_clipproposal_freq405.py"
+# TEST_CONFIG="configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_freq_tuned_clipproposal_fc866.py"
 
-# 24 epoch with seesaw
-ADDITIONAL_CONFIG="model.roi_head.bbox_head.temperature=100 optimizer_config.grad_clip.max_norm=10"
-WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_lvis_freq_tuned_clipproposal_freq405_seesawloss"
-TRAIN_CONFIG="configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_freq_tuned_clipproposal_freq405_seesawloss.py"
-TEST_CONFIG="configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_freq_tuned_clipproposal_fc866_seesawloss.py"
+# # 24 epoch with seesaw
+# ADDITIONAL_CONFIG="model.roi_head.bbox_head.temperature=100 optimizer_config.grad_clip.max_norm=10"
+# WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_lvis_freq_tuned_clipproposal_freq405_seesawloss"
+# TRAIN_CONFIG="configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_freq_tuned_clipproposal_freq405_seesawloss.py"
+# TEST_CONFIG="configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_freq_tuned_clipproposal_fc866_seesawloss.py"
 
 
-# 24 epoch with seesaw with hyper-pararms change
-ADDITIONAL_CONFIG="model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=0.5 optimizer_config.grad_clip.max_norm=10 \
-model.rpn_head.loss_bbox.loss_weight=2.0 model.roi_head.bbox_head.loss_bbox.loss_weight=2.0 \
-model.roi_head.bbox_head.num_shared_convs=3 model.roi_head.bbox_head.num_shared_fcs=0 \
-model.roi_head.bbox_head.num_cls_convs=1 model.roi_head.bbox_head.num_cls_fcs=2 \
-model.roi_head.bbox_head.num_reg_convs=1 model.roi_head.bbox_head.num_reg_fcs=2 \
-model.roi_head.bbox_head.learnable_temperature=True"
-WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_lvis_freq_tuned_clipproposal_freq405_seesawloss_301212_learnable_temp"
-TRAIN_CONFIG="configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_freq_tuned_clipproposal_freq405_seesawloss.py"
-TEST_CONFIG="configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_freq_tuned_clipproposal_fc866_seesawloss.py"
+# # 24 epoch with seesaw with hyper-pararms change
+# ADDITIONAL_CONFIG="model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=0.5 optimizer_config.grad_clip.max_norm=10 \
+# model.rpn_head.loss_bbox.loss_weight=2.0 model.roi_head.bbox_head.loss_bbox.loss_weight=2.0 \
+# model.roi_head.bbox_head.num_shared_convs=3 model.roi_head.bbox_head.num_shared_fcs=0 \
+# model.roi_head.bbox_head.num_cls_convs=1 model.roi_head.bbox_head.num_cls_fcs=2 \
+# model.roi_head.bbox_head.num_reg_convs=1 model.roi_head.bbox_head.num_reg_fcs=2 \
+# model.roi_head.bbox_head.learnable_temperature=True"
+# WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_lvis_freq_tuned_clipproposal_freq405_seesawloss_301212_learnable_temp"
+# TRAIN_CONFIG="configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_freq_tuned_clipproposal_freq405_seesawloss.py"
+# TEST_CONFIG="configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_freq_tuned_clipproposal_fc866_seesawloss.py"
 
 
 
