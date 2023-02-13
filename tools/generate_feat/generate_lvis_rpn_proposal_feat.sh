@@ -50,7 +50,7 @@ model.test_cfg.bbox_save_path_root=data/lvis_v1/rpn_proposal/mask_rcnn_freq/
 ## raw clip model, rpn proposal
 CHECKPOINT="data/test/cls_finetuner_clip_base_100shots_train/epoch_0.pth"
 CONFIG_FILE="configs/cls_finetuner/cls_finetuner_clip_full_lvis.py"
-BBOX_SAVE_PATH_ROOT="data/lvis_v1/rpn_proposal/mask_rcnn_r50_fpn_sample1e-3_mstrain_2x_lvis_v1_freq"
+BBOX_SAVE_PATH_ROOT="data/lvis_v1/rpn_proposal/mask_rcnn_freq"
 FEAT_SAVE_PATH_ROOT="data/lvis_v1/rpn_proposal_feat/freq_proposal_raw_feat"
 
 bash tools/dist_test.sh \
