@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --partition=gpu 
-#SBATCH --gres=gpu:p100:2
+#SBATCH --gres=gpu:v100:2
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=80GB
@@ -45,7 +45,7 @@ configs/rpn/rpn_r50_fpn_1x_lvis.py \
 data/exp_res/mask_rcnn_r50_fpn_sample1e-3_mstrain_2x_lvis_v1_freq/epoch_24.pth 2 \
 --out rpn_r50_fpn_1x_lvis.pkl \
 --cfg-options data.test.ann_file=data/lvis_v1/annotations/lvis_v1_train.json data.test.img_prefix=data/lvis_v1/ \
-model.test_cfg.bbox_save_path_root=data/lvis_v1/rpn_proposal/mask_rcnn_r50_fpn_sample1e-3_mstrain_2x_lvis_v1_freq/
+model.test_cfg.bbox_save_path_root=data/lvis_v1/rpn_proposal/mask_rcnn_freq/
 
 ## raw clip model, rpn proposal
 CHECKPOINT="data/test/cls_finetuner_clip_base_100shots_train/epoch_0.pth"
