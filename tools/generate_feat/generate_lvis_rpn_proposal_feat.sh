@@ -23,17 +23,35 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 ## this ratio make filtering the base categories does not make sense.
 
 # spliting the generation into other section to accelerate the procedure
-CHECKPOINT="data/exp_res/cls_finetuner_clip_lvis_base_train_over_sample_v2/epoch_18.pth"
+# CHECKPOINT="data/exp_res/cls_finetuner_clip_lvis_base_train_over_sample_v2/epoch_18.pth"
+# CONFIG_FILE="configs/cls_finetuner/cls_finetuner_clip_full_lvis.py"
+# BBOX_SAVE_PATH_ROOT="data/lvis_v1/rpn_proposal/mask_rcnn_r50_fpn_random_seesaw_loss_normed_mask_mstrain_2x_lvis_v1_base"
+# FEAT_SAVE_PATH_ROOT="data/lvis_v1/rpn_proposal_feat/lvis_base_finetuned"
+
+# bash tools/dist_test.sh \
+# configs/cls_finetuner/cls_finetuner_clip_full_lvis.py \
+# data/exp_res/cls_finetuner_clip_lvis_base_train_over_sample_v2/epoch_18.pth 2 \
+# --eval=gt_acc \
+# --eval-options jsonfile_prefix=data/lvis_v1/rpn_proposal_feat/lvis_base_finetuned/extract_feat \
+# --cfg-options data.test.ann_file=data/lvis_v1/annotations/lvis_v1_train.json \
+# model.test_cfg.generate_bbox_feat=True model.test_cfg.feat_save_path=data/lvis_v1/rpn_proposal_feat/lvis_base_finetuned \
+# model.test_cfg.use_pregenerated_proposal=data/lvis_v1/rpn_proposal/mask_rcnn_r50_fpn_random_seesaw_loss_normed_mask_mstrain_2x_lvis_v1_base \
+# model.test_cfg.num_of_rand_bboxes=500 model.test_cfg.save_cates_and_conf=True model.test_cfg.rand_select_subset=True
+
+
+## raw clip model, rpn proposal
+CHECKPOINT="data/test/cls_finetuner_clip_base_100shots_train/epoch_0.pth"
 CONFIG_FILE="configs/cls_finetuner/cls_finetuner_clip_full_lvis.py"
-BBOX_SAVE_PATH_ROOT="data/lvis_v1/rpn_proposal/mask_rcnn_r50_fpn_random_seesaw_loss_normed_mask_mstrain_2x_lvis_v1_base"
-FEAT_SAVE_PATH_ROOT="data/lvis_v1/rpn_proposal_feat/lvis_base_finetuned"
+BBOX_SAVE_PATH_ROOT="data/lvis_v1/rpn_proposal/mask_rcnn_r50_fpn_sample1e-3_mstrain_2x_lvis_v1_freq"
+FEAT_SAVE_PATH_ROOT="data/lvis_v1/rpn_proposal_feat/freq_proposal_raw_feat"
 
 bash tools/dist_test.sh \
-configs/cls_finetuner/cls_finetuner_clip_full_lvis.py \
-data/exp_res/cls_finetuner_clip_lvis_base_train_over_sample_v2/epoch_18.pth 2 \
+${CONFIG_FILE} \
+${CHECKPOINT} 2 \
 --eval=gt_acc \
---eval-options jsonfile_prefix=data/lvis_v1/rpn_proposal_feat/lvis_base_finetuned/extract_feat \
+--eval-options jsonfile_prefix=data/lvis_v1/rpn_proposal_feat/freq_proposal_raw_feat/extract_feat \
 --cfg-options data.test.ann_file=data/lvis_v1/annotations/lvis_v1_train.json \
-model.test_cfg.generate_bbox_feat=True model.test_cfg.feat_save_path=data/lvis_v1/rpn_proposal_feat/lvis_base_finetuned \
-model.test_cfg.use_pregenerated_proposal=data/lvis_v1/rpn_proposal/mask_rcnn_r50_fpn_random_seesaw_loss_normed_mask_mstrain_2x_lvis_v1_base \
+model.test_cfg.generate_bbox_feat=True model.test_cfg.feat_save_path=${FEAT_SAVE_PATH_ROOT} \
+model.test_cfg.use_pregenerated_proposal=${BBOX_SAVE_PATH_ROOT} \
 model.test_cfg.num_of_rand_bboxes=500 model.test_cfg.save_cates_and_conf=True model.test_cfg.rand_select_subset=True
+
