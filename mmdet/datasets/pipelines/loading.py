@@ -598,7 +598,8 @@ class LoadCLIPFeat:
                  load_rand_bbox_weight=False,
                  use_mix_gt_feat=False,
                  use_objectness_as_weight=False,
-                 use_base_discount_objectness=False):
+                 use_base_discount_objectness=False,
+                 load_gt_feat=True):
         self.file_path_prefix = file_path_prefix
         self.use_mix_gt_feat = use_mix_gt_feat
         # the path should like this
@@ -616,6 +617,7 @@ class LoadCLIPFeat:
         self.load_rand_bbox_weight = load_rand_bbox_weight
         self.use_objectness_as_weight = use_objectness_as_weight
         self.use_base_discount_objectness = use_base_discount_objectness
+        self.load_gt_feat = load_gt_feat
 
     def __call__(self, results):
         '''load the pre-extracted CLIP feat'''
@@ -638,64 +640,67 @@ class LoadCLIPFeat:
         file_name = '.'.join(file_name.split('.')[:-1]) + '.json'
 
         #### load the gt feat
-        gt_file_name = osp.join(self.gt_feat_prefix, file_name)
-        gt_file_content = json.load(open(gt_file_name))
-        
-        #'feat', 'bbox', 'gt_labels', 'img_metas'
-        gt_feat = np.array(gt_file_content['feat']).astype(np.float32)
-        gt_bbox = np.array(gt_file_content['bbox']).astype(np.float32)
-        gt_labels = gt_file_content['gt_labels']
-        img_metas = gt_file_content['img_metas']
-        pre_extract_scale_factor = np.array(img_metas['scale_factor']).astype(np.float32)
-        now_scale_factor = results['scale_factor']
-        
-        # handle the special case for the lvis dataset
-        if gt_feat.shape[0] != 0:
-            ## filter the feat for the specifc category
-            # compare the scale factor the pre-extract and the now pipeline
-            now_gt_bbox = results['gt_bboxes']
-            pre_extract_gt_bbox = gt_bbox
+        if self.load_gt_feat:
+            gt_file_name = osp.join(self.gt_feat_prefix, file_name)
+            gt_file_content = json.load(open(gt_file_name))
             
-            # in here we round the scale factor in 6 decimals
-            if (np.round(pre_extract_scale_factor, 6) == np.round(now_scale_factor, 6)).all():
-                #print('in the matching')
-                original_pre_extract_gt_bbox = pre_extract_gt_bbox
-                original_now_gt_bbox = now_gt_bbox
-            else:
-                original_pre_extract_gt_bbox = pre_extract_gt_bbox / pre_extract_scale_factor
-                original_now_gt_bbox = now_gt_bbox / now_scale_factor
+            #'feat', 'bbox', 'gt_labels', 'img_metas'
+            gt_feat = np.array(gt_file_content['feat']).astype(np.float32)
+            gt_bbox = np.array(gt_file_content['bbox']).astype(np.float32)
+            gt_labels = gt_file_content['gt_labels']
+            img_metas = gt_file_content['img_metas']
+            pre_extract_scale_factor = np.array(img_metas['scale_factor']).astype(np.float32)
+            now_scale_factor = results['scale_factor']
+            
+            # handle the special case for the lvis dataset
+            if gt_feat.shape[0] != 0:
+                ## filter the feat for the specifc category
+                # compare the scale factor the pre-extract and the now pipeline
+                now_gt_bbox = results['gt_bboxes']
+                pre_extract_gt_bbox = gt_bbox
+                
+                # in here we round the scale factor in 6 decimals
+                if (np.round(pre_extract_scale_factor, 6) == np.round(now_scale_factor, 6)).all():
+                    #print('in the matching')
+                    original_pre_extract_gt_bbox = pre_extract_gt_bbox
+                    original_now_gt_bbox = now_gt_bbox
+                else:
+                    original_pre_extract_gt_bbox = pre_extract_gt_bbox / pre_extract_scale_factor
+                    original_now_gt_bbox = now_gt_bbox / now_scale_factor
 
-            match_idx = []
-            for now_bbox in original_now_gt_bbox:
-                now_match_id = None
-                match_distance = 10000000
-                for i, extract_bbox in enumerate(original_pre_extract_gt_bbox):
-                    #print(extract_bbox, now_bbox)
-                    #print(np.round(extract_bbox, 2), np.round(now_bbox, 2))
-                    #print('extract_bbox, now_bbox', (np.round(extract_bbox, 2) == np.round(now_bbox, 2)))
-                    #if (np.round(extract_bbox, 0) == np.round(now_bbox, 0)).all():
-                    now_dist = (np.abs(extract_bbox - now_bbox)).sum()
-                    if now_dist < match_distance:
-                        match_distance = now_dist
-                        now_match_id = i
-                match_idx.append(now_match_id)
-                #print(now_bbox, original_pre_extract_gt_bbox[now_match_id])
-                #if gt_bbox_matched == False:
-                #    print('gt bbox is not matched',now_bbox)
-                        
-            # filter and reorder the feat
-            match_idx = np.array(match_idx).astype(np.int32)
-            #print('match_idx', match_idx, type(match_idx))        
-            remaining_feat = torch.from_numpy(gt_feat[match_idx])
-            
-            # pad the result
-            # if len(remaining_feat) < 800:
-            #     padded_len = 800 - len(remaining_feat)
-            #     padded_results = torch.zeros([padded_len] + list(remaining_feat.shape[1:]))
-            #     remaining_feat = torch.cat([remaining_feat, padded_results], dim=0)
-            results['gt_feats'] = remaining_feat
+                match_idx = []
+                for now_bbox in original_now_gt_bbox:
+                    now_match_id = None
+                    match_distance = 10000000
+                    for i, extract_bbox in enumerate(original_pre_extract_gt_bbox):
+                        #print(extract_bbox, now_bbox)
+                        #print(np.round(extract_bbox, 2), np.round(now_bbox, 2))
+                        #print('extract_bbox, now_bbox', (np.round(extract_bbox, 2) == np.round(now_bbox, 2)))
+                        #if (np.round(extract_bbox, 0) == np.round(now_bbox, 0)).all():
+                        now_dist = (np.abs(extract_bbox - now_bbox)).sum()
+                        if now_dist < match_distance:
+                            match_distance = now_dist
+                            now_match_id = i
+                    match_idx.append(now_match_id)
+                    #print(now_bbox, original_pre_extract_gt_bbox[now_match_id])
+                    #if gt_bbox_matched == False:
+                    #    print('gt bbox is not matched',now_bbox)
+                            
+                # filter and reorder the feat
+                match_idx = np.array(match_idx).astype(np.int32)
+                #print('match_idx', match_idx, type(match_idx))        
+                remaining_feat = torch.from_numpy(gt_feat[match_idx])
+                
+                # pad the result
+                # if len(remaining_feat) < 800:
+                #     padded_len = 800 - len(remaining_feat)
+                #     padded_results = torch.zeros([padded_len] + list(remaining_feat.shape[1:]))
+                #     remaining_feat = torch.cat([remaining_feat, padded_results], dim=0)
+                results['gt_feats'] = remaining_feat
+            else:
+                # if on this image there is no annotation
+                results['gt_feats'] = torch.zeros([0] + list(gt_feat.shape[1:]))
         else:
-            # if on this image there is no annotation
             results['gt_feats'] = torch.zeros([0] + list(gt_feat.shape[1:]))
         
         #### load the random feat

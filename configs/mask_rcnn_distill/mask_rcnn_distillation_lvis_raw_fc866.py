@@ -18,7 +18,7 @@ train_pipeline = [
         multiscale_mode='value',
         keep_ratio=True),
     dict(type='LoadCLIPFeat', file_path_prefix='data/lvis_v1/rpn_proposal_feat/freq_proposal_raw_feat',
-         num_of_rand_bbox=200, select_fixed_subset=200, load_rand_bbox_weight=True),    
+         num_of_rand_bbox=200, select_fixed_subset=200, load_gt_feat=False),    
     dict(type='RandomFlip', flip_ratio=0.5),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='Pad', size_divisor=32),
@@ -56,6 +56,7 @@ data = dict(
 # model config
 model = dict(
     roi_head=dict(
+        use_only_clip_prop_for_distill=True,
         bbox_head=dict(num_classes=866,
                        fg_vec_cfg=dict(load_path='data/embeddings/raw_lvis_fc866.pt')), 
         mask_head=dict(num_classes=866)))
