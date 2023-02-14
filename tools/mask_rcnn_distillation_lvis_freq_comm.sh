@@ -21,10 +21,10 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 
 
 # 24 epoch 
-ADDITIONAL_CONFIG="model.roi_head.bbox_head.temperature=100 optimizer_config.grad_clip.max_norm=10"
-WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_lvis_freq_tuned_clipproposal_freq405"
-TRAIN_CONFIG="configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_freq_tuned_clipproposal_freq405.py"
-TEST_CONFIG="configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_freq_tuned_clipproposal_fc866.py"
+# ADDITIONAL_CONFIG="model.roi_head.bbox_head.temperature=100 optimizer_config.grad_clip.max_norm=10"
+# WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_lvis_freq_tuned_clipproposal_freq405"
+# TRAIN_CONFIG="configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_freq_tuned_clipproposal_freq405.py"
+# TEST_CONFIG="configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_freq_tuned_clipproposal_fc866.py"
 
 # 24 epoch with hyper parameters change
 # ADDITIONAL_CONFIG="model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=0.5 optimizer_config.grad_clip.max_norm=10 \
@@ -55,6 +55,12 @@ TEST_CONFIG="configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_freq_tuned_cl
 # TRAIN_CONFIG="configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_freq_tuned_clipproposal_freq405_seesawloss.py"
 # TEST_CONFIG="configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_freq_tuned_clipproposal_fc866_seesawloss.py"
 
+
+# for rpn proposal_without finetuning
+ADDITIONAL_CONFIG="model.roi_head.bbox_head.temperature=100 optimizer_config.grad_clip.max_norm=10"
+WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_lvis_raw_rpn_proposal_freq405"
+TRAIN_CONFIG="configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_raw_rpn_proposal_freq405.py"
+TEST_CONFIG="configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_raw_fc866.py"
 
 
 bash tools/new_dist_train.sh ${TRAIN_CONFIG} 2 \

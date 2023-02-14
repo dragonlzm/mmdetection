@@ -94,12 +94,14 @@ def get_target_single(gt_bboxes, gt_labels, points, num_classes=65):
     mask_of_all_cates = torch.cat(mask_of_all_cates, dim=0)
     return mask_of_all_cates    
 
-
-proposal_path = "/home/zhuoming/detectron_proposal2"
-save_path = "/home/zhuoming/label_assignment_per_cate/"
+proposal_path = '/home/zhuoming/train100_exp'
+#proposal_path = "/home/zhuoming/detectron_proposal2"
+#save_path = "/home/zhuoming/label_assignment_per_cate/"
+save_path = "/home/zhuoming/label_assignment_per_cate_train100/"
 
 # load the gt infomation for each image
-gt_content = json.load(open('/data/zhuoming/detection/coco/annotations/instances_val2017.json'))
+#gt_content = json.load(open('/data/zhuoming/detection/coco/annotations/instances_val2017.json'))
+gt_content = json.load(open('/data/zhuoming/detection/coco/annotations/train_100imgs.json'))
 from_image_id_to_image_info = {}
 for info in gt_content['images']:
     image_id = info['id']

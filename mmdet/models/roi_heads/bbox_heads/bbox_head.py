@@ -430,7 +430,7 @@ class BBoxHead(BaseModule):
                 Second tensor is the labels with shape (num_boxes, ).
         """
         # rois.shape torch.Size([1000, 5]) cls_score.shape torch.Size([1000, 66]) bbox_pred.shape torch.Size([1000, 4])
-        if self.use_pregenerate_proposal_and_score is not None:
+        if hasattr(self, 'use_pregenerate_proposal_and_score') and self.use_pregenerate_proposal_and_score is not None:
             all_proposals = []
             all_scores = []
             for i, img_meta in enumerate(img_metas): 
