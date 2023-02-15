@@ -53,6 +53,7 @@ from .attention_rpn_text_head import AttentionRPNTextHead
 from .attention_rpn_text_rpn import AttentionRPNTextRPN
 from .faster_rcnn_with_clip_feat import FasterRCNNWithCLIPFeat
 from .retinadistillnet import RetinaDistillNet
+from .proposal_selector_v2 import ProposalSelectorV2
 
 __all__ = [
     'ATSS', 'BaseDetector', 'SingleStageDetector', 'TwoStageDetector', 'RPN',
@@ -67,5 +68,5 @@ __all__ = [
     'MaskRCNNWithCLIPFeat', 'ProposalSelector', 'FCOSWithDistillation',
     'QuerySupportDetector', 'AttentionRPNDetector', 'AttentionRPNHead',
     'AttentionRPNRPN', 'AttentionRPNTextRPN', 'AttentionRPNTextHead', 
-    'FasterRCNNWithCLIPFeat', 'RetinaDistillNet'
+    'FasterRCNNWithCLIPFeat', 'RetinaDistillNet', 'ProposalSelectorV2'
 ]

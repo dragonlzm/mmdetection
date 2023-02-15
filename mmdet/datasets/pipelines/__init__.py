@@ -8,7 +8,8 @@ from .formating import (Collect, DefaultFormatBundle, ImageToTensor,
 from .instaboost import InstaBoost
 from .loading import (LoadAnnotations, LoadImageFromFile, LoadImageFromWebcam,
                       LoadMultiChannelImageFromFiles, LoadProposals, LoadCLIPFeat,
-                      LoadCLIPBGProposal, LoadCLIPProposal, LoadCLIPProposalWithFeat)
+                      LoadCLIPBGProposal, LoadCLIPProposal, LoadCLIPProposalWithFeat,
+                      LoadVitProposal, LoadClipPred, LoadMask)
 from .test_time_aug import MultiScaleFlipAug
 from .transforms import (Albu, CutOut, Expand, MinIoURandomCrop, MixUp, Mosaic,
                          Normalize, Pad, PhotoMetricDistortion, RandomAffine,
@@ -27,5 +28,6 @@ __all__ = [
     'Rotate', 'ColorTransform', 'EqualizeTransform', 'BrightnessTransform',
     'ContrastTransform', 'Translate', 'RandomShift', 'Mosaic', 'MixUp',
     'RandomAffine', 'GenerateCroppedPatches', 'LoadCLIPFeat', 'LoadCLIPBGProposal',
-    'LoadCLIPProposal', 'LoadCLIPProposalWithFeat', 'CropResizeInstance', 'CopyPaste'
+    'LoadCLIPProposal', 'LoadCLIPProposalWithFeat', 'CropResizeInstance', 'CopyPaste',
+    'LoadVitProposal', 'LoadClipPred', 'LoadMask'
 ]

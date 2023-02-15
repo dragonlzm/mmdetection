@@ -961,7 +961,121 @@ class LoadCLIPProposal:
                     f"color_type='{self.color_type}', "
                     f'file_client_args={self.file_client_args})')
         return repr_str
-    
+
+
+@PIPELINES.register_module()
+class LoadVitProposal:
+    """Load pred-trained feat.
+    """
+
+    def __init__(self,
+                 file_path_prefix=None,
+                 num_of_rand_bbox=1000):
+        self.file_path_prefix = file_path_prefix
+        # the path should like this
+        self.num_of_rand_bbox = num_of_rand_bbox
+
+    def __call__(self, results):
+        '''load the pre-extracted CLIP feat'''
+        file_name = '.'.join(results['img_info']['filename'].split('.')[:-1]) + '_final_pred.json'
+
+        # load the gt feat
+        proposal_file_name = osp.join(self.file_path_prefix, file_name)
+        proposal_file_content = json.load(open(proposal_file_name))
+        
+        #the loaded bboxes are in xyxy format
+        all_bboxes = torch.tensor(proposal_file_content['box']).cuda()
+        #random_choice = np.random.choice(all_scores.shape[0], self.num_of_rand_bbox, replace=True)
+        if len(all_bboxes) < 1000:
+            print('file_name', file_name)
+            padded_len = 1000 - len(all_bboxes)
+            padded_results = torch.zeros([padded_len] + list(all_bboxes.shape[1:]))
+            all_bboxes = torch.cat([all_bboxes, padded_results], dim=0)
+
+        results['proposal_bboxes'] = all_bboxes
+        return results
+
+    def __repr__(self):
+        repr_str = (f'{self.__class__.__name__}('
+                    f'to_float32={self.to_float32}, '
+                    f"color_type='{self.color_type}', "
+                    f'file_client_args={self.file_client_args})')
+        return repr_str
+
+
+@PIPELINES.register_module()
+class LoadClipPred:
+    """Load pred-trained feat.
+    """
+
+    def __init__(self,
+                 file_path_prefix=None,
+                 num_of_rand_bbox=1000):
+        self.file_path_prefix = file_path_prefix
+        # the path should like this
+        self.num_of_rand_bbox = num_of_rand_bbox
+
+    def __call__(self, results):
+        '''load the pre-extracted CLIP feat'''
+        file_name = '.'.join(results['img_info']['filename'].split('.')[:-1]) + '_clip_pred.json'
+
+        # load the gt feat
+        proposal_file_name = osp.join(self.file_path_prefix, file_name)
+        proposal_file_content = json.load(open(proposal_file_name))
+        
+        #the loaded bboxes are in xyxy format
+        all_bboxes = torch.tensor(proposal_file_content['score']).cuda()
+        #random_choice = np.random.choice(all_scores.shape[0], self.num_of_rand_bbox, replace=True)
+        if len(all_bboxes) < 1000:
+            print('file_name', file_name)
+            padded_len = 1000 - len(all_bboxes)
+            padded_results = torch.zeros([padded_len] + list(all_bboxes.shape[1:]))
+            all_bboxes = torch.cat([all_bboxes, padded_results], dim=0)
+
+        results['proposal_clip_score'] = all_bboxes
+        return results
+
+    def __repr__(self):
+        repr_str = (f'{self.__class__.__name__}('
+                    f'to_float32={self.to_float32}, '
+                    f"color_type='{self.color_type}', "
+                    f'file_client_args={self.file_client_args})')
+        return repr_str
+
+
+@PIPELINES.register_module()
+class LoadMask:
+    """Load pred-trained feat.
+    """
+
+    def __init__(self,
+                 file_path_prefix=None,
+                 num_of_rand_bbox=1000):
+        self.file_path_prefix = file_path_prefix
+        # the path should like this
+        self.num_of_rand_bbox = num_of_rand_bbox
+
+    def __call__(self, results):
+        '''load the pre-extracted CLIP feat'''
+        file_name = '.'.join(results['img_info']['filename'].split('.')[:-1]) + '_mask.pt'
+
+        # load the gt feat
+        proposal_file_name = osp.join(self.file_path_prefix, file_name)
+        proposal_file_content = torch.load(proposal_file_name)
+        
+        #the loaded mask should be [65, HW]
+        proposal_file_content = proposal_file_content.cuda()
+        results['clip_mask'] = proposal_file_content
+        return results
+
+    def __repr__(self):
+        repr_str = (f'{self.__class__.__name__}('
+                    f'to_float32={self.to_float32}, '
+                    f"color_type='{self.color_type}', "
+                    f'file_client_args={self.file_client_args})')
+        return repr_str
+
+ 
 @PIPELINES.register_module()
 class LoadCLIPProposalWithFeat:
     """Load pred-trained feat.
