@@ -57,7 +57,7 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 
 
 # for rpn proposal_without finetuning
-ADDITIONAL_CONFIG="model.roi_head.bbox_head.temperature=100 optimizer_config.grad_clip.max_norm=10"
+ADDITIONAL_CONFIG="model.roi_head.bbox_head.temperature=100 optimizer_config.grad_clip.max_norm=10 model.train_cfg.rcnn.use_only_clip_prop_for_distill=True"
 WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_lvis_raw_rpn_proposal_freq405"
 TRAIN_CONFIG="configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_raw_rpn_proposal_freq405.py"
 TEST_CONFIG="configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_raw_fc866.py"

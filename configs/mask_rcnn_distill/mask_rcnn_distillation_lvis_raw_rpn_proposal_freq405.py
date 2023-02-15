@@ -56,7 +56,6 @@ data = dict(
 # model config
 model = dict(
     roi_head=dict(
-        use_only_clip_prop_for_distill=True,
         bbox_head=dict(num_classes=405,
                        fg_vec_cfg=dict(load_path='data/embeddings/raw_lvis_freq405.pt')), 
         mask_head=dict(num_classes=405)))
