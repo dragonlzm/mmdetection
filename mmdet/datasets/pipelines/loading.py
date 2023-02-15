@@ -701,7 +701,7 @@ class LoadCLIPFeat:
                 # if on this image there is no annotation
                 results['gt_feats'] = torch.zeros([0] + list(gt_feat.shape[1:]))
         else:
-            results['gt_feats'] = torch.zeros([0] + list(gt_feat.shape[1:]))
+            results['gt_feats'] = torch.zeros((0, 512))
         
         #### load the random feat
         rand_file_name = osp.join(self.random_feat_prefix, file_name)
