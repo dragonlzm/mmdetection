@@ -742,6 +742,10 @@ class LoadCLIPFeat:
             rand_bbox = rand_bbox[:, :4]
         
         # compare the scale factor and reshape the random bbox
+        img_metas = rand_file_content['img_metas']
+        pre_extract_scale_factor = np.array(img_metas['scale_factor']).astype(np.float32)
+        now_scale_factor = results['scale_factor']
+        
         if (np.round(pre_extract_scale_factor, 6) == np.round(now_scale_factor, 6)).all():
             final_rand_bbox = rand_bbox
         else:
