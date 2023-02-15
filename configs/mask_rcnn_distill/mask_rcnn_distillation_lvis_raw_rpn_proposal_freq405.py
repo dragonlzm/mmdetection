@@ -24,7 +24,7 @@ train_pipeline = [
     dict(type='Pad', size_divisor=32),
     dict(type='DefaultFormatBundle'),
     dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels', 'gt_masks', 'gt_feats',
-                               'rand_bboxes', 'rand_feats', 'rand_bbox_weights']),
+                               'rand_bboxes', 'rand_feats']),
 ]
 
 # oversample dataset
