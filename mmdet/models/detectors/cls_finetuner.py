@@ -189,6 +189,7 @@ class ClsFinetuner(BaseDetector):
 
         # for using clip to filter the pregenerated prediction(the predition may come from the vitdet final prediction)
         self.use_pregenerated_prediction = self.test_cfg.get('use_pregenerated_prediction', None) if self.test_cfg is not None else None
+        self.num_classes = self.rpn_head.num_classes
 
     def read_use_base_novel_clip(self, img_metas):
         file_name = img_metas[0]['ori_filename']
@@ -946,7 +947,7 @@ class ClsFinetuner(BaseDetector):
                         file_name = os.path.join('VOC2007', file_name)
                     elif 'VOC2012' in img_metas[0]['filename']:
                         file_name = os.path.join('VOC2012', file_name)
-                file_name = os.path.join(self.use_pregenerated_prediction, (file_name + '_clip_pred' + '.json'))
+                file_name = os.path.join(self.use_pregenerated_prediction, (file_name + '_clip_pred_' + str(self.num_classes) + '.json'))
                 if os.path.exists(file_name):
                     return [np.zeros((1,5))]
                 
