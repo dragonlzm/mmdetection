@@ -189,7 +189,7 @@ class ClsFinetuner(BaseDetector):
 
         # for using clip to filter the pregenerated prediction(the predition may come from the vitdet final prediction)
         self.use_pregenerated_prediction = self.test_cfg.get('use_pregenerated_prediction', None) if self.test_cfg is not None else None
-        self.num_classes = self.rpn_head.num_classes
+        self.num_classes = len(self.rpn_head.cate_names)
 
     def read_use_base_novel_clip(self, img_metas):
         file_name = img_metas[0]['ori_filename']
