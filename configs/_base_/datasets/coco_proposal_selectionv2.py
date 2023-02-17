@@ -8,9 +8,8 @@ train_pipeline = [
     dict(type='LoadAnnotations', with_bbox=True, with_label=True),
     dict(type='LoadVitProposal', file_path_prefix='/data/zhuoming/detection/coco/vitdet_proposal'),
     dict(type='LoadClipPred', file_path_prefix='/data/zhuoming/detection/coco/vitdet_proposal'),
-    #dict(type='LoadMask', file_path_prefix='/data/zhuoming/detection/coco/vitdet_proposal'),
     dict(type='DefaultFormatBundle'),
-    dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels', 'proposal_bboxes', 'proposal_clip_score', 'clip_mask'],
+    dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels', 'proposal_bboxes', 'proposal_clip_score'],
             meta_keys=('filename', 'ori_filename', 'ori_shape', 'img_shape')),
 ]
 
@@ -19,9 +18,8 @@ test_pipeline = [
     dict(type='LoadAnnotations', with_bbox=True, with_label=True),
     dict(type='LoadVitProposal', file_path_prefix='/data/zhuoming/detection/coco/vitdet_proposal?'),
     dict(type='LoadClipPred', file_path_prefix='/data/zhuoming/detection/coco/vitdet_proposal?'),
-    #dict(type='LoadMask', file_path_prefix='/data/zhuoming/detection/coco/vitdet_proposal?'),
     dict(type='DefaultFormatBundle'),
-    dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels', 'proposal_bboxes', 'proposal_clip_score', 'clip_mask'],
+    dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels', 'proposal_bboxes', 'proposal_clip_score'],
             meta_keys=('filename', 'ori_filename', 'ori_shape', 'img_shape')),
 ]
 
@@ -41,7 +39,7 @@ data = dict(
     train=dict(
         classes=classes,
         type=dataset_type,
-        ann_file=data_root + 'annotations/instances_train2017_48base_only.json',
+        ann_file=data_root + 'annotations/instances_train2017.json',
         img_prefix=data_root + 'train2017/',
         pipeline=train_pipeline),
     val=dict(

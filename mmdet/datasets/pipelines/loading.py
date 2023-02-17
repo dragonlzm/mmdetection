@@ -977,14 +977,14 @@ class LoadVitProposal:
 
     def __call__(self, results):
         '''load the pre-extracted CLIP feat'''
-        file_name = '.'.join(results['img_info']['filename'].split('.')[:-1]) + '_final_pred.json'
+        file_name = results['img_info']['filename'] + '_final_pred.json'
 
         # load the gt feat
         proposal_file_name = osp.join(self.file_path_prefix, file_name)
         proposal_file_content = json.load(open(proposal_file_name))
         
         #the loaded bboxes are in xyxy format
-        all_bboxes = torch.tensor(proposal_file_content['box']).cuda()
+        all_bboxes = torch.tensor(proposal_file_content['box'])
         #random_choice = np.random.choice(all_scores.shape[0], self.num_of_rand_bbox, replace=True)
         if len(all_bboxes) < 1000:
             print('file_name', file_name)
@@ -1017,14 +1017,14 @@ class LoadClipPred:
 
     def __call__(self, results):
         '''load the pre-extracted CLIP feat'''
-        file_name = '.'.join(results['img_info']['filename'].split('.')[:-1]) + '_clip_pred.json'
+        file_name = results['img_info']['filename'] + '_clip_pred.json'
 
         # load the gt feat
         proposal_file_name = osp.join(self.file_path_prefix, file_name)
         proposal_file_content = json.load(open(proposal_file_name))
         
         #the loaded bboxes are in xyxy format
-        all_bboxes = torch.tensor(proposal_file_content['score']).cuda()
+        all_bboxes = torch.tensor(proposal_file_content['score'])
         #random_choice = np.random.choice(all_scores.shape[0], self.num_of_rand_bbox, replace=True)
         if len(all_bboxes) < 1000:
             print('file_name', file_name)
@@ -1064,7 +1064,7 @@ class LoadMask:
         proposal_file_content = torch.load(proposal_file_name)
         
         #the loaded mask should be [65, HW]
-        proposal_file_content = proposal_file_content.cuda()
+        proposal_file_content = proposal_file_content
         results['clip_mask'] = proposal_file_content
         return results
 
