@@ -1010,10 +1010,12 @@ class LoadClipPred:
 
     def __init__(self,
                  file_path_prefix=None,
-                 num_of_rand_bbox=1000):
+                 num_of_rand_bbox=1000,
+                 suffix=None):
         self.file_path_prefix = file_path_prefix
         # the path should like this
         self.num_of_rand_bbox = num_of_rand_bbox
+        self.suffix = suffix
 
     def __call__(self, results):
         '''load the pre-extracted CLIP feat'''
