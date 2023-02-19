@@ -519,16 +519,26 @@ class CocoDataset(CustomDataset):
             if not os.path.exists(self.visualization_path):
                 os.makedirs(self.visualization_path)            
             plt.savefig(os.path.join(self.visualization_path, file_name))
-
-
         return over_all_acc, s_acc, m_acc, l_acc, person_acc, all_entropy, all_cos_score
 
     def calc_proposal_selection_eval(self, results):
         loss = torch.nn.L1Loss()
         pred_val = torch.cat([torch.from_numpy(ele[0]) for ele in results],dim=0)
         pred_val_target = torch.cat([torch.from_numpy(ele[1]) for ele in results],dim=0)
-        loss_val = loss(pred_val, pred_val_target)
-        return loss_val.item()
+        
+        if self.seperate_base_and_novel:
+            # select the base
+            pred_val_base = torch.cat([torch.from_numpy(ele[0][..., self.base_idx]) for ele in results],dim=0)
+            pred_val_target_base = torch.cat([torch.from_numpy(ele[1][..., self.base_idx]) for ele in results],dim=0)
+            loss_val_base = loss(pred_val_base, pred_val_target_base)
+            # select novel
+            pred_val_novel = torch.cat([torch.from_numpy(ele[0][..., self.novel_idx]) for ele in results], dim=0)
+            pred_val_target_novel = torch.cat([torch.from_numpy(ele[1][..., self.novel_idx]) for ele in results], dim=0)
+            loss_val_novel = loss(pred_val_novel, pred_val_target_novel)
+            return loss_val_base.item(), loss_val_novel.item()
+        else:
+            loss_val = loss(pred_val, pred_val_target)
+            return loss_val.item()
 
     def fast_eval_recall(self, results, proposal_nums, iou_thrs, logger=None):
         gt_bboxes = []
@@ -681,10 +691,18 @@ class CocoDataset(CustomDataset):
                 print_log(log_msg, logger=logger)
                 continue
             if metric == 'proposal_selection':
-                loss = self.calc_proposal_selection_eval(results)
-                eval_results['loss'] = loss
-                log_msg = f'\n loss\t{loss:.4f}'
-                print_log(log_msg, logger=logger)
+                if self.seperate_base_and_novel:
+                    loss_base, loss_novel = self.calc_proposal_selection_eval(results)
+                    eval_results['loss_base'] = loss_base
+                    eval_results['loss_novel'] = loss_novel
+                    log_msg = f'\n loss_base\t{loss_base:.4f}' + \
+                        f'\n loss_novel\t{loss_novel:.4f}' + \
+                    print_log(log_msg, logger=logger)
+                else:
+                    loss = self.calc_proposal_selection_eval(results)
+                    eval_results['loss'] = loss
+                    log_msg = f'\n loss\t{loss:.4f}'
+                    print_log(log_msg, logger=logger)
                 continue
             if metric == 'proposal_fast':
                 ar = self.fast_eval_recall(

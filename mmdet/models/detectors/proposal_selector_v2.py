@@ -6,6 +6,8 @@ import warnings
 import mmcv
 import torch
 from mmcv.image import tensor2imgs
+from mmcv.cnn import (build_activation_layer, build_conv_layer,
+                      build_norm_layer, xavier_init, bias_init_with_prob)
 
 from mmdet.core import bbox_mapping
 from mmdet.core.bbox.iou_calculators.iou2d_calculator import BboxOverlaps2D
@@ -94,7 +96,7 @@ class ProposalSelectorV2(BaseDetector):
                  train_cfg=None,
                  test_cfg=None,
                  init_cfg=None,
-                 subset_num=20,
+                 subset_num=15,
                  num_class=48):
         super(ProposalSelectorV2, self).__init__(init_cfg)
         self.train_cfg = train_cfg
@@ -104,14 +106,31 @@ class ProposalSelectorV2(BaseDetector):
         self.iou_calculator = BboxOverlaps2D()
         
         # define the modules
-        #self.global_info_extractor = nn.Conv2d(1, 10, 3, padding=1)
+        self.global_info_extractor = nn.Conv2d(1, 10, 3, padding=1)
         #self.global_info_dim_reducer = nn.Conv2d(11, 1, 3, padding=1)
-        self.global_info_extractor = nn.Conv2d(1, 10, 1)
+        #self.global_info_extractor = nn.Conv2d(1, 10, 1)
         self.global_info_dim_reducer = nn.Conv2d(11, 1, 1)
         self.select_idx = torch.tensor([0, 1, 2, 3, 6, 7, 8, 9, 10, 13, 14, 17, 18, 19, 20, 22, 24, 25, 26, 28, 30, 31, 33, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 46, 48, 49, 50, 51, 52, 53, 55, 56, 57, 59, 60, 61, 62, 64]).cuda()
         # select a subset to train in each iteration
         self.subset_num = subset_num
         self.num_class = num_class
+        #for m in self.global_info_extractor.modules():
+        #if hasattr(m, 'weight') and m.weight.dim() > 1:
+        xavier_init(self.global_info_extractor.weight, distribution='uniform')
+        xavier_init(self.global_info_dim_reducer.weight, distribution='uniform')    
+        #bias_init = bias_init_with_prob(0.01)
+        #nn.init.constant_(self.global_info_extractor.bias, bias_init)
+        #nn.init.constant_(self.global_info_dim_reducer.bias, bias_init)
+        nn.init.constant_(self.global_info_extractor.bias, 0.0)
+        nn.init.constant_(self.global_info_dim_reducer.bias, 0.0)
+
+
+    # def init_weights(self):
+    #     xavier_init(self.global_info_extractor.weight, distribution='uniform')
+    #     xavier_init(self.global_info_dim_reducer.weight, distribution='uniform')    
+    #     #bias_init = bias_init_with_prob(0.01)
+    #     #nn.init.constant_(self.global_info_extractor.bias, bias_init)
+    #     #nn.init.constant_(self.global_info_extractor.bias, bias_init)
     
     def extract_feat(self):
         pass
@@ -227,14 +246,16 @@ class ProposalSelectorV2(BaseDetector):
                     proposal_bboxes=None,
                     proposal_clip_score=None):
         # temp handle for the using 65 prediction
-        selected_proposal_clip_score = [ele[..., self.select_idx] for ele in proposal_clip_score]
+        #selected_proposal_clip_score = [ele[..., self.select_idx] for ele in proposal_clip_score]
         # prepare the clip predicted label
-        clip_pred_labels = [torch.max(ele, dim=-1)[1] for ele in selected_proposal_clip_score]
+        #clip_pred_labels = [torch.max(ele, dim=-1)[1] for ele in selected_proposal_clip_score]
+        clip_pred_labels = [torch.max(ele, dim=-1)[1] for ele in proposal_clip_score]
+        
 
         # obtain the per proposal area mask
         # first we get the area mask for each proposal
         per_proposal_area_masks = []
-        for meta_per_img, proposal_per_img, clip_score_per_img, clip_pred_labels_per_img in zip(img_metas, proposal_bboxes, selected_proposal_clip_score, clip_pred_labels):
+        for meta_per_img, proposal_per_img, clip_score_per_img, clip_pred_labels_per_img in zip(img_metas, proposal_bboxes, proposal_clip_score, clip_pred_labels):
             h,w,c = meta_per_img['img_shape']
             all_points = get_points_single((h,w), torch.float16, torch.device('cuda'))
             per_img_per_proposal_area_mask = get_target_single(proposal_per_img, clip_pred_labels_per_img, all_points, num_classes=clip_score_per_img.shape[-1])
@@ -243,7 +264,7 @@ class ProposalSelectorV2(BaseDetector):
         
         # aggregate the area mask with the predicted categories to generate the per category mask
         per_cate_masks = []
-        for per_proposal_area_masks_per_img, clip_pred_labels_per_img, clip_score_per_img in zip(per_proposal_area_masks, clip_pred_labels, selected_proposal_clip_score):
+        for per_proposal_area_masks_per_img, clip_pred_labels_per_img, clip_score_per_img in zip(per_proposal_area_masks, clip_pred_labels, proposal_clip_score):
             per_cate_masks_per_img = self.generate_per_cate_mask(per_proposal_area_masks_per_img, clip_pred_labels_per_img, clip_score_per_img.shape[-1])
             per_cate_masks.append(per_cate_masks_per_img)
         #print('per_cate_masks', [ele.shape for ele in per_cate_masks])
@@ -254,12 +275,12 @@ class ProposalSelectorV2(BaseDetector):
         # obtain a subset
         random_idx = torch.randperm(proposal_bboxes[0].shape[0])[:self.subset_num].cuda()
         per_proposal_area_masks = [ele[random_idx] for ele in per_proposal_area_masks]
-        selected_proposal_clip_score = [ele[random_idx] for ele in selected_proposal_clip_score]
+        proposal_clip_score = [ele[random_idx] for ele in proposal_clip_score]
         proposal_bboxes = [ele[random_idx] for ele in proposal_bboxes]
         
         # obtain the per proposal per category mask, obtain the prediction
         all_preds = []
-        for per_proposal_area_masks_per_img, proposal_clip_score_per_img, per_cate_masks_per_img in zip(per_proposal_area_masks, selected_proposal_clip_score, per_cate_masks):
+        for per_proposal_area_masks_per_img, proposal_clip_score_per_img, per_cate_masks_per_img in zip(per_proposal_area_masks, proposal_clip_score, per_cate_masks):
             #print('per_proposal_area_masks_per_img', per_proposal_area_masks_per_img.shape, 'proposal_clip_score_per_img', proposal_clip_score_per_img.shape)
             #print('proposal_bboxes', [ele.shape for ele in proposal_bboxes], 'proposal_clip_score', [ele.shape for ele in proposal_clip_score])
             prediction_per_img = self.cal_final_pred(per_proposal_area_masks_per_img, proposal_clip_score_per_img, per_cate_masks_per_img)
@@ -271,6 +292,7 @@ class ProposalSelectorV2(BaseDetector):
         # concat the result 
         all_preds = torch.cat(all_preds, dim=0)
         pred_score_target = torch.cat(pred_score_target, dim=0)
+        #pred_score_target = torch.zeros(all_preds.shape).cuda()
         
         # calculate the loss
         loss_value = self.loss(all_preds, pred_score_target)
@@ -284,16 +306,56 @@ class ProposalSelectorV2(BaseDetector):
                     gt_bboxes=None,
                     gt_labels=None, 
                     proposal_bboxes=None,
-                    proposal_scores=None,
-                    proposal_feats=None,
-                    rescale=False):
+                    proposal_clip_score=None,
+                    **kwargs):
 
-        pred_score, pred_score_target = self.forward_mask(gt_bboxes, gt_labels, proposal_bboxes, proposal_scores, proposal_feats)
+        clip_pred_labels = [torch.max(ele, dim=-1)[1] for ele in proposal_clip_score]
+        #print('type(img_metas)', type(img_metas), 'gt_labels', type(gt_labels), )
+        img_metas = [img_metas]
+        # obtain the per proposal area mask
+        # first we get the area mask for each proposal
+        per_proposal_area_masks = []
+        for meta_per_img, proposal_per_img, clip_score_per_img, clip_pred_labels_per_img in zip(img_metas, proposal_bboxes, proposal_clip_score, clip_pred_labels):
+            h,w,c = meta_per_img['img_shape']
+            all_points = get_points_single((h,w), torch.float16, torch.device('cuda'))
+            per_img_per_proposal_area_mask = get_target_single(proposal_per_img, clip_pred_labels_per_img, all_points, num_classes=clip_score_per_img.shape[-1])
+            per_proposal_area_masks.append(per_img_per_proposal_area_mask)
+        #print('per_proposal_area_masks', [ele.shape for ele in per_proposal_area_masks])        
         
-        # concat all the result, send them back to dataset and do the evaluation
-        result = torch.cat([pred_score.unsqueeze(dim=0), pred_score_target.unsqueeze(dim=0)], dim=0)
-
-        return [result.cpu().numpy()]
+        # aggregate the area mask with the predicted categories to generate the per category mask
+        per_cate_masks = []
+        for per_proposal_area_masks_per_img, clip_pred_labels_per_img, clip_score_per_img in zip(per_proposal_area_masks, clip_pred_labels, proposal_clip_score):
+            per_cate_masks_per_img = self.generate_per_cate_mask(per_proposal_area_masks_per_img, clip_pred_labels_per_img, clip_score_per_img.shape[-1])
+            per_cate_masks.append(per_cate_masks_per_img)
+        #print('per_cate_masks', [ele.shape for ele in per_cate_masks])
+        
+        # forward the per categories mask to obtain the final masks(generate mask)
+        per_cate_masks = self.forward_mask(per_cate_masks, img_metas)
+        
+        # obtain a subset
+        random_idx = torch.randperm(proposal_bboxes[0].shape[0])[:self.subset_num].cuda()
+        per_proposal_area_masks = [ele[random_idx] for ele in per_proposal_area_masks]
+        proposal_clip_score = [ele[random_idx] for ele in proposal_clip_score]
+        proposal_bboxes = [ele[random_idx] for ele in proposal_bboxes]
+        
+        # obtain the per proposal per category mask, obtain the prediction
+        all_preds = []
+        for per_proposal_area_masks_per_img, proposal_clip_score_per_img, per_cate_masks_per_img in zip(per_proposal_area_masks, proposal_clip_score, per_cate_masks):
+            #print('per_proposal_area_masks_per_img', per_proposal_area_masks_per_img.shape, 'proposal_clip_score_per_img', proposal_clip_score_per_img.shape)
+            #print('proposal_bboxes', [ele.shape for ele in proposal_bboxes], 'proposal_clip_score', [ele.shape for ele in proposal_clip_score])
+            prediction_per_img = self.cal_final_pred(per_proposal_area_masks_per_img, proposal_clip_score_per_img, per_cate_masks_per_img)
+            all_preds.append(prediction_per_img)
+        
+        # find the target(for the random selected proposal), for each categories, calculate the target iou per categories
+        pred_score_target = self.find_the_gt_for_proposal(proposal_bboxes, gt_bboxes, gt_labels)
+        
+        # concat the result 
+        all_preds = torch.cat(all_preds, dim=0).unsqueeze(dim=0)
+        pred_score_target = torch.cat(pred_score_target, dim=0).unsqueeze(dim=0)
+        #pred_score_target = torch.zeros(all_preds.shape).cuda()
+        result = torch.cat([all_preds, pred_score_target], dim=0)
+        
+        return  [result.cpu().numpy()]
 
     def aug_test(self, imgs, img_metas, rescale=False):
         pass

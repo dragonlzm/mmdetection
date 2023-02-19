@@ -71,7 +71,8 @@ class CustomDataset(Dataset):
                  eval_filter_empty_gt=False,
                  visualization_path=None,
                  copy_and_paste=False,
-                 eval_on_splits=None):
+                 eval_on_splits=None,
+                 seperate_base_and_novel=False):
         self.ann_file = ann_file
         self.data_root = data_root
         self.img_prefix = img_prefix
@@ -84,6 +85,10 @@ class CustomDataset(Dataset):
         self.visualization_path = visualization_path
         self.copy_and_paste = copy_and_paste
         self.eval_on_splits = eval_on_splits
+        # for proposal selector to seperate the novel from the base
+        self.seperate_base_and_novel = seperate_base_and_novel
+        self.base_idx = torch.tensor([0, 1, 2, 3, 6, 7, 8, 9, 10, 13, 14, 17, 18, 19, 20, 22, 24, 25, 26, 28, 30, 31, 33, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 46, 48, 49, 50, 51, 52, 53, 55, 56, 57, 59, 60, 61, 62, 64])
+        self.novel_idx = torch.tensor([4, 5, 11, 12, 15, 16, 21, 23, 27, 29, 32, 34, 45, 47, 54, 58, 63])
         
 
         # join paths if data_root is specified

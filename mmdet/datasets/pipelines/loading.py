@@ -1019,7 +1019,10 @@ class LoadClipPred:
 
     def __call__(self, results):
         '''load the pre-extracted CLIP feat'''
-        file_name = results['img_info']['filename'] + '_clip_pred.json'
+        if self.suffix == None:
+            file_name = results['img_info']['filename'] + '_clip_pred.json'
+        else:
+            file_name = results['img_info']['filename'] + '_clip_pred_' + self.suffix + '.json'
 
         # load the gt feat
         proposal_file_name = osp.join(self.file_path_prefix, file_name)
