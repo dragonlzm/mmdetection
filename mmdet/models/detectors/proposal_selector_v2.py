@@ -96,8 +96,9 @@ class ProposalSelectorV2(BaseDetector):
                  train_cfg=None,
                  test_cfg=None,
                  init_cfg=None,
-                 subset_num=15,
-                 num_class=48):
+                 subset_num=10,
+                 num_class=48,
+                 infer_subset_num=20):
         super(ProposalSelectorV2, self).__init__(init_cfg)
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
@@ -113,6 +114,7 @@ class ProposalSelectorV2(BaseDetector):
         self.select_idx = torch.tensor([0, 1, 2, 3, 6, 7, 8, 9, 10, 13, 14, 17, 18, 19, 20, 22, 24, 25, 26, 28, 30, 31, 33, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 46, 48, 49, 50, 51, 52, 53, 55, 56, 57, 59, 60, 61, 62, 64]).cuda()
         # select a subset to train in each iteration
         self.subset_num = subset_num
+        self.infer_subset_num = infer_subset_num
         self.num_class = num_class
         #for m in self.global_info_extractor.modules():
         #if hasattr(m, 'weight') and m.weight.dim() > 1:
@@ -333,17 +335,23 @@ class ProposalSelectorV2(BaseDetector):
         per_cate_masks = self.forward_mask(per_cate_masks, img_metas)
         
         # obtain a subset
-        random_idx = torch.randperm(proposal_bboxes[0].shape[0])[:self.subset_num].cuda()
-        per_proposal_area_masks = [ele[random_idx] for ele in per_proposal_area_masks]
-        proposal_clip_score = [ele[random_idx] for ele in proposal_clip_score]
-        proposal_bboxes = [ele[random_idx] for ele in proposal_bboxes]
+        # random_idx = torch.randperm(proposal_bboxes[0].shape[0])[:self.subset_num].cuda()
+        # per_proposal_area_masks = [ele[random_idx] for ele in per_proposal_area_masks]
+        # proposal_clip_score = [ele[random_idx] for ele in proposal_clip_score]
+        # proposal_bboxes = [ele[random_idx] for ele in proposal_bboxes]
         
         # obtain the per proposal per category mask, obtain the prediction
+        iter_num =  proposal_clip_score[0].shape[0] // self.infer_subset_num
+        
         all_preds = []
         for per_proposal_area_masks_per_img, proposal_clip_score_per_img, per_cate_masks_per_img in zip(per_proposal_area_masks, proposal_clip_score, per_cate_masks):
-            #print('per_proposal_area_masks_per_img', per_proposal_area_masks_per_img.shape, 'proposal_clip_score_per_img', proposal_clip_score_per_img.shape)
-            #print('proposal_bboxes', [ele.shape for ele in proposal_bboxes], 'proposal_clip_score', [ele.shape for ele in proposal_clip_score])
-            prediction_per_img = self.cal_final_pred(per_proposal_area_masks_per_img, proposal_clip_score_per_img, per_cate_masks_per_img)
+            prediction_per_img = []
+            for i in range(iter_num):
+                start_from = int(i * self.infer_subset_num)
+                end_at = int((i+1) * self.infer_subset_num)
+                temp_res = self.cal_final_pred(per_proposal_area_masks_per_img[start_from: end_at], proposal_clip_score_per_img[start_from: end_at], per_cate_masks_per_img)
+                prediction_per_img.append(temp_res)
+            prediction_per_img = torch.cat(prediction_per_img, dim=0)
             all_preds.append(prediction_per_img)
         
         # find the target(for the random selected proposal), for each categories, calculate the target iou per categories

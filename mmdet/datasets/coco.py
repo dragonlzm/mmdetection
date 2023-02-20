@@ -695,8 +695,7 @@ class CocoDataset(CustomDataset):
                     loss_base, loss_novel = self.calc_proposal_selection_eval(results)
                     eval_results['loss_base'] = loss_base
                     eval_results['loss_novel'] = loss_novel
-                    log_msg = f'\n loss_base\t{loss_base:.4f}' + \
-                        f'\n loss_novel\t{loss_novel:.4f}' + \
+                    log_msg = f'\n loss_base\t{loss_base:.4f}' +  f'\n loss_novel\t{loss_novel:.4f}'
                     print_log(log_msg, logger=logger)
                 else:
                     loss = self.calc_proposal_selection_eval(results)
