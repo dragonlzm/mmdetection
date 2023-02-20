@@ -147,6 +147,10 @@ class ProposalSelectorV2(BaseDetector):
         the proposal_bboxes (list[Tensor])
         the gt_bboxes (list[Tensor])
         '''
+        if self.training:
+            num_class = 48
+        else:
+            num_class = 65
         
         all_pred_target = []
         for proposal, gt_bbox, gt_label_per_img in zip(proposal_bboxes, gt_bboxes, gt_labels):
@@ -154,7 +158,7 @@ class ProposalSelectorV2(BaseDetector):
             real_iou = self.iou_calculator(proposal, gt_bbox)
             num_proposal = proposal.shape[0]
             assigned_res = []
-            for i in range(self.num_class):
+            for i in range(num_class):
                 if i not in gt_label_per_img:
                     temp = torch.zeros(num_proposal, 1).cuda()
                     assigned_res.append(temp)
