@@ -963,7 +963,7 @@ class ClsFinetuner(BaseDetector):
         if self.use_pregenerated_prediction != None:
             #proposal_file_name = os.path.join("/home/zhuoming/detectron_proposal1", (image_name + '_final_pred' + '.json'))
             result = {'score': proposal_list[0].cpu().tolist()}
-            print(file_name)
+            #print(file_name)
             file = open(file_name, 'w')
             file.write(json.dumps(result))
             file.close()                
