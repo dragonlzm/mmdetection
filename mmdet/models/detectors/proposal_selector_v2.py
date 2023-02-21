@@ -118,13 +118,26 @@ class ProposalSelectorV2(BaseDetector):
         self.num_class = num_class
         #for m in self.global_info_extractor.modules():
         #if hasattr(m, 'weight') and m.weight.dim() > 1:
-        xavier_init(self.global_info_extractor.weight, distribution='uniform')
-        xavier_init(self.global_info_dim_reducer.weight, distribution='uniform')    
-        #bias_init = bias_init_with_prob(0.01)
-        #nn.init.constant_(self.global_info_extractor.bias, bias_init)
-        #nn.init.constant_(self.global_info_dim_reducer.bias, bias_init)
-        nn.init.constant_(self.global_info_extractor.bias, 0.0)
-        nn.init.constant_(self.global_info_dim_reducer.bias, 0.0)
+        if loss.type == 'L1Loss':
+            xavier_init(self.global_info_extractor.weight, distribution='uniform')
+            xavier_init(self.global_info_dim_reducer.weight, distribution='uniform')    
+            #bias_init = bias_init_with_prob(0.01)
+            #nn.init.constant_(self.global_info_extractor.bias, bias_init)
+            #nn.init.constant_(self.global_info_dim_reducer.bias, bias_init)
+            nn.init.constant_(self.global_info_extractor.bias, 0.0)
+            nn.init.constant_(self.global_info_dim_reducer.bias, 0.0)
+        elif loss.type == 'MSELoss':
+            print('MSE')
+            #xavier_init(self.global_info_extractor.weight, distribution='uniform')
+            #xavier_init(self.global_info_dim_reducer.weight, distribution='uniform')
+            nn.init.constant_(self.global_info_extractor.weight, 0.0)
+            nn.init.constant_(self.global_info_dim_reducer.weight, 0.0)
+            
+            #bias_init = bias_init_with_prob(0.01)
+            #nn.init.constant_(self.global_info_extractor.bias, bias_init)
+            #nn.init.constant_(self.global_info_dim_reducer.bias, bias_init)
+            nn.init.constant_(self.global_info_extractor.bias, 0.0)
+            nn.init.constant_(self.global_info_dim_reducer.bias, 0.0)
 
 
     # def init_weights(self):
