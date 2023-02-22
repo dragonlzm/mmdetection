@@ -91,6 +91,7 @@ class ProposalSelectorV2(BaseDetector):
 
     def __init__(self,
                  loss,
+                 ranking_loss=None,
                  input_dim=5,
                  pretrained=None,
                  train_cfg=None,
@@ -104,13 +105,17 @@ class ProposalSelectorV2(BaseDetector):
         self.test_cfg = test_cfg
         self.input_dim = input_dim
         self.loss = build_loss(loss)
+        if ranking_loss is not None:
+            self.ranking_loss = build_loss(ranking_loss)
+        else:
+            self.ranking_loss = None
         self.iou_calculator = BboxOverlaps2D()
         
         # define the modules
         self.global_info_extractor = nn.Conv2d(1, 10, 3, padding=1)
-        #self.global_info_dim_reducer = nn.Conv2d(11, 1, 3, padding=1)
+        self.global_info_dim_reducer = nn.Conv2d(11, 1, 3, padding=1)
         #self.global_info_extractor = nn.Conv2d(1, 10, 1)
-        self.global_info_dim_reducer = nn.Conv2d(11, 1, 1)
+        #self.global_info_dim_reducer = nn.Conv2d(11, 1, 1)
         self.select_idx = torch.tensor([0, 1, 2, 3, 6, 7, 8, 9, 10, 13, 14, 17, 18, 19, 20, 22, 24, 25, 26, 28, 30, 31, 33, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 46, 48, 49, 50, 51, 52, 53, 55, 56, 57, 59, 60, 61, 62, 64]).cuda()
         # select a subset to train in each iteration
         self.subset_num = subset_num
@@ -269,7 +274,6 @@ class ProposalSelectorV2(BaseDetector):
         # prepare the clip predicted label
         #clip_pred_labels = [torch.max(ele, dim=-1)[1] for ele in selected_proposal_clip_score]
         clip_pred_labels = [torch.max(ele, dim=-1)[1] for ele in proposal_clip_score]
-        
 
         # obtain the per proposal area mask
         # first we get the area mask for each proposal
@@ -313,10 +317,29 @@ class ProposalSelectorV2(BaseDetector):
         pred_score_target = torch.cat(pred_score_target, dim=0)
         #pred_score_target = torch.zeros(all_preds.shape).cuda()
         
+        # add additional loss for ranking
+        # if torch.max(pred_score_target) > 0.5:
+        #     max_pred_value_per_proposal, _ = torch.max(all_preds, dim=-1)
+        #     max_gt_value_per_proposal, _ = torch.max(pred_score_target, dim=-1)
+        #     #rank_target = torch.argmax(max_gt_value_per_proposal)
+        #     #print('rank_target', rank_target, 'max_gt_value_per_proposal', max_gt_value_per_proposal)
+        #     rank_target = max_gt_value_per_proposal.softmax(dim=-1)
+        #     ranking_loss = self.ranking_loss(max_pred_value_per_proposal.unsqueeze(dim=0), rank_target.unsqueeze(dim=0))
+        # else:
+        #     ranking_loss = torch.tensor(0).cuda()
+        
         # calculate the loss
         loss_value = self.loss(all_preds, pred_score_target)
         loss_dict = dict()
-        loss_dict['loss_value'] = loss_value
+        loss_dict['main_loss'] = loss_value
+        
+        if self.ranking_loss is not None:
+            max_pred_value_per_proposal, _ = torch.max(all_preds, dim=-1)
+            max_gt_value_per_proposal, _ = torch.max(pred_score_target, dim=-1)
+            rank_target = max_gt_value_per_proposal.softmax(dim=-1)
+            ranking_loss = self.ranking_loss(max_pred_value_per_proposal.unsqueeze(dim=0), rank_target.unsqueeze(dim=0))
+            loss_dict['ranking_loss'] = ranking_loss
+        
         return loss_dict
 
     def simple_test(self,

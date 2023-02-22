@@ -16,8 +16,8 @@ train_pipeline = [
 test_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='LoadAnnotations', with_bbox=True, with_label=True),
-    dict(type='LoadVitProposal', file_path_prefix='/data/zhuoming/detection/coco/vitdet_proposal_val'),
-    dict(type='LoadClipPred', file_path_prefix='/data/zhuoming/detection/coco/vitdet_proposal_val'),
+    dict(type='LoadVitProposal', file_path_prefix='/data/zhuoming/detection/coco/vitdet_proposal_val_1'),
+    dict(type='LoadClipPred', file_path_prefix='/data/zhuoming/detection/coco/vitdet_proposal_val_1'),
     dict(type='DefaultFormatBundle'),
     dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels', 'proposal_bboxes', 'proposal_clip_score'],
             meta_keys=('filename', 'ori_filename', 'ori_shape', 'img_shape')),
