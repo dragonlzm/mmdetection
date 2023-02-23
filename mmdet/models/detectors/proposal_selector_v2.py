@@ -257,9 +257,18 @@ class ProposalSelectorV2(BaseDetector):
         now_clip_pred = now_clip_pred.permute([0,2,1])
         # per_cate_masks_per_img torch.Size([48, 1, 640, 403])
         per_cate_masks_per_img = per_cate_masks_per_img.reshape([per_cate_masks_per_img.shape[0], -1])
+        
+        #print('now_clip_pred', now_clip_pred.shape, 'per_cate_masks_per_img', per_cate_masks_per_img.shape)
+        # try normalization
+        clip_pred_non_empty = (torch.sum(now_clip_pred, dim=-1) != 0)
+        per_cate_masks_non_empty = (torch.sum(per_cate_masks_per_img, dim=-1) != 0)
+        
+        now_clip_pred[clip_pred_non_empty] = now_clip_pred[clip_pred_non_empty] / now_clip_pred[clip_pred_non_empty].norm(dim=-1, keepdim=True)
+        per_cate_masks_per_img[per_cate_masks_non_empty] = per_cate_masks_per_img[per_cate_masks_non_empty] / per_cate_masks_per_img[per_cate_masks_non_empty].norm(dim=-1, keepdim=True)
+        
         batch_predict = now_clip_pred * per_cate_masks_per_img
         batch_predict = batch_predict.sum(dim=-1)
-        #print('batch_predict', batch_predict.shape)
+        #print('batch_predict', batch_predict.shape, batch_predict)
         return batch_predict
         
     def forward_train(self,
