@@ -26,6 +26,7 @@ from mmcv.cnn import Conv2d, Linear, build_activation_layer
 from mmdet.core.bbox.iou_calculators.iou2d_calculator import BboxOverlaps2D
 from torch import nn
 
+sigmoid_fun = nn.Sigmoid()
 
 def get_points_single(featmap_size, dtype, device):
     """Get points of a single scale level."""
@@ -260,14 +261,20 @@ class ProposalSelectorV2(BaseDetector):
         
         #print('now_clip_pred', now_clip_pred.shape, 'per_cate_masks_per_img', per_cate_masks_per_img.shape)
         # try normalization
-        clip_pred_non_empty = (torch.sum(now_clip_pred, dim=-1) != 0)
-        per_cate_masks_non_empty = (torch.sum(per_cate_masks_per_img, dim=-1) != 0)
+        #clip_pred_non_empty = (torch.sum(now_clip_pred, dim=-1) != 0)
+        #per_cate_masks_non_empty = (torch.sum(per_cate_masks_per_img, dim=-1) != 0)
         
-        now_clip_pred[clip_pred_non_empty] = now_clip_pred[clip_pred_non_empty] / now_clip_pred[clip_pred_non_empty].norm(dim=-1, keepdim=True)
-        per_cate_masks_per_img[per_cate_masks_non_empty] = per_cate_masks_per_img[per_cate_masks_non_empty] / per_cate_masks_per_img[per_cate_masks_non_empty].norm(dim=-1, keepdim=True)
+        #now_clip_pred[clip_pred_non_empty] = now_clip_pred[clip_pred_non_empty] / now_clip_pred[clip_pred_non_empty].norm(dim=-1, keepdim=True)
+        #per_cate_masks_per_img[per_cate_masks_non_empty] = per_cate_masks_per_img[per_cate_masks_non_empty] / per_cate_masks_per_img[per_cate_masks_non_empty].norm(dim=-1, keepdim=True)
         
         batch_predict = now_clip_pred * per_cate_masks_per_img
         batch_predict = batch_predict.sum(dim=-1)
+        non_zero_idx = (batch_predict != 0)
+        batch_predict[non_zero_idx] = sigmoid_fun(batch_predict[non_zero_idx])
+        # normalize the score to the 0-1
+        #non_zero_idx = (batch_predict != 0)
+        #batch_predict[non_zero_idx] += 1
+        #batch_predict[non_zero_idx] /= 2
         #print('batch_predict', batch_predict.shape, batch_predict)
         return batch_predict
         
