@@ -593,7 +593,7 @@ class LoadCLIPFeat:
                  num_of_rand_bbox=20,
                  select_fixed_subset=None,
                  extra_rand_path_prefix=None,
-                 filter_iop=False,
+                 dampen_the_base=None,
                  max_filter_num=100,
                  load_rand_bbox_weight=False,
                  use_mix_gt_feat=False,
@@ -612,7 +612,7 @@ class LoadCLIPFeat:
         self.num_of_rand_bbox = num_of_rand_bbox
         self.select_fixed_subset = select_fixed_subset
         self.extra_rand_path_prefix = extra_rand_path_prefix
-        self.filter_iop = filter_iop
+        self.dampen_the_base = dampen_the_base
         self.max_filter_num = max_filter_num
         self.load_rand_bbox_weight = load_rand_bbox_weight
         self.use_objectness_as_weight = use_objectness_as_weight
@@ -793,42 +793,43 @@ class LoadCLIPFeat:
         if self.load_rand_bbox_weight:
             rand_bbox_weights = torch.from_numpy(rand_bbox_weights)  
         
-        #filter the iop sample
-        if self.filter_iop and len(results['gt_bboxes']) > 0:
+        #dampen the weight of proposal bbox which has a high overlap with fg
+        if self.dampen_the_base is not None and len(results['gt_bboxes']) > 0 and self.load_rand_bbox_weight:
             # scale the pred and the gt back to the original scale
             now_gt_bbox = torch.from_numpy(results['gt_bboxes'])
             now_scale_factor = torch.from_numpy(now_scale_factor)
             now_gt_bbox = now_gt_bbox / now_scale_factor
             temp_random_bbox = final_rand_bbox / now_scale_factor
             # calculate the iop
-            iop = iou_calculator(temp_random_bbox, now_gt_bbox, mode='iof')
+            iop = iou_calculator(temp_random_bbox, now_gt_bbox, mode='iou')
             max_iop_per_pred, max_iop_per_pred_idx = torch.max(iop, dim=-1)
             
             # the clip proposal inside the gt which need to be filtered
             # remaining_idx is the idx of the need filtered result: tensor([1, 2, 5, 6, 8, 9])
             #remaining_idx = (max_iop_per_pred > 0.9)
-            filtered_idx = (max_iop_per_pred > 0.9).nonzero().view(-1)
+            dampen_idx = (max_iop_per_pred > 0.5).nonzero().view(-1)
+            rand_bbox_weights[dampen_idx] *= self.dampen_the_base
             
             ### since in some situation, there is a big base GT bboxes which cover most of the image
             ### in this situation, all the clip proposal will be in this GT bboxes
             ### therefore in this situation we randomly sample the iop prediction for filtering 
             
-            # random sample at most self.max_filter_num bbox for filtering
-            if filtered_idx.shape[0] > self.max_filter_num:
-                random_filtered_choice = torch.from_numpy(np.random.choice(filtered_idx.shape[0], self.max_filter_num, replace=False))
-                final_filtered_idx = filtered_idx[random_filtered_choice]
-            else:
-                final_filtered_idx = filtered_idx
-            final_idx = torch.full(max_iop_per_pred.shape, True)
-            final_idx[final_filtered_idx] = False
+            # # random sample at most self.max_filter_num bbox for filtering
+            # if filtered_idx.shape[0] > self.max_filter_num:
+            #     random_filtered_choice = torch.from_numpy(np.random.choice(filtered_idx.shape[0], self.max_filter_num, replace=False))
+            #     final_filtered_idx = filtered_idx[random_filtered_choice]
+            # else:
+            #     final_filtered_idx = filtered_idx
+            # final_idx = torch.full(max_iop_per_pred.shape, True)
+            # final_idx[final_filtered_idx] = False
             
-            # show the number of the rest of the proposal  
-            #print('after filtering', final_idx.shape, torch.sum(final_idx))
-            #if filtered_idx.shape[0] > 100:
-            #    print('original_idx:', (max_iop_per_pred > 0.9), 'final_idx', ~final_idx)
-            # filter the bboxes 
-            final_rand_bbox = final_rand_bbox[final_idx]
-            rand_feat = rand_feat[final_idx]
+            # # show the number of the rest of the proposal  
+            # #print('after filtering', final_idx.shape, torch.sum(final_idx))
+            # #if filtered_idx.shape[0] > 100:
+            # #    print('original_idx:', (max_iop_per_pred > 0.9), 'final_idx', ~final_idx)
+            # # filter the bboxes 
+            # final_rand_bbox = final_rand_bbox[final_idx]
+            # rand_feat = rand_feat[final_idx]
         
         # in some images the valid clip proposal is fewer than 500, which need to replicate some of the clip proposals
         # to reach the needed number of distillation proposal
