@@ -93,6 +93,7 @@ class ProposalSelectorV2(BaseDetector):
     def __init__(self,
                  loss,
                  ranking_loss=None,
+                 ranking_loss_only=None,
                  input_dim=5,
                  pretrained=None,
                  train_cfg=None,
@@ -113,6 +114,7 @@ class ProposalSelectorV2(BaseDetector):
                 self.ranking_loss = build_loss(ranking_loss)
         else:
             self.ranking_loss = None
+        self.ranking_loss_only = ranking_loss_only
         self.iou_calculator = BboxOverlaps2D()
         
         # define the modules
@@ -194,13 +196,6 @@ class ProposalSelectorV2(BaseDetector):
             all_pred_target.append(assigned_res)
     
         return all_pred_target
-
-    def convert_bboxes_to_mask(self, proposal_bboxes, pred_distri, image_size):
-        '''proposal_bboxes should be [1000, 4], the pred_distri should be [1000, 65]
-           The output should be [1000, H, W, 65]'''
-
-    def convert_bboxes_to_mask(self, proposal_bboxes, proposal_clip_score):
-        pass
     
     def forward_mask(self, per_cate_masks, img_metas):
         #print('per_cate_masks', [ele.shape for ele in per_cate_masks])
@@ -287,21 +282,89 @@ class ProposalSelectorV2(BaseDetector):
         # each tuple the infomation per gt bboxes, each inner list contain the info per image
         result_of_all_imgs = []
         for proposal_per_img, pred_label_per_img, gt_bbox_per_img, gt_label_per_img in zip(proposal_bboxes, clip_pred_labels, gt_bboxes, gt_labels):
-            # calculate the iou between all the proposal and all the gt bboxes, the shape should be [num_proposal, num_gt]
+            # calculate the iou between all the proposal and all the gt bboxes, the shape should be 
+            # #[num_proposal, num_gt]
             real_iou = self.iou_calculator(proposal_per_img, gt_bbox_per_img)
             result_per_img = []
-            # calculate the result per image
-            for gt_bbox, gt_label in zip(gt_bbox_per_img, gt_label_per_img):
+            # calculate the for each gt bboxes
+            for i, (gt_bbox, gt_label) in enumerate(zip(gt_bbox_per_img, gt_label_per_img)):
+                # [num_proposal, 1] => [num_proposal]
+                current_gt_iou = real_iou[:, i]
+                # if the max value is zero skip
+                max_iou_val = torch.max(current_gt_iou)
+                if max_iou_val == 0:
+                    continue
                 # select the proposals with same predicted categories
                 need_proposal_idx = (pred_label_per_img == gt_label)
-                selected_iou = real_iou[need_proposal_idx]
-                max_iou_per_gt, max_iou_per_gt_idx = torch.topk(selected_iou, 5, dim=0)
-                print('max_iou_per_gt', max_iou_per_gt.shape, 'max_iou_per_gt_idx', max_iou_per_gt_idx.shape)
+                number_need_proposal_idx = need_proposal_idx.nonzero().reshape(-1)
+                # len(number_need_proposal_idx) == 100 then shape(selected_iou) [100, ]
+                selected_iou = current_gt_iou[need_proposal_idx]
+                # if there is no more remining gt bbox
+                if selected_iou.shape[0] == 0:
+                    continue
+                # check whether the max number can select
+                topk_num = selected_iou.shape[0] if selected_iou.shape[0] < 5 else 5
+                # if top K number is 1
+                if topk_num == 1:
+                    #print('number_need_proposal_idx', number_need_proposal_idx)
+                    res_idx = (i, number_need_proposal_idx[0], -1) 
+                else:
+                    #print('number_need_proposal_idx', number_need_proposal_idx)
+                    _, topk_iou_per_gt_idx = torch.topk(selected_iou, topk_num, dim=0)
+                    #print('topk_iou_per_gt_idx', topk_iou_per_gt_idx)
+                    pos_proposal_idx = number_need_proposal_idx[topk_iou_per_gt_idx[0]]
+                    # randomly select the negative idx from the topk result
+                    rand_idx = torch.randint(1, topk_num, (1,))
+                    #print('rand_idx', rand_idx)
+                    neg_proposal_idx = number_need_proposal_idx[topk_iou_per_gt_idx[rand_idx[0]]]
+                    res_idx = (gt_label, pos_proposal_idx, neg_proposal_idx)
+                #print('res_idx', res_idx)
+                result_per_img.append(res_idx)
+            result_of_all_imgs.append(result_per_img)
                 
-        return ()
-                
-    
+        return result_of_all_imgs
 
+    def collect_ranking_loss_sample(self, ranking_samples, per_cate_masks, per_proposal_area_masks, proposal_clip_score):
+        anchor = []
+        pos = []
+        neg = []
+        for result_per_img, per_cate_masks_per_img, per_proposal_area_masks_per_img, proposal_clip_score_per_img in zip(ranking_samples, per_cate_masks, per_proposal_area_masks, proposal_clip_score):
+            anchor_per_img = []
+            pos_per_img = []
+            neg_per_img = []
+            for gt_label, pos_proposal_idx, neg_proposal_idx in result_per_img:
+                # handle the anchor mask
+                anchor_mask = per_cate_masks_per_img[gt_label]
+                anchor_per_img.append(anchor_mask.reshape(1, -1))
+                # handle the pos mask
+                pos_area_mask = per_proposal_area_masks_per_img[pos_proposal_idx]
+                pos_clip_pred = proposal_clip_score_per_img[pos_proposal_idx]
+                pos_vec = torch.zeros(pos_area_mask.shape).cuda()
+                pos_value = torch.max(pos_clip_pred)
+                pos_vec[pos_area_mask] = pos_value
+                #if len(pos_vec.shape) == 2:
+                #    print('per_proposal_area_masks_per_img', per_proposal_area_masks_per_img.shape, 'pos_proposal_idx', pos_proposal_idx, 'pos_area_mask', pos_area_mask.shape, 'pos_clip_pred', pos_clip_pred.shape, 'pos_vec', pos_vec.shape, 'pos_value', pos_value.shape)
+                pos_per_img.append(pos_vec.unsqueeze(dim=0))
+                # handle the neg mask
+                neg_area_mask = per_proposal_area_masks_per_img[neg_proposal_idx]
+                if neg_proposal_idx == -1:
+                    neg_vec = torch.zeros(neg_area_mask.shape).cuda()
+                else:
+                    neg_clip_pred = proposal_clip_score_per_img[neg_proposal_idx]
+                    neg_vec = torch.zeros(neg_area_mask.shape).cuda()
+                    neg_value = torch.max(neg_clip_pred)
+                    neg_vec[neg_area_mask] = neg_value
+                neg_per_img.append(neg_vec.unsqueeze(dim=0))
+                #print('per_cate_masks_per_img', per_cate_masks_per_img.shape, 'anchor_mask', anchor_mask.shape, 'pos_vec', pos_vec.shape, 'neg_vec', neg_vec.shape)
+            if len(anchor_per_img) != 0:
+                anchor_per_img = torch.cat(anchor_per_img, dim=0)
+                pos_per_img = torch.cat(pos_per_img, dim=0)
+                neg_per_img = torch.cat(neg_per_img, dim=0)
+                anchor.append(anchor_per_img)
+                pos.append(pos_per_img)
+                neg.append(neg_per_img)
+        return anchor, pos, neg
+    
     def forward_train(self,
                     img,
                     img_metas,
@@ -338,48 +401,44 @@ class ProposalSelectorV2(BaseDetector):
         # calculate the top1 target and the following target
         if self.ranking_loss is not None:
             ranking_samples = self.calculate_the_ranking_samples(proposal_bboxes, clip_pred_labels, gt_bboxes, gt_labels)
+            # generate the training sample from the idxs
+            anchor, pos, neg = self.collect_ranking_loss_sample(ranking_samples, per_cate_masks, per_proposal_area_masks, proposal_clip_score)
         
-        # obtain a subset
-        random_idx = torch.randperm(proposal_bboxes[0].shape[0])[:self.subset_num].cuda()
-        per_proposal_area_masks = [ele[random_idx] for ele in per_proposal_area_masks]
-        proposal_clip_score = [ele[random_idx] for ele in proposal_clip_score]
-        proposal_bboxes = [ele[random_idx] for ele in proposal_bboxes]
-        
-        # obtain the per proposal per category mask, obtain the prediction
-        all_preds = []
-        for per_proposal_area_masks_per_img, proposal_clip_score_per_img, per_cate_masks_per_img in zip(per_proposal_area_masks, proposal_clip_score, per_cate_masks):
-            #print('per_proposal_area_masks_per_img', per_proposal_area_masks_per_img.shape, 'proposal_clip_score_per_img', proposal_clip_score_per_img.shape)
-            #print('proposal_bboxes', [ele.shape for ele in proposal_bboxes], 'proposal_clip_score', [ele.shape for ele in proposal_clip_score])
-            prediction_per_img = self.cal_final_pred(per_proposal_area_masks_per_img, proposal_clip_score_per_img, per_cate_masks_per_img)
-            all_preds.append(prediction_per_img)
-        
-        # find the target(for the random selected proposal), for each categories, calculate the target iou per categories
-        pred_score_target = self.find_the_gt_for_proposal(proposal_bboxes, gt_bboxes, gt_labels)
-        
-        # concat the result 
-        all_preds = torch.cat(all_preds, dim=0)
-        pred_score_target = torch.cat(pred_score_target, dim=0)
-        #pred_score_target = torch.zeros(all_preds.shape).cuda()
-        
-        # add additional loss for ranking
-        # if torch.max(pred_score_target) > 0.5:
-        #     max_pred_value_per_proposal, _ = torch.max(all_preds, dim=-1)
-        #     max_gt_value_per_proposal, _ = torch.max(pred_score_target, dim=-1)
-        #     #rank_target = torch.argmax(max_gt_value_per_proposal)
-        #     #print('rank_target', rank_target, 'max_gt_value_per_proposal', max_gt_value_per_proposal)
-        #     rank_target = max_gt_value_per_proposal.softmax(dim=-1)
-        #     ranking_loss = self.ranking_loss(max_pred_value_per_proposal.unsqueeze(dim=0), rank_target.unsqueeze(dim=0))
-        # else:
-        #     ranking_loss = torch.tensor(0).cuda()
-        
-        # calculate the loss
-        loss_value = self.loss(all_preds, pred_score_target)
         loss_dict = dict()
-        loss_dict['main_loss'] = loss_value
+        
+        if not self.ranking_loss_only:
+            # obtain a subset
+            random_idx = torch.randperm(proposal_bboxes[0].shape[0])[:self.subset_num].cuda()
+            per_proposal_area_masks = [ele[random_idx] for ele in per_proposal_area_masks]
+            proposal_clip_score = [ele[random_idx] for ele in proposal_clip_score]
+            proposal_bboxes = [ele[random_idx] for ele in proposal_bboxes]
+            
+            # obtain the per proposal per category mask, obtain the prediction
+            all_preds = []
+            for per_proposal_area_masks_per_img, proposal_clip_score_per_img, per_cate_masks_per_img in zip(per_proposal_area_masks, proposal_clip_score, per_cate_masks):
+                #print('per_proposal_area_masks_per_img', per_proposal_area_masks_per_img.shape, 'proposal_clip_score_per_img', proposal_clip_score_per_img.shape)
+                #print('proposal_bboxes', [ele.shape for ele in proposal_bboxes], 'proposal_clip_score', [ele.shape for ele in proposal_clip_score])
+                prediction_per_img = self.cal_final_pred(per_proposal_area_masks_per_img, proposal_clip_score_per_img, per_cate_masks_per_img)
+                all_preds.append(prediction_per_img)
+            
+            # find the target(for the random selected proposal), for each categories, calculate the target iou per categories
+            pred_score_target = self.find_the_gt_for_proposal(proposal_bboxes, gt_bboxes, gt_labels)
+            
+            # concat the result 
+            all_preds = torch.cat(all_preds, dim=0)
+            pred_score_target = torch.cat(pred_score_target, dim=0)
+            #pred_score_target = torch.zeros(all_preds.shape).cuda()
+
+            # calculate the loss
+            loss_value = self.loss(all_preds, pred_score_target)
+            loss_dict['main_loss'] = loss_value
         
         if self.ranking_loss is not None:
-            # from the idx obtained, obtain the target for calculate the loss
-            pass
+            all_rank_loss = 0
+            for anchor_per_img, pos_per_img, neg_per_img in zip(anchor,pos,neg):
+                all_rank_loss += self.ranking_loss(anchor_per_img, pos_per_img, neg_per_img)
+            all_rank_loss /= len(anchor)
+            loss_dict['ranking_loss'] = all_rank_loss
             # we need to calculate the ranking loss
         return loss_dict
 
