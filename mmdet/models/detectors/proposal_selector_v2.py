@@ -107,7 +107,10 @@ class ProposalSelectorV2(BaseDetector):
         self.input_dim = input_dim
         self.loss = build_loss(loss)
         if ranking_loss is not None:
-            self.ranking_loss = build_loss(ranking_loss)
+            if ranking_loss == 'TripletMarginLoss':
+                self.ranking_loss = nn.TripletMarginLoss(margin=1.0, p=2)
+            else:
+                self.ranking_loss = build_loss(ranking_loss)
         else:
             self.ranking_loss = None
         self.iou_calculator = BboxOverlaps2D()
@@ -277,7 +280,28 @@ class ProposalSelectorV2(BaseDetector):
         #batch_predict[non_zero_idx] /= 2
         #print('batch_predict', batch_predict.shape, batch_predict)
         return batch_predict
-        
+
+    def calculate_the_ranking_samples(self, proposal_bboxes, clip_pred_labels, gt_bboxes, gt_labels):
+        # this function aims to calculate the postive and negative sample for each gt bboxes
+        # the return format should list[list[tuple(per_cate_mask_idx, pos_proposal_idx, neg_proposal_idx)]]
+        # each tuple the infomation per gt bboxes, each inner list contain the info per image
+        result_of_all_imgs = []
+        for proposal_per_img, pred_label_per_img, gt_bbox_per_img, gt_label_per_img in zip(proposal_bboxes, clip_pred_labels, gt_bboxes, gt_labels):
+            # calculate the iou between all the proposal and all the gt bboxes, the shape should be [num_proposal, num_gt]
+            real_iou = self.iou_calculator(proposal_per_img, gt_bbox_per_img)
+            result_per_img = []
+            # calculate the result per image
+            for gt_bbox, gt_label in zip(gt_bbox_per_img, gt_label_per_img):
+                # select the proposals with same predicted categories
+                need_proposal_idx = (pred_label_per_img == gt_label)
+                selected_iou = real_iou[need_proposal_idx]
+                max_iou_per_gt, max_iou_per_gt_idx = torch.topk(selected_iou, 5, dim=0)
+                print('max_iou_per_gt', max_iou_per_gt.shape, 'max_iou_per_gt_idx', max_iou_per_gt_idx.shape)
+                
+        return ()
+                
+    
+
     def forward_train(self,
                     img,
                     img_metas,
@@ -310,6 +334,10 @@ class ProposalSelectorV2(BaseDetector):
         
         # forward the per categories mask to obtain the final masks(generate mask)
         per_cate_masks = self.forward_mask(per_cate_masks, img_metas)
+        
+        # calculate the top1 target and the following target
+        if self.ranking_loss is not None:
+            ranking_samples = self.calculate_the_ranking_samples(proposal_bboxes, clip_pred_labels, gt_bboxes, gt_labels)
         
         # obtain a subset
         random_idx = torch.randperm(proposal_bboxes[0].shape[0])[:self.subset_num].cuda()
@@ -350,12 +378,9 @@ class ProposalSelectorV2(BaseDetector):
         loss_dict['main_loss'] = loss_value
         
         if self.ranking_loss is not None:
-            max_pred_value_per_proposal, _ = torch.max(all_preds, dim=-1)
-            max_gt_value_per_proposal, _ = torch.max(pred_score_target, dim=-1)
-            rank_target = max_gt_value_per_proposal.softmax(dim=-1)
-            ranking_loss = self.ranking_loss(max_pred_value_per_proposal.unsqueeze(dim=0), rank_target.unsqueeze(dim=0))
-            loss_dict['ranking_loss'] = ranking_loss
-        
+            # from the idx obtained, obtain the target for calculate the loss
+            pass
+            # we need to calculate the ranking loss
         return loss_dict
 
     def simple_test(self,

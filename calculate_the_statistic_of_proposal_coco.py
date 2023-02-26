@@ -226,7 +226,7 @@ for info in gt_content['images']:
 #                       '/data/zhuoming/detection/lvis_v1/rpn_proposal/mask_rcnn_r50_fpn_random_seesaw_loss_normed_mask_mstrain_2x_lvis_v1_base']
 
 proposal_path_root = ['/project/nevatia_174/zhuoming/detection/detection/lvis_v1/clip_proposal/lvis_fc866_32_32_512', 
-                      '/project/nevatia_174/zhuoming/detection/lvis_v1/rpn_proposal/mask_rcnn_freq']
+                      '/project/nevatia_174/zhuoming/detection/lvis_v1/rpn_proposal_1/mask_rcnn_freq']
 
 for root in proposal_path_root:
     all_iou_for_novel = 0
