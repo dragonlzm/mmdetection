@@ -119,7 +119,8 @@ class ProposalSelectorV2(BaseDetector):
         
         # define the modules
         self.global_info_extractor = nn.Conv2d(1, 10, 3, padding=1)
-        self.global_info_dim_reducer = nn.Conv2d(11, 1, 3, padding=1)
+        self.global_info_dim_reducer_1 = nn.Conv2d(11, 5, 3, padding=1)
+        self.global_info_dim_reducer = nn.Conv2d(5, 1, 3, padding=1)
         #self.global_info_extractor = nn.Conv2d(1, 10, 1)
         #self.global_info_dim_reducer = nn.Conv2d(11, 1, 1)
         self.select_idx = torch.tensor([0, 1, 2, 3, 6, 7, 8, 9, 10, 13, 14, 17, 18, 19, 20, 22, 24, 25, 26, 28, 30, 31, 33, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 46, 48, 49, 50, 51, 52, 53, 55, 56, 57, 59, 60, 61, 62, 64]).cuda()
@@ -217,6 +218,7 @@ class ProposalSelectorV2(BaseDetector):
             mask = torch.cat([mask, gobal_info], dim=1)
             #mask = gobal_info + mask
             #print('before mask', mask.shape, mask, 'gobal_info', gobal_info)
+            mask = self.global_info_dim_reducer_1(mask)
             mask = self.global_info_dim_reducer(mask)
             #print('after mask', mask.shape)
             result.append(mask)
