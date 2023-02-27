@@ -1,4 +1,4 @@
-_base_ = './mask_rcnn_distillation_lvis_freq_tuned_clipproposal_fc866.py'
+_base_ = './mask_rcnn_distillation_lvis_freq_tuned_clipproposal_fcr1203.py'
 
 # learning policy
 model = dict(
