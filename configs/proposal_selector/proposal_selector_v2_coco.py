@@ -10,8 +10,6 @@ optimizer = dict(
     lr=0.0001,
     weight_decay=0.0001)
 
-
-
 optimizer_config = dict(grad_clip=None)
 
 lr_config = dict(step=[2,])

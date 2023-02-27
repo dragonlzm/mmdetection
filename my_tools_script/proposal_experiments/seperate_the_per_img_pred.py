@@ -6,7 +6,7 @@ file_root = '/data/zhuoming/detection/coco/vitdet_proposal_val_1'
 # load the full prediction
 #full_pred_path = '/data/zhuoming/detection/grad_clip_check/proposal_selector_v2_coco.gt_acc.json'
 #full_pred_path = '/data/zhuoming/detection/grad_clip_check/proposal_selector_v2_l2loss_coco/val_res.gt_acc.json'
-full_pred_path = '/data/zhuoming/code/new_rpn/mmdetection/data/grad_clip_check/proposal_selector_v2_l2loss_tripleloss_coco/val_res.gt_acc.json'
+full_pred_path = '/data/zhuoming/code/new_rpn/mmdetection/data/grad_clip_check/proposal_selector_v2_rloss_coco_2dim_reduce/val_res.gt_acc.json'
 full_pred_content = json.load(open(full_pred_path))
 
 for ele in full_pred_content:
