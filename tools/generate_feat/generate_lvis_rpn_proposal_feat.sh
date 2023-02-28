@@ -39,19 +39,26 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 # model.test_cfg.num_of_rand_bboxes=500 model.test_cfg.save_cates_and_conf=True model.test_cfg.rand_select_subset=True
 
 
-# generate rpn proposal
-bash tools/dist_test.sh \
-configs/rpn/rpn_r50_fpn_1x_lvis.py \
-data/exp_res/mask_rcnn_r50_fpn_sample1e-3_mstrain_2x_lvis_v1_freq/epoch_24.pth 2 \
---out rpn_r50_fpn_1x_lvis.pkl \
---cfg-options data.test.ann_file=data/lvis_v1/annotations/lvis_v1_train.json data.test.img_prefix=data/lvis_v1/ \
-model.test_cfg.bbox_save_path_root=data/lvis_v1/rpn_proposal_1/mask_rcnn_freq/
-
-## raw clip model, rpn proposal
+# generate rpn proposal raw feat(freq+comm / rare split)
 CHECKPOINT="data/test/cls_finetuner_clip_base_100shots_train/epoch_0.pth"
 CONFIG_FILE="configs/cls_finetuner/cls_finetuner_clip_full_lvis.py"
-BBOX_SAVE_PATH_ROOT="data/lvis_v1/rpn_proposal_1/mask_rcnn_freq"
-FEAT_SAVE_PATH_ROOT="data/lvis_v1/rpn_proposal_feat/freq_proposal_raw_feat"
+BBOX_SAVE_PATH_ROOT="data/lvis_v1/rpn_proposal/mask_rcnn_r50_fpn_random_seesaw_loss_normed_mask_mstrain_2x_lvis_v1_base"
+FEAT_SAVE_PATH_ROOT="data/lvis_v1/rpn_proposal_feat/fc_proposal_raw_feat"
+
+
+# generate rpn proposal
+# bash tools/dist_test.sh \
+# configs/rpn/rpn_r50_fpn_1x_lvis.py \
+# data/exp_res/mask_rcnn_r50_fpn_sample1e-3_mstrain_2x_lvis_v1_freq/epoch_24.pth 2 \
+# --out rpn_r50_fpn_1x_lvis.pkl \
+# --cfg-options data.test.ann_file=data/lvis_v1/annotations/lvis_v1_train.json data.test.img_prefix=data/lvis_v1/ \
+# model.test_cfg.bbox_save_path_root=data/lvis_v1/rpn_proposal_1/mask_rcnn_freq/
+
+# ## raw clip model, rpn proposal(freq and comm splits)
+# CHECKPOINT="data/test/cls_finetuner_clip_base_100shots_train/epoch_0.pth"
+# CONFIG_FILE="configs/cls_finetuner/cls_finetuner_clip_full_lvis.py"
+# BBOX_SAVE_PATH_ROOT="data/lvis_v1/rpn_proposal_1/mask_rcnn_freq"
+# FEAT_SAVE_PATH_ROOT="data/lvis_v1/rpn_proposal_feat/freq_proposal_raw_feat"
 
 bash tools/dist_test.sh \
 ${CONFIG_FILE} \
