@@ -167,7 +167,7 @@ train_pipeline = [
     dict(type='Pad', size_divisor=32),
     dict(type='DefaultFormatBundle'),
     dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels', 'gt_masks', 'gt_feats',
-                               'rand_bboxes', 'rand_feats', 'rand_bbox_weights']),
+                               'rand_bboxes', 'rand_feats']),
 ]
 
 # oversample dataset
@@ -176,15 +176,11 @@ dataset_type = 'LVISV1Dataset'
 data_root = 'data/lvis_v1/'
 data = dict(
     train=dict(
-        _delete_=True,
-        type='ClassBalancedDataset',
-        oversample_thr=1e-3,
-        dataset=dict(
-            type=dataset_type,
-            ann_file=data_root + 'annotations/lvis_v1_train.json',
-            img_prefix=data_root,
-            pipeline=train_pipeline,
-            classes=classes)),
+        type=dataset_type,
+        ann_file=data_root + 'annotations/lvis_v1_train.json',
+        img_prefix=data_root,
+        pipeline=train_pipeline,
+        classes=classes),
     val=dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/lvis_v1_val.json',
