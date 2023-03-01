@@ -160,7 +160,7 @@ train_pipeline = [
                    (1333, 768), (1333, 800)],
         multiscale_mode='value',
         keep_ratio=True),
-    dict(type='LoadCLIPFeat', file_path_prefix='data/lvis_v1/rpn_proposal_feat/freq_proposal_raw_feat',
+    dict(type='LoadCLIPFeat', file_path_prefix='data/lvis_v1/rpn_proposal_feat/fc_proposal_raw_feat',
          num_of_rand_bbox=200, select_fixed_subset=200, load_gt_feat=False),    
     dict(type='RandomFlip', flip_ratio=0.5),
     dict(type='Normalize', **img_norm_cfg),
