@@ -131,12 +131,12 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #    #--resume-from=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_sample1e-3_mstrain_2x_lvis_v1/latest.pth
 
 
-# base
-PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
-python -m torch.distributed.launch --nproc_per_node=2 \
-   /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
-   configs/lvis/mask_rcnn_r50_fpn_sample1e-3_mstrain_2x_lvis_v1_freq.py --launcher pytorch \
-   --work-dir=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_sample1e-3_mstrain_2x_lvis_v1_freq \
-   --cfg-options optimizer.lr=0.005 \
-   #--resume-from=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_sample1e-3_mstrain_2x_lvis_v1_freq/latest.pth
+# freq
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#    /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#    configs/lvis/mask_rcnn_r50_fpn_sample1e-3_mstrain_2x_lvis_v1_freq.py --launcher pytorch \
+#    --work-dir=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_sample1e-3_mstrain_2x_lvis_v1_freq \
+#    --cfg-options optimizer.lr=0.005 \
+#    #--resume-from=/project/nevatia_174/zhuoming/detection/exp_res/mask_rcnn_r50_fpn_sample1e-3_mstrain_2x_lvis_v1_freq/latest.pth
 
