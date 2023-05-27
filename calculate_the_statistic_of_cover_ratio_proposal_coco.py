@@ -140,7 +140,7 @@ for root in proposal_path_root:
                 #print(overlap_on_novel_gt[overlap_on_novel_gt != 0])
                 accumulate_overlap_on_novel_gt = 0
             all_overlap_on_novel += accumulate_overlap_on_novel_gt
-            the_max_per_proposal = torch.max(overlap_on_novel_gt, dim=0)
+            the_max_per_proposal = torch.max(overlap_on_novel_gt, dim=0)[0]
             over_08_novel += torch.sum(the_max_per_proposal>0.8)
             over_05_novel += torch.sum(the_max_per_proposal>0.5)
             over_03_novel += torch.sum(the_max_per_proposal>0.3)
@@ -166,7 +166,7 @@ for root in proposal_path_root:
             overlap_on_base_gt = iou_calculator(base_gt_bboxes, all_proposals[:, :4], 'iof')
             accumulate_overlap_on_base_gt = torch.mean(overlap_on_base_gt[overlap_on_base_gt != 0])
             all_overlap_on_base += accumulate_overlap_on_base_gt
-            the_max_per_proposal = torch.max(overlap_on_base_gt, dim=0)
+            the_max_per_proposal = torch.max(overlap_on_base_gt, dim=0)[0]
             over_08_base += torch.sum(the_max_per_proposal>0.8)
             over_05_base += torch.sum(the_max_per_proposal>0.5)
             over_03_base += torch.sum(the_max_per_proposal>0.3)
