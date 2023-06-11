@@ -8,6 +8,8 @@
 #SBATCH --time=48:00:00
 #SBATCH --account=nevatia_174
 
+# for faster rcnn baseline training
+
 
 module purge
 module load gcc/8.3.0

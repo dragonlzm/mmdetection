@@ -7,7 +7,7 @@
 #SBATCH --mem=70GB
 #SBATCH --time=48:00:00
 #SBATCH --account=nevatia_174
-
+# for training the few-shot model attention_rpn
 
 module purge
 module load gcc/8.3.0
