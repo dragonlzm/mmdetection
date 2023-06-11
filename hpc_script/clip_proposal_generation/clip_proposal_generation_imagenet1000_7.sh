@@ -13,6 +13,8 @@ module load gcc/8.3.0
 #module load cuda/10.1.243
 #./program
 
+# generating the CLIP proposal on COCO dataset using the ImageNet name (1000 leaf names), this task is distributed in 15 subtasks
+
 cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #rm -rf ./data
 #ln -sf /project/nevatia_174/zhuoming/detection ./data

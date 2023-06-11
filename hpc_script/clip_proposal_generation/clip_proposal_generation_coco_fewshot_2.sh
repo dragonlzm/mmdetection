@@ -13,6 +13,9 @@ module load gcc/8.3.0
 #module load cuda/10.1.243
 #./program
 
+# This script aims for generate CLIP proposal for the COCO few-shot settting, 
+# finetune the model using the 60 base and using all 80 cates for generating proposal (this procedure will be distributed in 15 subtasks)
+
 cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #rm -rf ./data
 #ln -sf /project/nevatia_174/zhuoming/detection ./data

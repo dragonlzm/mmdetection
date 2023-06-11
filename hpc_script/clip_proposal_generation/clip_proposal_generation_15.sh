@@ -13,6 +13,8 @@ module load gcc/8.3.0
 #module load cuda/10.1.243
 #./program
 
+# This script aims for generate CLIP proposal for the COCO zero-shot settting (this procedure wil be distributed in 15 sub-tasks)
+
 cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #rm -rf ./data
 #ln -sf /project/nevatia_174/zhuoming/detection ./data

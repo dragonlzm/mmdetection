@@ -8,6 +8,7 @@
 #SBATCH --time=24:00:00
 #SBATCH --account=nevatia_174
 
+# the experiment about the choice in objectness score in generating the CLIP proposal
 
 module purge
 module load gcc/8.3.0
