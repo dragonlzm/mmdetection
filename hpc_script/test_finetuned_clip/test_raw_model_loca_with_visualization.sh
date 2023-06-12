@@ -14,7 +14,7 @@ module load gcc/8.3.0
 #./program
 
 # This is testing the classification acc base on different perturbation on bbox location
-# using raw CLIP, with visulization
+# using raw CLIP, with visulization, On COCO dataset
 
 cd /home1/liuzhuom/mmdetection
 rm -rf ./data

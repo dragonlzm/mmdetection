@@ -14,6 +14,10 @@ module load gcc/8.3.0
 #module load cuda/10.1.243
 #./program
 
+# Mask R-CNN training with feature from CLIP proposal 
+# training with per CLIP proposal weight, base filtered clip proposal, per clip proposal weight, regression with text embedding
+# the task in this script using all tricks
+
 cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #rm -rf ./data
 #ln -sf /project/nevatia_174/zhuoming/detection ./data

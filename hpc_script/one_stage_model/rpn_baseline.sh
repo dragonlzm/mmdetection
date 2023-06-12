@@ -13,7 +13,7 @@ module load gcc/8.3.0
 #module load cuda/10.1.243
 #./program
 
-## this is for training the RPN base line
+## this is for training the RPN baseline on COCO dataset
 
 cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #rm -rf ./data

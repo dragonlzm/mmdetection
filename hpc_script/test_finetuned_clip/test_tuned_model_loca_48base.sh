@@ -15,7 +15,7 @@ module load gcc/8.3.0
 #./program
 
 # This is testing the classification acc base on different perturbation on bbox location
-# using base finetuned model
+# using base finetuned model, On COCO dataset
 
 cd /home1/liuzhuom/mmdetection
 rm -rf ./data

@@ -14,6 +14,9 @@ module load gcc/8.3.0
 #module load cuda/10.1.243
 #./program
 
+# this script should contain the script for training the Mask RCNN with distillation
+# this is the raw version w/o regression with embedding, filtering base bboxes, per distillattion box weight
+
 cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #rm -rf ./data
 #ln -sf /project/nevatia_174/zhuoming/detection ./data

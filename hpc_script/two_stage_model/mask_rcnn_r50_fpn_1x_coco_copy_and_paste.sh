@@ -14,6 +14,8 @@ module load gcc/8.3.0
 #module load cuda/10.1.243
 #./program
 
+# training the Mask R-CNN baseline without distillation (trained witl copy and paste)
+
 cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #rm -rf ./data
 #ln -sf /project/nevatia_174/zhuoming/detection ./data

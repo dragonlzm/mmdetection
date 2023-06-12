@@ -8,11 +8,13 @@
 #SBATCH --time=48:00:00
 #SBATCH --account=nevatia_174
 
-
 module purge
 module load gcc/8.3.0
 #module load cuda/10.1.243
 #./program
+
+# exploration of using the ViT backbone from CLIP to train the Mask R-CNN with distillation
+# on LVIS dataset with seesaw loss
 
 cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #rm -rf ./data

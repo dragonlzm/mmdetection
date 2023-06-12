@@ -3,8 +3,8 @@
 #SBATCH --partition=gpu 
 #SBATCH --gres=gpu:v100:2
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=4
-#SBATCH --mem=40GB
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=80GB
 #SBATCH --time=48:00:00
 #SBATCH --account=nevatia_174
 
@@ -14,9 +14,36 @@ module load gcc/8.3.0
 #module load cuda/10.1.243
 #./program
 
+## training the distillation with agumentation (updated albu augmentation)
+
 cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #rm -rf ./data
 #ln -sf /project/nevatia_174/zhuoming/detection ./data
+
+# 2*4 180k
+# COMBINE_METHOD='cat'
+# WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_detectron_2x4_180k_base48_augmentation"
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#     configs/mask_rcnn_distill/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_detectron_2x4_180k_base48_augmentation.py --launcher pytorch \
+#     --work-dir=${WORK_DIR} \
+#     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
+#     model.roi_head.bbox_head.combine_reg_and_cls_embedding=${COMBINE_METHOD} \
+#     #--resume-from=${WORK_DIR}/latest.pth
+
+# 2*8 180k
+# COMBINE_METHOD='cat'
+# WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_detectron_2x8_180k_base48_augmentation"
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#     configs/mask_rcnn_distill/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_detectron_2x8_180k_base48_augmentation.py --launcher pytorch \
+#     --work-dir=${WORK_DIR} \
+#     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
+#     model.roi_head.bbox_head.combine_reg_and_cls_embedding=${COMBINE_METHOD} \
+#     #--resume-from=${WORK_DIR}/latest.pth
+
 
 # 2*2 original setting
 # COMBINE_METHOD='cat'
@@ -57,28 +84,6 @@ python -m torch.distributed.launch --nproc_per_node=2 \
     model.roi_head.bbox_head.combine_reg_and_cls_embedding=${COMBINE_METHOD} \
     --resume-from=${WORK_DIR}/latest.pth
     #--resume-from=${START_FROM}/epoch_16.pth
-
-# mask_rcnn_r50_fpn_1x_coco_copy_and_paste (should be delete, added here temperary)
-PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
-python -m torch.distributed.launch --nproc_per_node=2 \
-   /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
-   configs/mask_rcnn/mask_rcnn_r50_fpn_1x_coco_copy_and_paste.py --launcher pytorch \
-   --work-dir=/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_copy_and_paste \
-   --resume-from=/project/nevatia_174/zhuoming/detection/baseline/mask_rcnn_r50_fpn_1x_coco_copy_and_paste/latest.pth
-
-
-# 2*2 360k
-# COMBINE_METHOD='cat'
-# WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_detectron_2x2_360k_base48_augmentation"
-# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
-# python -m torch.distributed.launch --nproc_per_node=2 \
-#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
-#     configs/mask_rcnn_distill/mask_rcnn_with_base48_tuned_clip_feat_r50_fpn_1x_coco_detectron_2x2_360k_base48_augmentation.py --launcher pytorch \
-#     --work-dir=${WORK_DIR} \
-#     --cfg-options model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=1 optimizer_config.grad_clip.max_norm=10 \
-#     model.roi_head.bbox_head.combine_reg_and_cls_embedding=${COMBINE_METHOD} \
-#     #--resume-from=${WORK_DIR}/latest.pth
-
 
 # test the model
 #CHECKPOINT_NAME="epoch_12.pth"

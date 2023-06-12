@@ -18,6 +18,8 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #rm -rf ./data
 #ln -sf /project/nevatia_174/zhuoming/detection ./data
 
+# Mask R-CNN with distillation with trihead rpn 
+
 # for 1x training
 # PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
 # python -m torch.distributed.launch --nproc_per_node=2 \

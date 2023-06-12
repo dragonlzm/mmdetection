@@ -14,6 +14,7 @@ module load gcc/8.3.0
 #./program
 
 # this script aims to test the classification accuracy of CLIP when attribute of each categories is provided
+# On COCO dataset
 
 cd /home1/liuzhuom/mmdetection
 rm -rf ./data

@@ -8,11 +8,12 @@
 #SBATCH --time=48:00:00
 #SBATCH --account=nevatia_174
 
-
 module purge
 module load gcc/8.3.0
 #module load cuda/10.1.243
 #./program
+
+# Mask R-CNN with Distillation experiment with GT weights.
 
 cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #rm -rf ./data

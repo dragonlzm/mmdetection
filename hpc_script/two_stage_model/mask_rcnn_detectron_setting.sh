@@ -8,16 +8,16 @@
 #SBATCH --time=48:00:00
 #SBATCH --account=nevatia_174
 
-
 module purge
 module load gcc/8.3.0
 #module load cuda/10.1.243
 #./program
 
+## training the Mask R-CNN with the detectron setting (iteration instead of epoch)
+
 cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #rm -rf ./data
 #ln -sf /project/nevatia_174/zhuoming/detection ./data
-
 
 # for 2*8
 # TRAIN_CONFIG="configs/mask_rcnn/mask_rcnn_r50_fpn_1x_coco_detectron_2x8.py"

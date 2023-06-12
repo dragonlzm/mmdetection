@@ -8,18 +8,25 @@
 #SBATCH --time=48:00:00
 #SBATCH --account=nevatia_174
 
-# for faster rcnn baseline training
-
-
 module purge
 module load gcc/8.3.0
 #module load cuda/10.1.243
 #./program
 
+# for faster rcnn baseline training
+
 cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #rm -rf ./data
 #ln -sf /project/nevatia_174/zhuoming/detection ./data
 
+
+# training with all categories
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#     configs/faster_rcnn/faster_rcnn_r50_fpn_1x_coco_2gpu.py --launcher pytorch \
+#     --work-dir=/project/nevatia_174/zhuoming/detection/test/faster_rcnn_r50_fpn_1x_coco_2gpu 
+#     #--resume-from=/project/nevatia_174/zhuoming/detection/test/new_rpn_patches246_coco/latest.pth
 
 # faster rcnn base48
 TRAIN_CONFIG="configs/faster_rcnn/faster_rcnn_r50_caffe_c4_1x_coco_base48.py"
