@@ -14,6 +14,9 @@ module load gcc/8.3.0
 #module load cuda/10.1.243
 #./program
 
+# This is testing the classification acc base on different perturbation on bbox location
+# using base finetuned model
+
 cd /home1/liuzhuom/mmdetection
 rm -rf ./data
 ln -sf /project/nevatia_174/zhuoming/detection ./data

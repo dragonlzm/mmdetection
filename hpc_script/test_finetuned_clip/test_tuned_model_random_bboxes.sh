@@ -8,11 +8,13 @@
 #SBATCH --time=24:00:00
 #SBATCH --account=nevatia_174
 
-
 module purge
 module load gcc/8.3.0
 #module load cuda/10.1.243
 #./program
+
+# testing the classification acc of the CLIP model using random bboxes
+# On COCO dataset
 
 cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 rm -rf ./data

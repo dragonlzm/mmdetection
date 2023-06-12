@@ -8,16 +8,17 @@
 #SBATCH --time=24:00:00
 #SBATCH --account=nevatia_174
 
-
 module purge
 module load gcc/8.3.0
 #module load cuda/10.1.243
 #./program
 
+# This is testing the classification acc base on different perturbation on bbox location
+# using all categories finetuned CLIP, On COCO dataset
+
 cd /home1/liuzhuom/mmdetection
 rm -rf ./data
 ln -sf /project/nevatia_174/zhuoming/detection ./data
-
 
 # 0.2
 PYTHONPATH="/home1/liuzhuom/mmdetection":$PYTHONPATH \
