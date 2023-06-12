@@ -8,11 +8,12 @@
 #SBATCH --time=48:00:00
 #SBATCH --account=nevatia_174
 
-
 module purge
 module load gcc/8.3.0
 #module load cuda/10.1.243
 #./program
+
+## this is for training the FCOS model baseline (without distillation)
 
 cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #rm -rf ./data
