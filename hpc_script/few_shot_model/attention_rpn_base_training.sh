@@ -18,6 +18,8 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #rm -rf ./data
 #ln -sf /project/nevatia_174/zhuoming/detection ./data
 
+# this script for base training of the attention RPN (paper: Few-Shot Object Detection with Attention-RPN and Multi-Relation Detector)
+
 # 2*2 batch size
 # WORK_DIR="/project/nevatia_174/zhuoming/detection/meta_learning/attention-rpn_r50_c4_2xb2_coco_official-base-training"
 # PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
