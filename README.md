@@ -3,13 +3,13 @@
 
 Please refer the following commands to prepare the environment:
 
-  conda create --name pyt
-  conda activate pyt
-  conda install pytorch=1.10.0 torchvision torchaudio cudatoolkit=10.2 -c pytorch
-  pip install fiftyone tensorboard
-  pip install mmcv-full==1.3.17 -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.10.0/index.html
-  pip install ftfy seaborn pycocotools terminaltables regex isort lvis opencv-python PyYAML
-  conda install tensorflow-estimator==2.1.0
+    conda create --name pyt
+    conda activate pyt
+    conda install pytorch=1.10.0 torchvision torchaudio cudatoolkit=10.2 -c pytorch
+    pip install fiftyone tensorboard
+    pip install mmcv-full==1.3.17 -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.10.0/index.html
+    pip install ftfy seaborn pycocotools terminaltables regex isort lvis opencv-python PyYAML
+    conda install tensorflow-estimator==2.1.0
 
 If your node could not connect to the internet(Some HPC node is not connected to the internet), you should use run the tools/mmcv_installation.sh to install the mmcv
 
