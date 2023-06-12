@@ -13,6 +13,9 @@ module load gcc/8.3.0
 #module load cuda/10.1.243
 #./program
 
+# generate the feature for LVIS dataset (zero-shot setting), using the CLIP porposal
+# without filtering the CLIP proposal using the GT bboxes
+
 cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #rm -rf ./data
 #ln -sf /project/nevatia_174/zhuoming/detection ./data

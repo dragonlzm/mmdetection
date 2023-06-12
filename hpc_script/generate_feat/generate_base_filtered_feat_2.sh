@@ -14,6 +14,10 @@ module load gcc/8.3.0
 #module load cuda/10.1.243
 #./program
 
+# this script aims to generate the CLIP feature(base finetuned feature), with CLIP proposal
+# the proposal is filtered base on the base categories gt bboxes
+# this procedure is distributed in two subtasks
+
 cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #rm -rf ./data
 #ln -sf /project/nevatia_174/zhuoming/detection ./data

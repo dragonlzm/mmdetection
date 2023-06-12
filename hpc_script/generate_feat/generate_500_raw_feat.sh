@@ -13,14 +13,11 @@ module load gcc/8.3.0
 #module load cuda/10.1.243
 #./program
 
+## this script aims to extract the raw feature using the CLIP proposal
+
 cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #rm -rf ./data
 #ln -sf /project/nevatia_174/zhuoming/detection ./data
-
-## this script aim to generate feat for the LVIS dataset with the clip proposal generated for LVIS
-## due to the long-tail property of the LVIS dataset, we can expect that we should not filter the base cate in the dataset
-## since the novel categories only exist in about 300 images, and the whole dataset have nearly 100,000 images
-## this ratio make filtering the base categories does not make sense.
 
 ## generate raw feature
 #1

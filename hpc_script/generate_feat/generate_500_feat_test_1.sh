@@ -8,6 +8,9 @@
 #SBATCH --time=48:00:00
 #SBATCH --account=nevatia_174
 
+# generate the feature for COCO dataset, using the CLIP porposal
+# (this procedure will be distributed in two tasks)
+
 
 module purge
 module load gcc/8.3.0

@@ -8,6 +8,7 @@
 #SBATCH --time=48:00:00
 #SBATCH --account=nevatia_174
 
+# extract the feature using multiple size of the bbxoes for COCO zeroshot setting
 
 module purge
 module load gcc/8.3.0
