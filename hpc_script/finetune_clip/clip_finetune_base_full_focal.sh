@@ -8,6 +8,7 @@
 #SBATCH --time=24:00:00
 #SBATCH --account=nevatia_174
 
+# finetuning the CLIP on COCO base categories (zero-shot, base 48) with focal loss function
 
 module purge
 module load gcc/8.3.0

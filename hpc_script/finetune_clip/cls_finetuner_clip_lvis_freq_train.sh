@@ -8,6 +8,8 @@
 #SBATCH --time=48:00:00
 #SBATCH --account=nevatia_174
 
+# finetuning the CLIP on LVIS base categories of LVIS zero-shot setting 
+# (base categories includes the freq and comm categories total 866 categories)
 
 module purge
 module load gcc/8.3.0

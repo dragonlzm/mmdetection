@@ -8,6 +8,8 @@
 #SBATCH --time=24:00:00
 #SBATCH --account=nevatia_174
 
+# finetuning the CLIP on COCO base categories (zero-shot, base 48, the vision encoder is a ResNet50 instead of the ViT)
+
 module purge
 module load gcc/8.3.0
 #module load cuda/10.1.243

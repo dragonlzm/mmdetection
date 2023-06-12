@@ -8,6 +8,7 @@
 #SBATCH --time=30:00:00
 #SBATCH --account=nevatia_174
 
+# finetuning the CLIP on COCO base categories (few-shot, base 60)
 
 module purge
 module load gcc/8.3.0

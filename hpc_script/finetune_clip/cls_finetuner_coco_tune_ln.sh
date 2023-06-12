@@ -8,6 +8,7 @@
 #SBATCH --time=24:00:00
 #SBATCH --account=nevatia_174
 
+# finetune the clip with all COCO categories, finetuning the LN only
 
 module purge
 module load gcc/8.3.0
