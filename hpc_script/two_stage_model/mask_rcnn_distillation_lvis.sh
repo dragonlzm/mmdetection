@@ -186,8 +186,8 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 
 # 60 epochs experiments
 WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_lvis_raw_fc866_60e"
-PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
 START_FROM="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_lvis_raw_fc866_48e/epoch_32.pth"
+PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
     configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_raw_fc866_60e.py --launcher pytorch \
