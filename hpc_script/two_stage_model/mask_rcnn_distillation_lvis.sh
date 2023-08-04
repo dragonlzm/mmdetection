@@ -214,7 +214,7 @@ START_FROM="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_di
 PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
-    configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_raw_fc866_60e.py --launcher pytorch \
+    configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_raw_fc866_72e.py --launcher pytorch \
     --work-dir=${WORK_DIR} \
     --cfg-options model.roi_head.bbox_head.temperature=100 optimizer_config.grad_clip.max_norm=10 \
     --resume-from=${START_FROM}
