@@ -220,17 +220,30 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #     --resume-from=${START_FROM}
 #     #--resume-from=${WORK_DIR}/latest.pth
 
-# 72 epochs experiments (56, 77)
-WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_lvis_raw_fc866_84e"
+# 84 epochs experiments (56, 77)
+# WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_lvis_raw_fc866_84e"
+# START_FROM="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_lvis_raw_fc866_60e/epoch_50.pth"
+# PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
+# python -m torch.distributed.launch --nproc_per_node=2 \
+#     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
+#     configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_raw_fc866_84e.py --launcher pytorch \
+#     --work-dir=${WORK_DIR} \
+#     --cfg-options model.roi_head.bbox_head.temperature=100 optimizer_config.grad_clip.max_norm=10 \
+#     --resume-from=${START_FROM}
+#     #--resume-from=${WORK_DIR}/latest.pth
+
+# 84 epochs experiments (74, 79)
+WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_lvis_raw_fc866_84e_74_79"
 START_FROM="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_lvis_raw_fc866_60e/epoch_50.pth"
 PYTHONPATH="/project/nevatia_174/zhuoming/code/new_rpn/mmdetection":$PYTHONPATH \
 python -m torch.distributed.launch --nproc_per_node=2 \
     /project/nevatia_174/zhuoming/code/new_rpn/mmdetection/tools/train.py \
-    configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_raw_fc866_84e.py --launcher pytorch \
+    configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_raw_fc866_84e_74_79.py --launcher pytorch \
     --work-dir=${WORK_DIR} \
     --cfg-options model.roi_head.bbox_head.temperature=100 optimizer_config.grad_clip.max_norm=10 \
     --resume-from=${START_FROM}
     #--resume-from=${WORK_DIR}/latest.pth
+
 
 
 # test the model
