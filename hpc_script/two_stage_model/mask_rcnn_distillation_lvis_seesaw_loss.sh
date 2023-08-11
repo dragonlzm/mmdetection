@@ -68,19 +68,36 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 
 
 # 48 epoch 2xreg 0.5 distill 302121
+# ADDITIONAL_CONFIG="model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=0.5 optimizer_config.grad_clip.max_norm=10 \
+# model.rpn_head.loss_bbox.loss_weight=2.0 model.roi_head.bbox_head.loss_bbox.loss_weight=2.0 \
+# model.roi_head.bbox_head.num_shared_convs=3 model.roi_head.bbox_head.num_shared_fcs=0 \
+# model.roi_head.bbox_head.num_cls_convs=1 model.roi_head.bbox_head.num_cls_fcs=2 \
+# model.roi_head.bbox_head.num_reg_convs=1 model.roi_head.bbox_head.num_reg_fcs=2 \
+# model.roi_head.bbox_head.learnable_temperature=True"
+# WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_lvis_base_seesawloss_48e_2xregw_05distw_301212_learnable_temp"
+
+# bash tools/new_dist_train.sh configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_base_seesawloss_48e.py 2 \
+# ${WORK_DIR} /data/zhuoming/detection \
+# --cfg-options ${ADDITIONAL_CONFIG} \
+# #--resume-from=${WORK_DIR}/latest.pth
+# #--resume-from=${WORK_DIR}/epoch_1.pth
+
+
+# 48 epoch 2xreg 0.5 distill 302121 (40, 44)
 ADDITIONAL_CONFIG="model.roi_head.bbox_head.temperature=100 model.train_cfg.rcnn.distill_loss_factor=0.5 optimizer_config.grad_clip.max_norm=10 \
 model.rpn_head.loss_bbox.loss_weight=2.0 model.roi_head.bbox_head.loss_bbox.loss_weight=2.0 \
 model.roi_head.bbox_head.num_shared_convs=3 model.roi_head.bbox_head.num_shared_fcs=0 \
 model.roi_head.bbox_head.num_cls_convs=1 model.roi_head.bbox_head.num_cls_fcs=2 \
 model.roi_head.bbox_head.num_reg_convs=1 model.roi_head.bbox_head.num_reg_fcs=2 \
 model.roi_head.bbox_head.learnable_temperature=True"
-WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_lvis_base_seesawloss_48e_2xregw_05distw_301212_learnable_temp"
+WORK_DIR="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_lvis_base_seesawloss_48e_40_44_2xregw_05distw_301212_learnable_temp"
+START_FROM="/project/nevatia_174/zhuoming/detection/grad_clip_check/mask_rcnn_distillation_lvis_base_seesawloss_48e_2xregw_05distw_301212_learnable_temp"
 
-bash tools/new_dist_train.sh configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_base_seesawloss_48e.py 2 \
+bash tools/new_dist_train.sh configs/mask_rcnn_distill/mask_rcnn_distillation_lvis_base_seesawloss_48e_40_44.py 2 \
 ${WORK_DIR} /data/zhuoming/detection \
 --cfg-options ${ADDITIONAL_CONFIG} \
+--resume-from=${START_FROM}/epoch_32.pth
 #--resume-from=${WORK_DIR}/latest.pth
-#--resume-from=${WORK_DIR}/epoch_1.pth
 
 
 CHECKPOINT_NAME="latest.pth"
