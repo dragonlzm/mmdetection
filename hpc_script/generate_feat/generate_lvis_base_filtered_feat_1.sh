@@ -22,12 +22,12 @@ cd /project/nevatia_174/zhuoming/code/new_rpn/mmdetection
 #ln -sf /project/nevatia_174/zhuoming/detection ./data
 
 # spliting the generation into other section to accelerate the procedure
-#CHECKPOINT="data/exp_res/cls_finetuner_clip_lvis_base_train_over_sample_v2/epoch_18.pth"
-CHECKPOINT="data/exp_res/cls_finetuner_clip_lvis_base_train_gt_and_100_rand_embedding_v2/latest.pth"
+CHECKPOINT="data/exp_res/cls_finetuner_clip_lvis_base_train_over_sample_v2/epoch_18.pth"
+#CHECKPOINT="data/exp_res/cls_finetuner_clip_lvis_base_train_gt_and_100_rand_embedding_v2/latest.pth"
 CONFIG_FILE="configs/cls_finetuner/cls_finetuner_clip_full_lvis.py"
 BBOX_SAVE_PATH_ROOT="data/lvis_v1/clip_proposal/lvis_32_32_512"
-#FEAT_SAVE_PATH_ROOT="data/lvis_v1/clip_proposal_feat/lvis_base_finetuned"
-FEAT_SAVE_PATH_ROOT="data/lvis_v1/clip_proposal_feat/lvis_base_finetuned_vision_and_text"
+FEAT_SAVE_PATH_ROOT="data/lvis_v1/clip_proposal_feat/lvis_base_finetuned"
+#FEAT_SAVE_PATH_ROOT="data/lvis_v1/clip_proposal_feat/lvis_base_finetuned_vision_and_text"
 
 #### update for using the best overall perf model to extract feature, no longer filter the base cate
 bash tools/dist_test.sh \
